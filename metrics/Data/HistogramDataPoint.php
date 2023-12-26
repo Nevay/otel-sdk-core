@@ -6,7 +6,7 @@ namespace Nevay\OtelSDK\Metrics\Data;
 
 use Nevay\OtelSDK\Common\Attributes;
 
-final class HistogramDataPoint {
+final class HistogramDataPoint implements DataPoint {
 
     /**
      * @param list<int> $bucketCounts

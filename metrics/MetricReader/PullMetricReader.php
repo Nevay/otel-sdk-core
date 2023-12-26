@@ -9,6 +9,7 @@ use Composer\InstalledVersions;
 use InvalidArgumentException;
 use Nevay\OtelSDK\Metrics\Internal\MultiMetricProducer;
 use Nevay\OtelSDK\Metrics\MetricExporter;
+use Nevay\OtelSDK\Metrics\MetricFilter;
 use Nevay\OtelSDK\Metrics\MetricProducer;
 use Nevay\OtelSDK\Metrics\MetricReader;
 use OpenTelemetry\API\Metrics\MeterProviderInterface;
@@ -32,6 +33,7 @@ final class PullMetricReader implements MetricReader {
     private readonly MetricExporter $metricExporter;
     private readonly float $exportTimeout;
     private readonly float $collectTimeout;
+    private readonly ?MetricFilter $metricFilter;
     private readonly MultiMetricProducer $metricProducer;
     private readonly string $workerCallbackId;
 
@@ -51,6 +53,8 @@ final class PullMetricReader implements MetricReader {
      * @param MetricExporter $metricExporter exporter to push metrics to
      * @param int<0, max> $exportTimeoutMillis export timeout in milliseconds
      * @param int<0, max> $collectTimeoutMillis collect timeout in milliseconds
+     * @param MetricFilter|null $metricFilter metric filter to apply to metrics
+     *        and attributes during collect
      * @param Future<MeterProviderInterface>|null $meterProvider meter provider
      *        for self diagnostics
      *
@@ -60,6 +64,7 @@ final class PullMetricReader implements MetricReader {
         MetricExporter $metricExporter,
         int $exportTimeoutMillis = 30000,
         int $collectTimeoutMillis = 30000,
+        ?MetricFilter $metricFilter = null,
         ?Future $meterProvider = null,
     ) {
         if ($exportTimeoutMillis < 0) {
@@ -72,6 +77,7 @@ final class PullMetricReader implements MetricReader {
         $this->metricExporter = $metricExporter;
         $this->exportTimeout = $exportTimeoutMillis / 1000;
         $this->collectTimeout = $collectTimeoutMillis / 1000;
+        $this->metricFilter = $metricFilter;
         $this->metricProducer = new MultiMetricProducer();
 
         $reference = WeakReference::create($this);
@@ -160,7 +166,7 @@ final class PullMetricReader implements MetricReader {
                 $id = ++$p->processedBatchId;
                 try {
                     $future = $p->metricExporter->export(
-                        $p->metricProducer->produce(new TimeoutCancellation($p->collectTimeout)),
+                        $p->metricProducer->produce($p->metricFilter, new TimeoutCancellation($p->collectTimeout)),
                         new TimeoutCancellation($p->exportTimeout),
                     );
                 } catch (Throwable $e) {

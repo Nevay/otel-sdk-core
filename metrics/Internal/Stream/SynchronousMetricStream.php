@@ -3,6 +3,7 @@ namespace Nevay\OtelSDK\Metrics\Internal\Stream;
 
 use GMP;
 use Nevay\OtelSDK\Metrics\Aggregation;
+use Nevay\OtelSDK\Metrics\Data\Data;
 use Nevay\OtelSDK\Metrics\Data\Exemplar;
 use Nevay\OtelSDK\Metrics\Data\Temporality;
 use function assert;
@@ -16,13 +17,15 @@ use const PHP_INT_SIZE;
 
 /**
  * @template TSummary
- * @template TData
+ * @template-covariant TData of Data
  * @implements MetricStream<TSummary, TData>
  */
 final class SynchronousMetricStream implements MetricStream {
 
+    /** @var Aggregation<TSummary, TData> */
     private Aggregation $aggregation;
     private int $timestamp;
+    /** @var DeltaStorage<TSummary> */
     private DeltaStorage $storage;
     private int|GMP $readers = 0;
     private int|GMP $cumulative = 0;
@@ -38,6 +41,10 @@ final class SynchronousMetricStream implements MetricStream {
 
     public function temporality(): Temporality {
         return Temporality::Delta;
+    }
+
+    public function aggregation(): Aggregation {
+        return $this->aggregation;
     }
 
     public function timestamp(): int {
@@ -86,7 +93,7 @@ final class SynchronousMetricStream implements MetricStream {
         }
     }
 
-    public function collect(int $reader): mixed {
+    public function collect(int $reader): Data {
         $cumulative = ($this->cumulative >> $reader & 1) != 0;
         $metric = $this->storage->collect($reader, $cumulative) ?? new Metric([], [], $this->timestamp);
 

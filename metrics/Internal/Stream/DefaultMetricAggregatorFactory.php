@@ -3,6 +3,7 @@ namespace Nevay\OtelSDK\Metrics\Internal\Stream;
 
 use Nevay\OtelSDK\Metrics\Aggregation;
 use Nevay\OtelSDK\Metrics\AttributeProcessor;
+use Nevay\OtelSDK\Metrics\Data\Data;
 
 /**
  * @template TSummary
@@ -11,8 +12,7 @@ use Nevay\OtelSDK\Metrics\AttributeProcessor;
 final class DefaultMetricAggregatorFactory implements MetricAggregatorFactory {
 
     /**
-     * @template TData
-     * @param Aggregation<TSummary, TData> $aggregation
+     * @param Aggregation<TSummary, Data> $aggregation
      */
     public function __construct(
         private readonly Aggregation $aggregation,

@@ -1,14 +1,14 @@
 <?php declare(strict_types=1);
 namespace Nevay\OtelSDK\Metrics\Data;
 
-final class Sum {
+/**
+ * @implements Data<NumberDataPoint>
+ */
+final class Sum implements Data {
 
-    /**
-     * @param iterable<NumberDataPoint> $dataPoints
-     */
     public function __construct(
-        public readonly iterable $dataPoints,
+        public array $dataPoints,
         public readonly Temporality $temporality,
-        public bool $monotonic,
+        public readonly bool $monotonic,
     ) {}
 }

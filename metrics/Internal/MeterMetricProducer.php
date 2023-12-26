@@ -8,9 +8,12 @@ use Nevay\OtelSDK\Metrics\Data\Metric;
 use Nevay\OtelSDK\Metrics\ExemplarReservoirResolver;
 use Nevay\OtelSDK\Metrics\Internal\Registry\MetricCollector;
 use Nevay\OtelSDK\Metrics\Internal\Stream\MetricStream;
+use Nevay\OtelSDK\Metrics\MetricFilter;
+use Nevay\OtelSDK\Metrics\MetricFilterResult;
 use Nevay\OtelSDK\Metrics\MetricProducer;
 use Nevay\OtelSDK\Metrics\TemporalityResolver;
 use function array_keys;
+use function count;
 
 final class MeterMetricProducer implements MetricProducer {
 
@@ -48,17 +51,60 @@ final class MeterMetricProducer implements MetricProducer {
         $this->streamIds = null;
     }
 
-    public function produce(?Cancellation $cancellation = null): iterable {
-        $this->streamIds ??= array_keys($this->sources);
-        $this->collector->collectAndPush($this->streamIds, $cancellation);
+    public function produce(?MetricFilter $metricFilter = null, ?Cancellation $cancellation = null): iterable {
+        $sources = $metricFilter
+            ? $this->applyMetricFilter($this->sources, $metricFilter)
+            : $this->sources;
+        $streamIds = count($sources) === count($this->sources)
+            ? $this->streamIds ??= array_keys($this->sources)
+            : array_keys($sources);
 
-        foreach ($this->sources as $sources) {
-            foreach ($sources as $source) {
+        $this->collector->collectAndPush($streamIds, $cancellation);
+
+        foreach ($sources as $streamSources) {
+            foreach ($streamSources as $source) {
                 yield new Metric(
                     $source->descriptor,
                     $source->stream->collect($source->reader),
                 );
             }
         }
+    }
+
+    /**
+     * @param array<int, list<MetricStreamSource>> $sources
+     * @return array<int, array<int, MetricStreamSource>>
+     */
+    private function applyMetricFilter(array $sources, MetricFilter $filter): array {
+        foreach ($sources as $streamId => $streamSources) {
+            foreach ($streamSources as $sourceId => $source) {
+                $result = $filter->testMetric(
+                    $source->descriptor->instrumentationScope,
+                    $source->descriptor->name,
+                    $source->stream->aggregation(),
+                    $source->descriptor->unit,
+                );
+
+                if ($result === MetricFilterResult::Accept) {
+                    // no-op
+                }
+                if ($result === MetricFilterResult::AcceptPartial) {
+                    $sources[$streamId][$sourceId] = new MetricStreamSource(
+                        $source->descriptor,
+                        new FilteredMetricStream($source->descriptor, $source->stream, $filter),
+                        $source->reader,
+                    );
+                }
+                if ($result === MetricFilterResult::Drop) {
+                    unset($sources[$streamId][$sourceId]);
+                    if (!$sources[$streamId]) {
+                        /** @noinspection PhpConditionAlreadyCheckedInspection */
+                        unset($sources[$streamId]);
+                    }
+                }
+            }
+        }
+
+        return $sources;
     }
 }

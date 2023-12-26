@@ -3,7 +3,7 @@ namespace Nevay\OtelSDK\Metrics\Data;
 
 use Nevay\OtelSDK\Common\Attributes;
 
-final class NumberDataPoint {
+final class NumberDataPoint implements DataPoint {
 
     /**
      * @param float|int $value

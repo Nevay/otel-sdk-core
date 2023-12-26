@@ -14,5 +14,5 @@ interface MetricProducer {
      *
      * @see https://opentelemetry.io/docs/specs/otel/metrics/sdk/#produce-batch
      */
-    public function produce(?Cancellation $cancellation = null): iterable;
+    public function produce(?MetricFilter $metricFilter = null, ?Cancellation $cancellation = null): iterable;
 }

@@ -2,13 +2,14 @@
 namespace Nevay\OtelSDK\Metrics;
 
 use Nevay\OtelSDK\Common\Attributes;
+use Nevay\OtelSDK\Metrics\Data\Data;
 use Nevay\OtelSDK\Metrics\Data\Exemplar;
 use Nevay\OtelSDK\Metrics\Data\Temporality;
 use OpenTelemetry\Context\ContextInterface;
 
 /**
  * @template TSummary
- * @template TData
+ * @template-covariant TData of Data
  */
 interface Aggregation {
 
@@ -55,5 +56,5 @@ interface Aggregation {
         int $startTimestamp,
         int $timestamp,
         Temporality $temporality,
-    ): mixed;
+    ): Data;
 }

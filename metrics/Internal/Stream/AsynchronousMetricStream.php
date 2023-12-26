@@ -2,6 +2,7 @@
 namespace Nevay\OtelSDK\Metrics\Internal\Stream;
 
 use Nevay\OtelSDK\Metrics\Aggregation;
+use Nevay\OtelSDK\Metrics\Data\Data;
 use Nevay\OtelSDK\Metrics\Data\Exemplar;
 use Nevay\OtelSDK\Metrics\Data\Temporality;
 use function array_search;
@@ -9,16 +10,18 @@ use function count;
 
 /**
  * @template TSummary
- * @template TData
+ * @template-covariant TData of Data
  * @implements MetricStream<TSummary, TData>
  */
 final class AsynchronousMetricStream implements MetricStream {
 
+    /** @var Aggregation<TSummary, TData> */
     private Aggregation $aggregation;
     private int $startTimestamp;
+    /** @var Metric<TSummary> */
     private Metric $metric;
 
-    /** @var array<int, Metric|null> */
+    /** @var array<int, Metric<TSummary>|null> */
     private array $lastReads = [];
 
     /**
@@ -32,6 +35,10 @@ final class AsynchronousMetricStream implements MetricStream {
 
     public function temporality(): Temporality {
         return Temporality::Cumulative;
+    }
+
+    public function aggregation(): Aggregation {
+        return $this->aggregation;
     }
 
     public function timestamp(): int {
@@ -64,7 +71,7 @@ final class AsynchronousMetricStream implements MetricStream {
         $this->lastReads[$reader] = null;
     }
 
-    public function collect(int $reader): mixed {
+    public function collect(int $reader): Data {
         $metric = $this->metric;
 
         if (($lastRead = $this->lastReads[$reader] ?? null) === null) {

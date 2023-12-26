@@ -4,6 +4,7 @@ namespace Nevay\OtelSDK\Metrics\Internal\Stream;
 use Nevay\OtelSDK\Common\Attributes;
 use Nevay\OtelSDK\Metrics\Aggregation;
 use Nevay\OtelSDK\Metrics\AttributeProcessor;
+use Nevay\OtelSDK\Metrics\Data\Data;
 use Nevay\OtelSDK\Metrics\ExemplarReservoir;
 use OpenTelemetry\Context\ContextInterface;
 use function serialize;
@@ -22,8 +23,7 @@ final class DefaultMetricAggregator implements MetricAggregator {
     private array $summaries = [];
 
     /**
-     * @template TData
-     * @param Aggregation<TSummary, TData> $aggregation
+     * @param Aggregation<TSummary, Data> $aggregation
      */
     public function __construct(
         Aggregation $aggregation,

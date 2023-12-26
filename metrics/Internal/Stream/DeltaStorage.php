@@ -3,6 +3,7 @@ namespace Nevay\OtelSDK\Metrics\Internal\Stream;
 
 use GMP;
 use Nevay\OtelSDK\Metrics\Aggregation;
+use Nevay\OtelSDK\Metrics\Data\Data;
 
 /**
  * @template TSummary
@@ -14,8 +15,7 @@ final class DeltaStorage {
     private readonly Delta $head;
 
     /**
-     * @template TData
-     * @param Aggregation<TSummary, TData> $aggregation
+     * @param Aggregation<TSummary, Data> $aggregation
      */
     public function __construct(Aggregation $aggregation) {
         $this->aggregation = $aggregation;
