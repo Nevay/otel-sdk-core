@@ -3,6 +3,7 @@ namespace Nevay\OtelSDK\Metrics\Internal\View;
 
 use Nevay\OtelSDK\Metrics\AggregationResolver;
 use Nevay\OtelSDK\Metrics\AttributeProcessor;
+use Nevay\OtelSDK\Metrics\CardinalityLimitResolver;
 use Nevay\OtelSDK\Metrics\ExemplarReservoirResolver;
 use Nevay\OtelSDK\Metrics\Internal\MeterMetricProducer;
 
@@ -18,6 +19,7 @@ final class ResolvedView {
         public readonly ?AttributeProcessor $attributeProcessor,
         public readonly ?AggregationResolver $aggregationResolver,
         public readonly ?ExemplarReservoirResolver $exemplarReservoirResolver,
+        public readonly ?CardinalityLimitResolver $cardinalityLimitResolver,
         public readonly iterable $producers,
     ) {}
 }

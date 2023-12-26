@@ -33,10 +33,10 @@ final class SynchronousMetricStream implements MetricStream {
     /**
      * @param Aggregation<TSummary, TData> $aggregation
      */
-    public function __construct(Aggregation $aggregation, int $startTimestamp) {
+    public function __construct(Aggregation $aggregation, int $startTimestamp, ?int $cardinalityLimit) {
         $this->aggregation = $aggregation;
         $this->timestamp = $startTimestamp;
-        $this->storage = new DeltaStorage($aggregation);
+        $this->storage = new DeltaStorage($aggregation, $cardinalityLimit);
     }
 
     public function temporality(): Temporality {

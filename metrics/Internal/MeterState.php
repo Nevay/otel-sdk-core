@@ -82,11 +82,13 @@ final class MeterState {
                     continue;
                 }
 
-                $stream = new SynchronousMetricStream($aggregation, $this->startTimestamp);
+                $cardinalityLimit = $view->cardinalityLimitResolver?->resolveCardinalityLimit($instrument->type);
+                $stream = new SynchronousMetricStream($aggregation, $this->startTimestamp, $cardinalityLimit);
                 $streamId = $this->registry->registerSynchronousStream($instrument, $stream, new DefaultMetricAggregator(
                     $aggregation,
                     $view->attributeProcessor,
                     $view->exemplarReservoirResolver?->resolveExemplarReservoir($aggregation),
+                    $cardinalityLimit,
                 ));
 
                 $streams[$streamId] = $stream;
@@ -139,10 +141,12 @@ final class MeterState {
                     continue;
                 }
 
+                $cardinalityLimit = $view->cardinalityLimitResolver?->resolveCardinalityLimit($instrument->type);
                 $stream = new AsynchronousMetricStream($aggregation, $this->startTimestamp);
                 $streamId = $this->registry->registerAsynchronousStream($instrument, $stream, new DefaultMetricAggregatorFactory(
                     $aggregation,
                     $view->attributeProcessor,
+                    $cardinalityLimit,
                 ));
 
                 $streams[$streamId] = $stream;
@@ -207,6 +211,7 @@ final class MeterState {
             foreach ($this->producers as $producer) {
                 $aggregationResolver = $view->aggregationResolver ?? $producer->aggregationResolver ?: null;
                 $exemplarReservoirResolver = $view->exemplarReservoirResolver ?? $producer->exemplarReservoirResolver ?: null;
+                $cardinalityLimitResolver = $view->cardinalityLimitResolver ?? $producer->cardinalityLimitResolver ?: null;
                 yield new ResolvedView(
                     $name,
                     $unit,
@@ -214,6 +219,7 @@ final class MeterState {
                     $attributeProcessor,
                     $aggregationResolver,
                     $exemplarReservoirResolver,
+                    $cardinalityLimitResolver,
                     [$producer],
                 );
             }
@@ -317,9 +323,12 @@ final class MeterState {
     }
 
     private static function streamDedupId(ResolvedView $view): string {
-        return self::serialize($view->aggregationResolver)
+        return ''
+            . self::serialize($view->attributeProcessor)
+            . self::serialize($view->aggregationResolver)
             . self::serialize($view->exemplarReservoirResolver)
-            . self::serialize($view->attributeProcessor);
+            . self::serialize($view->cardinalityLimitResolver)
+        ;
     }
 
     private static function serialize(?object $object): string {

@@ -11,14 +11,16 @@ use Nevay\OtelSDK\Metrics\Data\Data;
 final class DeltaStorage {
 
     private readonly Aggregation $aggregation;
+    private readonly ?int $cardinalityLimit;
     /** @var Delta<TSummary> */
     private readonly Delta $head;
 
     /**
      * @param Aggregation<TSummary, Data> $aggregation
      */
-    public function __construct(Aggregation $aggregation) {
+    public function __construct(Aggregation $aggregation, ?int $cardinalityLimit) {
         $this->aggregation = $aggregation;
+        $this->cardinalityLimit = $cardinalityLimit;
         $this->head = new Delta(new Metric([], [], 0), 0);
         unset($this->head->metric);
     }
@@ -92,6 +94,10 @@ final class DeltaStorage {
 
     private function mergeInto(Metric $into, Metric $metric): void {
         foreach ($metric->summaries as $k => $summary) {
+            if (Overflow::check($into->attributes, $k, $this->cardinalityLimit)) {
+                $k = Overflow::INDEX;
+                $into->attributes[$k] ??= Overflow::attributes();
+            }
             $into->attributes[$k] ??= $metric->attributes[$k];
             $into->summaries[$k] = isset($into->summaries[$k])
                 ? $this->aggregation->merge($into->summaries[$k], $summary)

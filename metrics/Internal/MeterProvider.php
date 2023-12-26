@@ -43,7 +43,13 @@ final class MeterProvider implements MeterProviderInterface, Provider {
         $metricProducers = [];
         $metricReaders = [];
         foreach ($metricReaderConfigurations as $configuration) {
-            $producer = new MeterMetricProducer($registry, $configuration->temporalityResolver, $configuration->aggregationResolver, $configuration->exemplarReservoirResolver);
+            $producer = new MeterMetricProducer(
+                $registry,
+                $configuration->temporalityResolver,
+                $configuration->aggregationResolver,
+                $configuration->exemplarReservoirResolver,
+                $configuration->cardinalityLimitResolver,
+            );
             $configuration->metricReader->registerProducer($producer);
 
             $metricProducers[] = $producer;

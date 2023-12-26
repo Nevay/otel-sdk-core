@@ -2,7 +2,7 @@
 namespace Nevay\OtelSDK\Metrics\Data;
 
 /**
- * @template TData
+ * @template TData of Data
  */
 final class Metric {
 

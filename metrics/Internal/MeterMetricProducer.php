@@ -3,6 +3,7 @@ namespace Nevay\OtelSDK\Metrics\Internal;
 
 use Amp\Cancellation;
 use Nevay\OtelSDK\Metrics\AggregationResolver;
+use Nevay\OtelSDK\Metrics\CardinalityLimitResolver;
 use Nevay\OtelSDK\Metrics\Data\Descriptor;
 use Nevay\OtelSDK\Metrics\Data\Metric;
 use Nevay\OtelSDK\Metrics\ExemplarReservoirResolver;
@@ -21,16 +22,24 @@ final class MeterMetricProducer implements MetricProducer {
     private readonly TemporalityResolver $temporalityResolver;
     public readonly AggregationResolver $aggregationResolver;
     public readonly ExemplarReservoirResolver $exemplarReservoirResolver;
+    public readonly CardinalityLimitResolver $cardinalityLimitResolver;
 
     /** @var array<int, list<MetricStreamSource>> */
     private array $sources = [];
     private ?array $streamIds = null;
 
-    public function __construct(MetricCollector $collector, TemporalityResolver $temporalityResolver, AggregationResolver $aggregationResolver, ExemplarReservoirResolver $exemplarReservoirResolver) {
+    public function __construct(
+        MetricCollector $collector,
+        TemporalityResolver $temporalityResolver,
+        AggregationResolver $aggregationResolver,
+        ExemplarReservoirResolver $exemplarReservoirResolver,
+        CardinalityLimitResolver $cardinalityLimitResolver,
+    ) {
         $this->collector = $collector;
         $this->temporalityResolver = $temporalityResolver;
         $this->aggregationResolver = $aggregationResolver;
         $this->exemplarReservoirResolver = $exemplarReservoirResolver;
+        $this->cardinalityLimitResolver = $cardinalityLimitResolver;
     }
 
     public function unregisterStream(int $streamId): void {

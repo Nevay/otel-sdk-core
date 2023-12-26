@@ -36,8 +36,15 @@ final class MeterProviderBuilder {
         TemporalityResolver $temporalityResolver = TemporalityResolvers::LowMemory,
         AggregationResolver $aggregationResolver = AggregationResolvers::Default,
         ExemplarReservoirResolver $exemplarReservoirResolver = ExemplarReservoirResolvers::None,
+        CardinalityLimitResolver $cardinalityLimitResolver = CardinalityLimitResolvers::Default,
     ): self {
-        $this->metricReaderConfigurations[] = new MetricReaderConfiguration($metricReader, $temporalityResolver, $aggregationResolver, $exemplarReservoirResolver);
+        $this->metricReaderConfigurations[] = new MetricReaderConfiguration(
+            $metricReader,
+            $temporalityResolver,
+            $aggregationResolver,
+            $exemplarReservoirResolver,
+            $cardinalityLimitResolver,
+        );
 
         return $this;
     }

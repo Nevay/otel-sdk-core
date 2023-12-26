@@ -15,9 +15,10 @@ use function serialize;
  */
 final class DefaultMetricAggregator implements MetricAggregator {
 
-    private Aggregation $aggregation;
-    private ?AttributeProcessor $attributeProcessor;
-    private ?ExemplarReservoir $exemplarReservoir;
+    private readonly Aggregation $aggregation;
+    private readonly ?AttributeProcessor $attributeProcessor;
+    private readonly ?ExemplarReservoir $exemplarReservoir;
+    private readonly ?int $cardinalityLimit;
 
     private array $attributes = [];
     private array $summaries = [];
@@ -29,16 +30,22 @@ final class DefaultMetricAggregator implements MetricAggregator {
         Aggregation $aggregation,
         ?AttributeProcessor $attributeProcessor,
         ?ExemplarReservoir $exemplarReservoir,
+        ?int $cardinalityLimit,
     ) {
         $this->aggregation = $aggregation;
         $this->attributeProcessor = $attributeProcessor;
         $this->exemplarReservoir = $exemplarReservoir;
+        $this->cardinalityLimit = $cardinalityLimit;
     }
 
     public function record(float|int $value, Attributes $attributes, ContextInterface $context, int $timestamp): void {
         $filteredAttributes = $this->attributeProcessor?->process($attributes, $context) ?? $attributes;
         $raw = $filteredAttributes->toArray();
         $index = $raw ? serialize($raw) : 0;
+        if (Overflow::check($this->attributes, $index, $this->cardinalityLimit)) {
+            $index = Overflow::INDEX;
+            $filteredAttributes = Overflow::attributes();
+        }
         $this->attributes[$index] ??= $filteredAttributes;
         $this->aggregation->record(
             $this->summaries[$index] ??= $this->aggregation->initialize(),
@@ -47,7 +54,9 @@ final class DefaultMetricAggregator implements MetricAggregator {
             $context,
             $timestamp,
         );
-        $this->exemplarReservoir?->offer($index, $value, $attributes, $context, $timestamp);
+        if ($index !== Overflow::INDEX) {
+            $this->exemplarReservoir?->offer($index, $value, $attributes, $context, $timestamp);
+        }
     }
 
     public function collect(int $timestamp): Metric {
