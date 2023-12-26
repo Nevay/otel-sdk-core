@@ -1,0 +1,13 @@
+<?php declare(strict_types=1);
+namespace Nevay\OtelSDK\Metrics\Internal\StalenessHandler;
+
+final class DelayedStalenessHandlerFactory implements StalenessHandlerFactory {
+
+    public function __construct(
+        private readonly float $delay,
+    ) {}
+
+    public function create(): StalenessHandler&ReferenceCounter {
+        return new DelayedStalenessHandler($this->delay);
+    }
+}

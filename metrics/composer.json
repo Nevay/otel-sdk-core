@@ -1,0 +1,31 @@
+{
+    "name": "tbachert/otel-sdk-metrics",
+    "description": "OpenTelemetry SDK metrics signal",
+    "keywords": ["opentelemetry", "otel", "sdk", "metrics"],
+    "require": {
+        "php-64bit": "^8.1",
+        "composer-runtime-api": "^2.0",
+        "amphp/amp": "^3.0",
+        "amphp/pipeline": "^1.0",
+        "open-telemetry/api": "^1.0",
+        "open-telemetry/context": "^1.0",
+        "revolt/event-loop": "^1.0",
+        "tbachert/otel-sdk-common": "^0.1"
+    },
+    "suggest": {
+        "ext-gmp": "To support unlimited number of synchronous metric readers, otherwise limited to 63 per stream"
+    },
+    "autoload": {
+        "psr-4": {
+            "Nevay\\OtelSDK\\Metrics\\": ""
+        },
+        "files": [
+            "Internal/functions.php"
+        ]
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "0.1.x-dev"
+        }
+    }
+}

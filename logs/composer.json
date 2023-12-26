@@ -1,0 +1,25 @@
+{
+    "name": "tbachert/otel-sdk-logs",
+    "description": "OpenTelemetry SDK logs signal",
+    "keywords": ["opentelemetry", "otel", "sdk", "log"],
+    "require": {
+        "php-64bit": "^8.1",
+        "composer-runtime-api": "^2.0",
+        "amphp/amp": "^3.0",
+        "open-telemetry/api": "^1.0",
+        "open-telemetry/context": "^1.0",
+        "psr/log": "^1 || ^2 || ^3",
+        "revolt/event-loop": "^1.0",
+        "tbachert/otel-sdk-common": "^0.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Nevay\\OtelSDK\\Logs\\": ""
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "0.1.x-dev"
+        }
+    }
+}

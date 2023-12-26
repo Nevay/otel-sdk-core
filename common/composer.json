@@ -1,0 +1,20 @@
+{
+    "name": "tbachert/otel-sdk-common",
+    "description": "OpenTelemetry SDK classes shared between signals",
+    "keywords": ["opentelemetry", "otel", "sdk"],
+    "license": "Apache-2.0",
+    "require": {
+        "php-64bit": "^8.1",
+        "amphp/amp": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Nevay\\OtelSDK\\Common\\": ""
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "0.1.x-dev"
+        }
+    }
+}
