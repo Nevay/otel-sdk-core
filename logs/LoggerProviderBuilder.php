@@ -35,14 +35,14 @@ final class LoggerProviderBuilder {
         return $this;
     }
 
-    public function setAttributeLimits(int $attributeCountLimit = null, int $attributeValueLengthLimit = null): self {
+    public function setAttributeLimits(?int $attributeCountLimit = null, ?int $attributeValueLengthLimit = null): self {
         $this->attributeCountLimit = $attributeCountLimit;
         $this->attributeValueLengthLimit = $attributeValueLengthLimit;
 
         return $this;
     }
 
-    public function setLogRecordAttributeLimits(int $attributeCountLimit = null, int $attributeValueLengthLimit = null): self {
+    public function setLogRecordAttributeLimits(?int $attributeCountLimit = null, ?int $attributeValueLengthLimit = null): self {
         $this->logRecordAttributeCountLimit = $attributeCountLimit;
         $this->logRecordAttributeValueLengthLimit = $attributeValueLengthLimit;
 

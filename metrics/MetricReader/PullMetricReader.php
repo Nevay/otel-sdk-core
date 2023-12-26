@@ -12,6 +12,7 @@ use Nevay\OtelSDK\Metrics\MetricExporter;
 use Nevay\OtelSDK\Metrics\MetricFilter;
 use Nevay\OtelSDK\Metrics\MetricProducer;
 use Nevay\OtelSDK\Metrics\MetricReader;
+use Nevay\OtelSDK\Metrics\MetricReaderAware;
 use OpenTelemetry\API\Metrics\MeterProviderInterface;
 use OpenTelemetry\API\Metrics\ObservableCallbackInterface;
 use OpenTelemetry\API\Metrics\ObserverInterface;
@@ -82,6 +83,10 @@ final class PullMetricReader implements MetricReader {
 
         $reference = WeakReference::create($this);
         $this->workerCallbackId = EventLoop::defer(static fn() => self::worker($reference, $meterProvider));
+
+        if ($metricExporter instanceof MetricReaderAware) {
+            $metricExporter->setMetricReader($this);
+        }
     }
 
     private function initMetrics(WeakReference $reference, MeterProviderInterface $meterProvider): void {

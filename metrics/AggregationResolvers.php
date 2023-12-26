@@ -11,10 +11,10 @@ enum AggregationResolvers implements AggregationResolver {
     case Default;
 
     /**
-     * @param Aggregation $aggregation
+     * @param Aggregation|null $aggregation
      * @return AggregationResolver
      */
-    public static function resolved(Aggregation $aggregation): AggregationResolver {
+    public static function resolved(?Aggregation $aggregation): AggregationResolver {
         return new class($aggregation) implements AggregationResolver {
 
             public function __construct(

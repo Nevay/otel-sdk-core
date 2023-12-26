@@ -1,9 +1,12 @@
 <?php declare(strict_types=1);
 namespace Nevay\OtelSDK\Common;
 
+use Composer\InstalledVersions;
 use InvalidArgumentException;
+use Nevay\SPI\ServiceLoader;
 use function array_key_first;
 use function assert;
+use function class_exists;
 use function count;
 use function sprintf;
 
@@ -20,6 +23,36 @@ final class Resource {
         public readonly Attributes $attributes,
         public readonly ?string $schemaUrl = null,
     ) {}
+
+    /**
+     * Returns the default resource.
+     *
+     * @return Resource default resource
+     *
+     * @see https://opentelemetry.io/docs/specs/semconv/resource/#semantic-attributes-with-sdk-provided-default-value
+     */
+    public static function default(): Resource {
+        static $default;
+        return $default ??= new Resource(new Attributes([
+            'telemetry.sdk.language' => 'php',
+            'telemetry.sdk.name' => 'tbachert/otel-sdk',
+            'telemetry.sdk.version' => self::packageVersion('tbachert/otel-sdk') ?? 'unknown',
+            'service.name' => 'unknown_service:php',
+        ]));
+    }
+
+    /**
+     * Detects resource information using all registered resource detectors.
+     *
+     * @return Resource detected resource
+     *
+     * @see ResourceDetector
+     * @see ServiceLoader::register()
+     */
+    public static function detect(): Resource {
+        $detector = new ResourceDetector\Composite(...ServiceLoader::load(ResourceDetector::class));
+        return Resource::default()->merge($detector->getResource());
+    }
 
     /**
      * Creates a resource from the given attributes.
@@ -76,7 +109,7 @@ final class Resource {
             if ($schemaUrl !== $resource->schemaUrl && $resource->schemaUrl !== null) {
                 assert($schemaUrl !== null);
                 throw new InvalidArgumentException(sprintf(
-                    'Resource schema url mismatch, cannot merge "%s" ("%s") into "%s"',
+                    'Resource schema url mismatch, cannot merge "%s" ("%s") with "%s"',
                     $resource->schemaUrl, $key, $schemaUrl,
                 ));
             }
@@ -89,5 +122,13 @@ final class Resource {
             new Attributes($attributes, $attributesDropped),
             $schemaUrl,
         );
+    }
+
+    private static function packageVersion(string $package): ?string {
+        if (class_exists(InstalledVersions::class) && InstalledVersions::isInstalled($package)) {
+            return InstalledVersions::getVersionRanges($package);
+        }
+
+        return null;
     }
 }

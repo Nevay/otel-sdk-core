@@ -61,41 +61,41 @@ final class TracerProviderBuilder {
         return $this;
     }
 
-    public function setAttributeLimits(int $attributeCountLimit = null, int $attributeValueLengthLimit = null): self {
+    public function setAttributeLimits(?int $attributeCountLimit = null, ?int $attributeValueLengthLimit = null): self {
         $this->attributeCountLimit = $attributeCountLimit;
         $this->attributeValueLengthLimit = $attributeValueLengthLimit;
 
         return $this;
     }
 
-    public function setSpanAttributeLimits(int $attributeCountLimit = null, int $attributeValueLengthLimit = null): self {
+    public function setSpanAttributeLimits(?int $attributeCountLimit = null, ?int $attributeValueLengthLimit = null): self {
         $this->spanAttributeCountLimit = $attributeCountLimit;
         $this->spanAttributeValueLengthLimit = $attributeValueLengthLimit;
 
         return $this;
     }
 
-    public function setEventAttributeLimits(int $attributeCountLimit = null, int $attributeValueLengthLimit = null): self {
+    public function setEventAttributeLimits(?int $attributeCountLimit = null, ?int $attributeValueLengthLimit = null): self {
         $this->eventAttributeCountLimit = $attributeCountLimit;
         $this->eventAttributeValueLengthLimit = $attributeValueLengthLimit;
 
         return $this;
     }
 
-    public function setLinkAttributeLimits(int $attributeCountLimit = null, int $attributeValueLengthLimit = null): self {
+    public function setLinkAttributeLimits(?int $attributeCountLimit = null, ?int $attributeValueLengthLimit = null): self {
         $this->linkAttributeCountLimit = $attributeCountLimit;
         $this->linkAttributeValueLengthLimit = $attributeValueLengthLimit;
 
         return $this;
     }
 
-    public function setEventCountLimit(int $eventCountLimit): self {
+    public function setEventCountLimit(?int $eventCountLimit): self {
         $this->eventCountLimit = $eventCountLimit;
 
         return $this;
     }
 
-    public function setLinkCountLimit(int $linkCountLimit): self {
+    public function setLinkCountLimit(?int $linkCountLimit): self {
         $this->linkCountLimit = $linkCountLimit;
 
         return $this;
@@ -119,12 +119,12 @@ final class TracerProviderBuilder {
                 : null,
         );
         $eventAttributesFactory = AttributesLimitingFactory::create(
-            $this->eventAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
-            $this->eventAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
+            $this->eventAttributeCountLimit ?? $this->spanAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
+            $this->eventAttributeValueLengthLimit ?? $this->spanAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
         );
         $linkAttributesFactory = AttributesLimitingFactory::create(
-            $this->linkAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
-            $this->linkAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
+            $this->linkAttributeCountLimit ?? $this->spanAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
+            $this->linkAttributeValueLengthLimit ?? $this->spanAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
         );
         $eventCountLimit = $this->eventCountLimit ?? 128;
         $linkCountLimit = $this->linkCountLimit ?? 128;
