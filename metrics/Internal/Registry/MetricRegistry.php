@@ -15,8 +15,9 @@ use Nevay\OtelSDK\Metrics\Internal\Stream\MetricAggregatorFactory;
 use Nevay\OtelSDK\Metrics\Internal\Stream\MetricStream;
 use OpenTelemetry\Context\ContextInterface;
 use OpenTelemetry\Context\ContextStorageInterface;
-use RuntimeException;
+use Psr\Log\LoggerInterface;
 use function Amp\async;
+use function array_keys;
 use function count;
 
 final class MetricRegistry implements MetricWriter, MetricCollector {
@@ -24,6 +25,7 @@ final class MetricRegistry implements MetricWriter, MetricCollector {
     private ?ContextStorageInterface $contextStorage;
     private AttributesFactory $attributesFactory;
     private Clock $clock;
+    private ?LoggerInterface $logger;
 
     /** @var array<int, MetricStream> */
     private array $streams = [];
@@ -47,10 +49,12 @@ final class MetricRegistry implements MetricWriter, MetricCollector {
         ?ContextStorageInterface $contextStorage,
         AttributesFactory $attributesFactory,
         Clock $clock,
+        ?LoggerInterface $logger,
     ) {
         $this->contextStorage = $contextStorage;
         $this->attributesFactory = $attributesFactory;
         $this->clock = $clock;
+        $this->logger = $logger;
     }
 
     public function registerSynchronousStream(Instrument $instrument, MetricStream $stream, MetricAggregator $aggregator): int {
@@ -155,7 +159,7 @@ final class MetricRegistry implements MetricWriter, MetricCollector {
         $noopObserver = new NoopObserver();
         $handler = function(int $callbackId, array $callbackArguments) use ($observers, $noopObserver): void {
             if (!$callback = $this->asynchronousCallbacks[$callbackId] ?? null) {
-                throw new RuntimeException('Callback unregistered during metric collection');
+                throw new AsynchronousCallbackUnregisteredException();
             }
 
             $args = [];
@@ -174,9 +178,33 @@ final class MetricRegistry implements MetricWriter, MetricCollector {
                 try {
                     $future->await();
                     unset($callbacks[$callbackId]);
-                } catch (Exception) {}
+                } catch (AsynchronousCallbackUnregisteredException) {
+                    $this->logger?->info('Callback unregistered during asynchronous metric collection', [
+                        'callback_id' => $callbackId,
+                        'collection_timestamp' => $timestamp,
+                    ]);
+                } catch (Exception $e) {
+                    $this->logger?->error('Exception thrown by callback during asynchronous metric collection', [
+                        'exception' => $e,
+                        'callback_id' => $callbackId,
+                        'collection_timestamp' => $timestamp,
+                    ]);
+                }
             }
-        } catch (CancelledException) {}
+        } catch (CancelledException) {
+            $this->logger?->warning('Asynchronous metric collection cancelled', [
+                'collection_timestamp' => $timestamp,
+            ]);
+        }
+
+        if ($callbacks) {
+            $this->logger?->warning('Failed to invoke some callbacks during asynchronous metric collection', [
+                'total_failed_callbacks' => count($callbacks),
+                'total_registered_callbacks' => count($futures),
+                'failed_callback_ids' => array_keys($callbacks),
+                'collection_timestamp' => $timestamp,
+            ]);
+        }
 
         foreach ($callbacks as $callbackArguments) {
             foreach ($callbackArguments as $instrumentId) {

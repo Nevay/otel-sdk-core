@@ -38,7 +38,7 @@ final class MeterProvider implements MeterProviderInterface, Provider {
         StalenessHandlerFactory $stalenessHandlerFactory,
         ?LoggerInterface $logger,
     ) {
-        $registry = new MetricRegistry($contextStorage, $metricAttributesFactory, $clock);
+        $registry = new MetricRegistry($contextStorage, $metricAttributesFactory, $clock, $logger);
 
         $metricProducers = [];
         $metricReaders = [];
