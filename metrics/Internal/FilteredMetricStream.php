@@ -1,7 +1,6 @@
 <?php declare(strict_types=1);
 namespace Nevay\OtelSDK\Metrics\Internal;
 
-use Nevay\OtelSDK\Metrics\Aggregation;
 use Nevay\OtelSDK\Metrics\Data\Data;
 use Nevay\OtelSDK\Metrics\Data\Descriptor;
 use Nevay\OtelSDK\Metrics\Data\Temporality;
@@ -29,10 +28,6 @@ final class FilteredMetricStream implements MetricStream {
         return $this->stream->temporality();
     }
 
-    public function aggregation(): Aggregation {
-        return $this->stream->aggregation();
-    }
-
     public function timestamp(): int {
         return $this->stream->timestamp();
     }
@@ -56,7 +51,7 @@ final class FilteredMetricStream implements MetricStream {
             $result = $this->filter->testAttributes(
                 $this->descriptor->instrumentationScope,
                 $this->descriptor->name,
-                $this->stream->aggregation(),
+                $this->descriptor->instrumentType,
                 $this->descriptor->unit,
                 $dataPoint->attributes,
             );

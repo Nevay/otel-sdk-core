@@ -90,7 +90,7 @@ final class MeterMetricProducer implements MetricProducer {
                 $result = $filter->testMetric(
                     $source->descriptor->instrumentationScope,
                     $source->descriptor->name,
-                    $source->stream->aggregation(),
+                    $source->descriptor->instrumentType,
                     $source->descriptor->unit,
                 );
 

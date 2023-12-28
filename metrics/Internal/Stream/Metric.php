@@ -12,7 +12,7 @@ final class Metric {
     /**
      * @param array<Attributes> $attributes
      * @param array<TSummary> $summaries
-     * @param array<Exemplar>|null $exemplars
+     * @param array<Exemplar> $exemplars
      */
     public function __construct(
         public array $attributes,

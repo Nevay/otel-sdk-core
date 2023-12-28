@@ -37,10 +37,6 @@ final class AsynchronousMetricStream implements MetricStream {
         return Temporality::Cumulative;
     }
 
-    public function aggregation(): Aggregation {
-        return $this->aggregation;
-    }
-
     public function timestamp(): int {
         return $this->metric->timestamp;
     }

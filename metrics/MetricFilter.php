@@ -12,14 +12,14 @@ interface MetricFilter {
     public function testMetric(
         InstrumentationScope $instrumentationScope,
         string $name,
-        Aggregation $aggregation,
+        InstrumentType $instrumentType,
         ?string $unit,
     ): MetricFilterResult;
 
     public function testAttributes(
         InstrumentationScope $instrumentationScope,
         string $name,
-        Aggregation $aggregation,
+        InstrumentType $instrumentType,
         ?string $unit,
         Attributes $attributes,
     ): bool;

@@ -43,10 +43,6 @@ final class SynchronousMetricStream implements MetricStream {
         return Temporality::Delta;
     }
 
-    public function aggregation(): Aggregation {
-        return $this->aggregation;
-    }
-
     public function timestamp(): int {
         return $this->timestamp;
     }

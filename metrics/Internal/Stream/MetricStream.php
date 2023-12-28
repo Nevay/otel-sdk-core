@@ -1,7 +1,6 @@
 <?php declare(strict_types=1);
 namespace Nevay\OtelSDK\Metrics\Internal\Stream;
 
-use Nevay\OtelSDK\Metrics\Aggregation;
 use Nevay\OtelSDK\Metrics\Data\Data;
 use Nevay\OtelSDK\Metrics\Data\Temporality;
 
@@ -17,13 +16,6 @@ interface MetricStream {
      * @return Temporality internal temporality
      */
     public function temporality(): Temporality;
-
-    /**
-     * Returns the underlying aggregation of this stream.
-     *
-     * @return Aggregation<TSummary, TData> underlying aggregation
-     */
-    public function aggregation(): Aggregation;
 
     /**
      * Returns the last metric timestamp.
