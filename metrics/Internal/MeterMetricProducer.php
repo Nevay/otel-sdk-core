@@ -69,6 +69,7 @@ final class MeterMetricProducer implements MetricProducer {
             : array_keys($sources);
 
         $this->collector->collectAndPush($streamIds, $cancellation);
+        unset($streamIds, $metricFilter, $cancellation);
 
         foreach ($sources as $streamSources) {
             foreach ($streamSources as $source) {
