@@ -6,6 +6,7 @@ use Nevay\OtelSDK\Metrics\AggregationResolver;
 use Nevay\OtelSDK\Metrics\CardinalityLimitResolver;
 use Nevay\OtelSDK\Metrics\Data\Descriptor;
 use Nevay\OtelSDK\Metrics\Data\Metric;
+use Nevay\OtelSDK\Metrics\Data\Temporality;
 use Nevay\OtelSDK\Metrics\ExemplarReservoirResolver;
 use Nevay\OtelSDK\Metrics\Internal\Registry\MetricCollector;
 use Nevay\OtelSDK\Metrics\Internal\Stream\MetricStream;
@@ -19,7 +20,7 @@ use function count;
 final class MeterMetricProducer implements MetricProducer {
 
     private readonly MetricCollector $collector;
-    private readonly TemporalityResolver $temporalityResolver;
+    public readonly TemporalityResolver $temporalityResolver;
     public readonly AggregationResolver $aggregationResolver;
     public readonly ExemplarReservoirResolver $exemplarReservoirResolver;
     public readonly CardinalityLimitResolver $cardinalityLimitResolver;
@@ -43,15 +44,15 @@ final class MeterMetricProducer implements MetricProducer {
     }
 
     public function unregisterStream(int $streamId): void {
+        if (!isset($this->sources[$streamId])) {
+            return;
+        }
+
         unset($this->sources[$streamId]);
         $this->streamIds = null;
     }
 
-    public function registerMetricSource(int $streamId, Descriptor $descriptor, MetricStream $stream): void {
-        if (!$temporality = $this->temporalityResolver->resolveTemporality($descriptor)) {
-            return;
-        }
-
+    public function registerMetricSource(int $streamId, Descriptor $descriptor, MetricStream $stream, Temporality $temporality): void {
         $this->sources[$streamId][] = new MetricStreamSource(
             $descriptor,
             $stream,

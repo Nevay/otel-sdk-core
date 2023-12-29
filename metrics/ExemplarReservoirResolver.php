@@ -3,5 +3,5 @@ namespace Nevay\OtelSDK\Metrics;
 
 interface ExemplarReservoirResolver {
 
-    public function resolveExemplarReservoir(Aggregation $aggregation): ?ExemplarReservoir;
+    public function resolveExemplarReservoir(Aggregation $aggregation): ?ExemplarReservoirFactory;
 }

@@ -3,10 +3,10 @@ namespace Nevay\OtelSDK\Metrics;
 
 use Closure;
 use Nevay\OtelSDK\Metrics\Aggregation\ExplicitBucketHistogramAggregation;
-use Nevay\OtelSDK\Metrics\Exemplar\AlignedHistogramBucketExemplarReservoir;
+use Nevay\OtelSDK\Metrics\Exemplar\AlignedHistogramBucketExemplarReservoirFactory;
 use Nevay\OtelSDK\Metrics\Exemplar\ExemplarFilter\WithSampledTraceExemplarFilter;
-use Nevay\OtelSDK\Metrics\Exemplar\FilteredReservoir;
-use Nevay\OtelSDK\Metrics\Exemplar\SimpleFixedSizeExemplarReservoir;
+use Nevay\OtelSDK\Metrics\Exemplar\FilteredReservoirFactory;
+use Nevay\OtelSDK\Metrics\Exemplar\SimpleFixedSizeExemplarReservoirFactory;
 
 enum ExemplarReservoirResolvers implements ExemplarReservoirResolver {
 
@@ -15,7 +15,7 @@ enum ExemplarReservoirResolvers implements ExemplarReservoirResolver {
     case None;
 
     /**
-     * @param Closure(Aggregation): ?ExemplarReservoir $callback
+     * @param Closure(Aggregation): ?ExemplarReservoirFactory $callback
      * @return ExemplarReservoirResolver
      */
     public static function callback(Closure $callback): ExemplarReservoirResolver {
@@ -25,28 +25,28 @@ enum ExemplarReservoirResolvers implements ExemplarReservoirResolver {
                 private readonly Closure $callback,
             ) {}
 
-            public function resolveExemplarReservoir(Aggregation $aggregation): ?ExemplarReservoir {
+            public function resolveExemplarReservoir(Aggregation $aggregation): ?ExemplarReservoirFactory {
                 return ($this->callback)($aggregation);
             }
         };
     }
 
-    public function resolveExemplarReservoir(Aggregation $aggregation): ?ExemplarReservoir {
+    public function resolveExemplarReservoir(Aggregation $aggregation): ?ExemplarReservoirFactory {
         return match ($this) {
             self::All,
-                => self::defaultExemplarReservoir($aggregation),
+                => self::defaultExemplarReservoirFactory($aggregation),
             self::WithSampledTrace,
-                => new FilteredReservoir(self::defaultExemplarReservoir($aggregation), new WithSampledTraceExemplarFilter()),
+                => new FilteredReservoirFactory(self::defaultExemplarReservoirFactory($aggregation), new WithSampledTraceExemplarFilter()),
             self::None,
                 => null,
         };
     }
 
-    private static function defaultExemplarReservoir(Aggregation $aggregation): ExemplarReservoir {
+    private static function defaultExemplarReservoirFactory(Aggregation $aggregation): ExemplarReservoirFactory {
         if ($aggregation instanceof ExplicitBucketHistogramAggregation && $aggregation->boundaries) {
-            return new AlignedHistogramBucketExemplarReservoir($aggregation->boundaries);
+            return new AlignedHistogramBucketExemplarReservoirFactory($aggregation->boundaries);
         }
 
-        return new SimpleFixedSizeExemplarReservoir(1);
+        return new SimpleFixedSizeExemplarReservoirFactory();
     }
 }

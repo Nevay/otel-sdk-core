@@ -1,25 +1,22 @@
 <?php declare(strict_types=1);
 namespace Nevay\OtelSDK\Metrics\Internal\View;
 
-use Nevay\OtelSDK\Metrics\AggregationResolver;
+use Nevay\OtelSDK\Metrics\Aggregation;
 use Nevay\OtelSDK\Metrics\AttributeProcessor;
-use Nevay\OtelSDK\Metrics\CardinalityLimitResolver;
-use Nevay\OtelSDK\Metrics\ExemplarReservoirResolver;
+use Nevay\OtelSDK\Metrics\Data\Descriptor;
+use Nevay\OtelSDK\Metrics\Data\Temporality;
+use Nevay\OtelSDK\Metrics\ExemplarReservoirFactory;
 use Nevay\OtelSDK\Metrics\Internal\MeterMetricProducer;
 
 final class ResolvedView {
 
-    /**
-     * @param iterable<MeterMetricProducer> $producers
-     */
     public function __construct(
-        public readonly string $name,
-        public readonly ?string $unit,
-        public readonly ?string $description,
+        public readonly Descriptor $descriptor,
         public readonly ?AttributeProcessor $attributeProcessor,
-        public readonly ?AggregationResolver $aggregationResolver,
-        public readonly ?ExemplarReservoirResolver $exemplarReservoirResolver,
-        public readonly ?CardinalityLimitResolver $cardinalityLimitResolver,
-        public readonly iterable $producers,
+        public readonly Aggregation $aggregation,
+        public readonly ?ExemplarReservoirFactory $exemplarReservoirFactory,
+        public readonly ?int $cardinalityLimit,
+        public readonly MeterMetricProducer $metricProducer,
+        public readonly Temporality $temporality,
     ) {}
 }
