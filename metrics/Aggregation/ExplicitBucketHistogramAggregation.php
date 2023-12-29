@@ -92,10 +92,6 @@ final class ExplicitBucketHistogramAggregation implements Aggregation {
     ): Histogram {
         $dataPoints = [];
         foreach ($attributes as $key => $dataPointAttributes) {
-            if ($summaries[$key]->count === 0) {
-                continue;
-            }
-
             $dataPoints[] = new HistogramDataPoint(
                 $summaries[$key]->count,
                 $summaries[$key]->sum,
