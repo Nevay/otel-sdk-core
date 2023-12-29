@@ -18,23 +18,28 @@ final class SumAggregation implements Aggregation {
     ) {}
 
     public function initialize(): SumSummary {
-        return new SumSummary(0);
+        return new SumSummary(0, 0);
     }
 
     public function record(mixed $summary, float|int $value, Attributes $attributes, ContextInterface $context, int $timestamp): void {
-        $summary->value += $value;
+        self::calculateCompensatedSum($summary, $value);
+
     }
 
     public function merge(mixed $left, mixed $right): SumSummary {
-        $sum = $right->value + $left->value;
+        $right = clone $right;
+        self::calculateCompensatedSum($right, $left->value);
+        self::calculateCompensatedSum($right, -$left->valueCompensation);
 
-        return new SumSummary($sum);
+        return $right;
     }
 
     public function diff(mixed $left, mixed $right): SumSummary {
-        $sum = $right->value - $left->value;
+        $right = clone $right;
+        self::calculateCompensatedSum($right, -$left->value);
+        self::calculateCompensatedSum($right, $left->valueCompensation);
 
-        return new SumSummary($sum);
+        return $right;
     }
 
     public function toData(
@@ -61,5 +66,12 @@ final class SumAggregation implements Aggregation {
             $temporality,
             $this->monotonic,
         );
+    }
+
+    private static function calculateCompensatedSum(SumSummary $summary, float|int $value): void {
+        $y = $value - $summary->valueCompensation;
+        $t = $summary->value + $y;
+        $summary->valueCompensation = $t - $summary->value - $y;
+        $summary->value = $t;
     }
 }

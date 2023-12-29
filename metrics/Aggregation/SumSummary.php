@@ -5,5 +5,6 @@ final class SumSummary {
 
     public function __construct(
         public float|int $value,
+        public float|int $valueCompensation,
     ) {}
 }

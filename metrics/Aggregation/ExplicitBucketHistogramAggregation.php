@@ -29,6 +29,7 @@ final class ExplicitBucketHistogramAggregation implements Aggregation {
         return new ExplicitBucketHistogramSummary(
             0,
             0,
+            0,
             $this->recordMinMax ? +INF : NAN,
             $this->recordMinMax ? -INF : NAN,
             array_fill(0, count($this->boundaries) + 1, 0),
@@ -38,48 +39,38 @@ final class ExplicitBucketHistogramAggregation implements Aggregation {
     public function record(mixed $summary, float|int $value, Attributes $attributes, ContextInterface $context, int $timestamp): void {
         for ($i = 0, $n = count($this->boundaries); $i < $n && $this->boundaries[$i] < $value; $i++) {}
         $summary->count++;
-        $summary->sum += $value;
+        self::calculateCompensatedSum($summary, $value);
         $summary->min = self::min($value, $summary->min);
         $summary->max = self::max($value, $summary->max);
         $summary->buckets[$i]++;
     }
 
     public function merge(mixed $left, mixed $right): ExplicitBucketHistogramSummary {
-        $count = $right->count + $left->count;
-        $sum = $right->sum + $left->sum;
-        $min = self::min($right->min, $left->min);
-        $max = self::max($right->max, $left->max);
-        $buckets = $right->buckets;
+        $right = clone $right;
+        $right->count += $left->count;
+        self::calculateCompensatedSum($right, $left->sum);
+        self::calculateCompensatedSum($right, -$left->sumCompensation);
+        $right->min = self::min($right->min, $left->min);
+        $right->max = self::max($right->max, $left->max);
         foreach ($left->buckets as $i => $bucketCount) {
-            $buckets[$i] += $bucketCount;
+            $right->buckets[$i] += $bucketCount;
         }
 
-        return new ExplicitBucketHistogramSummary(
-            $count,
-            $sum,
-            $min,
-            $max,
-            $buckets,
-        );
+        return $right;
     }
 
     public function diff(mixed $left, mixed $right): ExplicitBucketHistogramSummary {
-        $count = $right->count - $left->count;
-        $sum = $right->sum - $left->sum;
-        $min = $right->min <= $left->min ? $right->min : NAN;
-        $max = $right->max >= $left->max ? $right->max : NAN;
-        $buckets = $right->buckets;
+        $right = clone $right;
+        $right->count -= $left->count;
+        self::calculateCompensatedSum($right, -$left->sum);
+        self::calculateCompensatedSum($right, $left->sumCompensation);
+        $right->min = $right->min <= $left->min ? $right->min : NAN;
+        $right->max = $right->max >= $left->max ? $right->max : NAN;
         foreach ($left->buckets as $i => $bucketCount) {
-            $buckets[$i] -= $bucketCount;
+            $right->buckets[$i] -= $bucketCount;
         }
 
-        return new ExplicitBucketHistogramSummary(
-            $count,
-            $sum,
-            $min,
-            $max,
-            $buckets,
-        );
+        return $right;
     }
 
     public function toData(
@@ -120,5 +111,12 @@ final class ExplicitBucketHistogramAggregation implements Aggregation {
     private static function max(float|int $left, float|int $right): float|int {
         /** @noinspection PhpConditionAlreadyCheckedInspection */
         return $left >= $right ? $left : ($right >= $left ? $right : NAN);
+    }
+
+    private static function calculateCompensatedSum(ExplicitBucketHistogramSummary $summary, float|int $value): void {
+        $y = $value - $summary->sumCompensation;
+        $t = $summary->sum + $y;
+        $summary->sumCompensation = $t - $summary->sum - $y;
+        $summary->sum = $t;
     }
 }
