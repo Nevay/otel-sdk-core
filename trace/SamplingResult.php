@@ -1,6 +1,7 @@
 <?php declare(strict_types=1);
 namespace Nevay\OtelSDK\Trace;
 
+use OpenTelemetry\API\Trace\TraceFlags;
 use OpenTelemetry\API\Trace\TraceStateInterface;
 
 /**
@@ -17,6 +18,9 @@ interface SamplingResult {
 
     /**
      * Returns trace flags that will be associate with the span.
+     *
+     * If {@link TraceFlags::SAMPLED} is set, then {@link SamplingResult::shouldRecord()} must
+     * return `true`.
      *
      * @return int trace flags to associate with the span
      */
