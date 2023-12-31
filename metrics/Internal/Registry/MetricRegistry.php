@@ -131,7 +131,7 @@ final class MetricRegistry implements MetricWriter, MetricCollector {
         );
         foreach ($instrumentIds as $instrumentId) {
             unset($this->instrumentToCallbacks[$instrumentId][$callbackId]);
-            if (!$this->instrumentToCallbacks[$instrumentId]) {
+            if (!($this->instrumentToCallbacks[$instrumentId] ?? [])) {
                 unset($this->instrumentToCallbacks[$instrumentId]);
             }
         }

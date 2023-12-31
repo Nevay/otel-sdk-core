@@ -3,22 +3,24 @@ namespace Nevay\OtelSDK\Metrics\Internal\Instrument;
 
 use Nevay\OtelSDK\Metrics\Internal\Registry\MetricWriter;
 use Nevay\OtelSDK\Metrics\Internal\StalenessHandler\ReferenceCounter;
+use WeakMap;
 
 final class ObservableCallbackDestructor {
 
     /**
-     * @param array<int, int> $callbackIds
+     * @param WeakMap<object, ObservableCallbackDestructor> $destructors
+     * @param array<int, ReferenceCounter> $callbackIds
      */
     public function __construct(
+        public readonly WeakMap $destructors,
         private readonly MetricWriter $writer,
-        private readonly ReferenceCounter $referenceCounter,
         public array $callbackIds = [],
     ) {}
 
     public function __destruct() {
-        foreach ($this->callbackIds as $callbackId) {
+        foreach ($this->callbackIds as $callbackId => $referenceCounter) {
             $this->writer->unregisterCallback($callbackId);
-            $this->referenceCounter->release();
+            $referenceCounter->release();
         }
     }
 }

@@ -6,6 +6,6 @@ use OpenTelemetry\API\Metrics\GaugeInterface;
 /**
  * @experimental
  */
-final class Gauge implements GaugeInterface {
+final class Gauge implements GaugeInterface, InstrumentHandle {
     use SynchronousInstrument { write as record; }
 }

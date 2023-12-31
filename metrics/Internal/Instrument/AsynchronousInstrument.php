@@ -7,8 +7,7 @@ use Nevay\OtelSDK\Metrics\Internal\StalenessHandler\ReferenceCounter;
 use OpenTelemetry\API\Metrics\ObservableCallbackInterface;
 use OpenTelemetry\API\Metrics\ObserverInterface;
 use WeakMap;
-use function Nevay\OtelSDK\Metrics\Internal\closure;
-use function Nevay\OtelSDK\Metrics\Internal\weaken;
+use function assert;
 
 trait AsynchronousInstrument {
 
@@ -19,8 +18,10 @@ trait AsynchronousInstrument {
         private readonly MetricWriter $writer,
         private readonly Instrument $instrument,
         private readonly ReferenceCounter $referenceCounter,
-        private readonly WeakMap $destructors
+        private readonly WeakMap $destructors,
     ) {
+        assert($this instanceof InstrumentHandle);
+
         $this->referenceCounter->acquire();
     }
 
@@ -28,23 +29,20 @@ trait AsynchronousInstrument {
         $this->referenceCounter->release();
     }
 
+    public function getHandle(): Instrument {
+        return $this->instrument;
+    }
+
     /**
      * @param callable(ObserverInterface): void $callback
      */
     public function observe(callable $callback): ObservableCallbackInterface {
-        $target = null;
-        $callback = weaken(closure($callback), $target);
-
-        $callbackId = $this->writer->registerCallback($callback, $this->instrument);
-        $this->referenceCounter->acquire();
-
-        $destructor = null;
-        if ($target) {
-            /** @noinspection PhpSecondWriteToReadonlyPropertyInspection */
-            $destructor = $this->destructors[$target] ??= new ObservableCallbackDestructor($this->writer, $this->referenceCounter);
-            $destructor->callbackIds[$callbackId] = $callbackId;
-        }
-
-        return new ObservableCallback($this->writer, $this->referenceCounter, $callbackId, $destructor, $target);
+        return AsynchronousInstruments::observe(
+            $this->writer,
+            $this->destructors,
+            $callback,
+            [$this->instrument],
+            $this->referenceCounter,
+        );
     }
 }

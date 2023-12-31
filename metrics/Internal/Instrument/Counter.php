@@ -3,6 +3,6 @@ namespace Nevay\OtelSDK\Metrics\Internal\Instrument;
 
 use OpenTelemetry\API\Metrics\CounterInterface;
 
-final class Counter implements CounterInterface {
+final class Counter implements CounterInterface, InstrumentHandle {
     use SynchronousInstrument { write as add; }
 }

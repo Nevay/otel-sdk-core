@@ -16,6 +16,7 @@ use OpenTelemetry\API\Metrics\MeterInterface;
 use OpenTelemetry\API\Metrics\MeterProviderInterface;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface;
+use WeakMap;
 use function Amp\async;
 
 final class MeterProvider implements MeterProviderInterface, Provider {
@@ -63,6 +64,7 @@ final class MeterProvider implements MeterProviderInterface, Provider {
             $metricProducers,
             $viewRegistry,
             $stalenessHandlerFactory,
+            new WeakMap(),
             $logger,
         );
         $this->instrumentationScopeAttributesFactory = $instrumentationScopeAttributesFactory;

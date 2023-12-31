@@ -5,6 +5,7 @@ use Nevay\OtelSDK\Metrics\Instrument;
 use Nevay\OtelSDK\Metrics\Internal\Registry\MetricWriter;
 use Nevay\OtelSDK\Metrics\Internal\StalenessHandler\ReferenceCounter;
 use OpenTelemetry\Context\ContextInterface;
+use function assert;
 
 trait SynchronousInstrument {
 
@@ -13,11 +14,17 @@ trait SynchronousInstrument {
         private readonly Instrument $instrument,
         private readonly ReferenceCounter $referenceCounter,
     ) {
+        assert($this instanceof InstrumentHandle);
+
         $this->referenceCounter->acquire();
     }
 
     public function __destruct() {
         $this->referenceCounter->release();
+    }
+
+    public function getHandle(): Instrument {
+        return $this->instrument;
     }
 
     /**

@@ -4,11 +4,11 @@ namespace Nevay\OtelSDK\Metrics;
 final class Instrument {
 
     public function __construct(
-        public InstrumentType $type,
-        public string $name,
-        public ?string $unit,
-        public ?string $description,
-        public array $advisory = [],
+        public readonly InstrumentType $type,
+        public readonly string $name,
+        public readonly ?string $unit,
+        public readonly ?string $description,
+        public readonly array $advisory = [],
     ) {}
 
     public function equals(Instrument $other): bool {

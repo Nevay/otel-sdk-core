@@ -11,6 +11,6 @@ final class Metric {
      */
     public function __construct(
         public readonly Descriptor $descriptor,
-        public readonly mixed $data,
+        public readonly Data $data,
     ) {}
 }

@@ -3,6 +3,6 @@ namespace Nevay\OtelSDK\Metrics\Internal\Instrument;
 
 use OpenTelemetry\API\Metrics\ObservableUpDownCounterInterface;
 
-final class ObservableUpDownCounter implements ObservableUpDownCounterInterface {
+final class ObservableUpDownCounter implements ObservableUpDownCounterInterface, InstrumentHandle {
     use AsynchronousInstrument;
 }

@@ -34,7 +34,7 @@ final class MeterState {
 
     private ?int $startTimestamp = null;
 
-    /** @var array<string, array<string, array{Instrument, ReferenceCounter, WeakMap<object, ObservableCallbackDestructor>}>> */
+    /** @var array<string, array<string, array{Instrument, ReferenceCounter}>> */
     private array $asynchronous = [];
     /** @var array<string, array<string, array{Instrument, ReferenceCounter}>> */
     private array $synchronous = [];
@@ -43,6 +43,7 @@ final class MeterState {
 
     /**
      * @param iterable<MeterMetricProducer> $producers
+     * @param WeakMap<object, ObservableCallbackDestructor> $destructors
      */
     public function __construct(
         public readonly MetricRegistry $registry,
@@ -51,8 +52,24 @@ final class MeterState {
         private readonly iterable $producers,
         private readonly ViewRegistry $viewRegistry,
         private readonly StalenessHandlerFactory $stalenessHandlerFactory,
+        public readonly WeakMap $destructors,
         public readonly ?LoggerInterface $logger,
     ) {}
+
+    /**
+     * @return array{Instrument, ReferenceCounter}|null
+     */
+    public function getAsynchronousInstrument(Instrument $instrument, InstrumentationScope $instrumentationScope): ?array {
+        $instrumentationScopeId = self::instrumentationScopeId($instrumentationScope);
+        $instrumentId = self::instrumentId($instrument);
+
+        $asynchronousInstrument = $this->asynchronous[$instrumentationScopeId][$instrumentId] ?? null;
+        if (!$asynchronousInstrument || $asynchronousInstrument[0] !== $instrument) {
+            return null;
+        }
+
+        return $asynchronousInstrument;
+    }
 
     /**
      * @return array{Instrument, ReferenceCounter}
@@ -111,7 +128,7 @@ final class MeterState {
     }
 
     /**
-     * @return array{Instrument, ReferenceCounter, WeakMap<object, ObservableCallbackDestructor>}
+     * @return array{Instrument, ReferenceCounter}
      */
     public function createAsynchronousInstrument(Instrument $instrument, InstrumentationScope $instrumentationScope): array {
         $instrumentationScopeId = self::instrumentationScopeId($instrumentationScope);

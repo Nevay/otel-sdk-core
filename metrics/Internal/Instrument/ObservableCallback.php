@@ -7,13 +7,12 @@ use OpenTelemetry\API\Metrics\ObservableCallbackInterface;
 
 final class ObservableCallback implements ObservableCallbackInterface {
 
-    /** @noinspection PhpPropertyOnlyWrittenInspection */
     public function __construct(
         private readonly MetricWriter $writer,
         private readonly ReferenceCounter $referenceCounter,
         private ?int $callbackId,
         private readonly ?ObservableCallbackDestructor $callbackDestructor,
-        private readonly ?object $target,
+        private ?object $target,
     ) {}
 
     public function detach(): void {
@@ -25,9 +24,13 @@ final class ObservableCallback implements ObservableCallbackInterface {
         $this->referenceCounter->release();
         if ($this->callbackDestructor !== null) {
             unset($this->callbackDestructor->callbackIds[$this->callbackId]);
+            if (!$this->callbackDestructor->callbackIds) {
+                unset($this->callbackDestructor->destructors[$this->target]);
+            }
         }
 
         $this->callbackId = null;
+        $this->target = null;
     }
 
     public function __destruct() {
