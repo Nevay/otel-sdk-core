@@ -8,7 +8,7 @@ final class Overflow {
     public final const INDEX = '';
 
     public static function check(array $indexedAttributes, int|string $index, ?int $cardinalityLimit): bool {
-        return $cardinalityLimit && count($indexedAttributes) >= $cardinalityLimit && !isset($indexedAttributes[$index]);
+        return $cardinalityLimit !== null && count($indexedAttributes) >= $cardinalityLimit && !isset($indexedAttributes[$index]);
     }
     
     public static function attributes(): Attributes {

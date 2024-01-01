@@ -6,5 +6,8 @@ namespace Nevay\OtelSDK\Metrics;
  */
 interface CardinalityLimitResolver {
 
+    /**
+     * @return int<0, max>|null
+     */
     public function resolveCardinalityLimit(InstrumentType $instrumentType): ?int;
 }
