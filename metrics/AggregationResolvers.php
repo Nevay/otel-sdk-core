@@ -1,7 +1,10 @@
 <?php declare(strict_types=1);
 namespace Nevay\OtelSDK\Metrics;
 
-use Closure;
+use Nevay\OtelSDK\Metrics\Aggregation\ExplicitBucketHistogramAggregationResolver;
+use Nevay\OtelSDK\Metrics\Aggregation\LastValueAggregationResolver;
+use Nevay\OtelSDK\Metrics\Aggregation\SumAggregationResolver;
+use function assert;
 
 enum AggregationResolvers implements AggregationResolver {
 
@@ -14,7 +17,7 @@ enum AggregationResolvers implements AggregationResolver {
      * @param Aggregation|null $aggregation
      * @return AggregationResolver
      */
-    public static function resolved(?Aggregation $aggregation): AggregationResolver {
+    public static function fromAggregation(?Aggregation $aggregation): AggregationResolver {
         return new class($aggregation) implements AggregationResolver {
 
             public function __construct(
@@ -27,36 +30,25 @@ enum AggregationResolvers implements AggregationResolver {
         };
     }
 
-    /**
-     * @param Closure(InstrumentType, array): ?Aggregation $callback
-     * @return AggregationResolver
-     */
-    public static function callback(Closure $callback): AggregationResolver {
-        return new class($callback) implements AggregationResolver {
+    public function resolveAggregation(InstrumentType $instrumentType, array $advisory = []): Aggregation {
+        $aggregation = $this->resolver($instrumentType)->resolveAggregation($instrumentType, $advisory);
+        assert($aggregation !== null);
 
-            public function __construct(
-                private readonly Closure $callback,
-            ) {}
-
-            public function resolveAggregation(InstrumentType $instrumentType, array $advisory = []): ?Aggregation {
-                return ($this->callback)($instrumentType, $advisory);
-            }
-        };
+        return $aggregation;
     }
 
-    public function resolveAggregation(InstrumentType $instrumentType, array $advisory = []): ?Aggregation {
+    private function resolver(InstrumentType $instrumentType): AggregationResolver {
         return match ($instrumentType) {
             InstrumentType::Counter,
             InstrumentType::AsynchronousCounter,
-                => new Aggregation\SumAggregation(true),
             InstrumentType::UpDownCounter,
             InstrumentType::AsynchronousUpDownCounter,
-                => new Aggregation\SumAggregation(),
+                => new SumAggregationResolver(),
             InstrumentType::Histogram,
-                => new Aggregation\ExplicitBucketHistogramAggregation(boundaries: $advisory['ExplicitBucketBoundaries'] ?? [0, 5, 10, 25, 50, 75, 100, 250, 500, 1000, 2500, 5000, 7500, 10000]),
+                => new ExplicitBucketHistogramAggregationResolver(),
             InstrumentType::Gauge,
             InstrumentType::AsynchronousGauge,
-                => new Aggregation\LastValueAggregation(),
+                => new LastValueAggregationResolver(),
         };
     }
 }

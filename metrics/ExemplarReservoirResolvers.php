@@ -14,39 +14,26 @@ enum ExemplarReservoirResolvers implements ExemplarReservoirResolver {
     case WithSampledTrace;
     case None;
 
-    /**
-     * @param Closure(Aggregation): ?ExemplarReservoirFactory $callback
-     * @return ExemplarReservoirResolver
-     */
-    public static function callback(Closure $callback): ExemplarReservoirResolver {
-        return new class($callback) implements ExemplarReservoirResolver {
+    public static function fromFactory(?ExemplarReservoirFactory $exemplarReservoirFactory): ExemplarReservoirResolver {
+        return new class($exemplarReservoirFactory) implements ExemplarReservoirResolver {
 
             public function __construct(
-                private readonly Closure $callback,
+                private readonly ?ExemplarReservoirFactory $exemplarReservoirFactory,
             ) {}
 
             public function resolveExemplarReservoir(Aggregation $aggregation): ?ExemplarReservoirFactory {
-                return ($this->callback)($aggregation);
+                return $this->exemplarReservoirFactory;
             }
         };
     }
 
     public function resolveExemplarReservoir(Aggregation $aggregation): ?ExemplarReservoirFactory {
         return match ($this) {
-            self::All,
-                => self::defaultExemplarReservoirFactory($aggregation),
-            self::WithSampledTrace,
-                => new FilteredReservoirFactory(self::defaultExemplarReservoirFactory($aggregation), new WithSampledTraceExemplarFilter()),
-            self::None,
-                => null,
+            self::All => $aggregation instanceof ExplicitBucketHistogramAggregation && $aggregation->boundaries
+                ? new AlignedHistogramBucketExemplarReservoirFactory($aggregation->boundaries)
+                : new SimpleFixedSizeExemplarReservoirFactory(),
+            self::WithSampledTrace => new FilteredReservoirFactory(self::All->resolveExemplarReservoir($aggregation), new WithSampledTraceExemplarFilter()),
+            self::None => null,
         };
-    }
-
-    private static function defaultExemplarReservoirFactory(Aggregation $aggregation): ExemplarReservoirFactory {
-        if ($aggregation instanceof ExplicitBucketHistogramAggregation && $aggregation->boundaries) {
-            return new AlignedHistogramBucketExemplarReservoirFactory($aggregation->boundaries);
-        }
-
-        return new SimpleFixedSizeExemplarReservoirFactory();
     }
 }

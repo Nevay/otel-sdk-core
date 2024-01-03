@@ -20,8 +20,8 @@ final class View {
      */
     public function __construct(
         public readonly ?string $name = null,
-        public readonly string|null|false $unit = null,
-        public readonly string|null|false $description = null,
+        public readonly string|false|null $unit = null,
+        public readonly string|false|null $description = null,
         public readonly AttributeProcessor|false|null $attributeProcessor = null,
         public readonly AggregationResolver|false|null $aggregationResolver = null,
         public readonly ExemplarReservoirResolver|false|null $exemplarReservoirResolver = null,
@@ -29,7 +29,7 @@ final class View {
     ) {}
 
     public static function drop(): View {
-        static $drop = new View(attributeProcessor: false, aggregationResolver: false, exemplarReservoirResolver: false, cardinalityLimitResolver: false);
+        static $drop = new View(aggregationResolver: false);
         return $drop;
     }
 }

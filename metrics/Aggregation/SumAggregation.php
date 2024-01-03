@@ -14,7 +14,7 @@ use OpenTelemetry\Context\ContextInterface;
 final class SumAggregation implements Aggregation {
 
     public function __construct(
-        public readonly bool $monotonic = false,
+        public readonly bool $monotonic,
     ) {}
 
     public function initialize(): SumSummary {

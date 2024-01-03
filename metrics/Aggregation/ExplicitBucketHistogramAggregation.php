@@ -22,7 +22,8 @@ final class ExplicitBucketHistogramAggregation implements Aggregation {
      */
     public function __construct(
         public readonly array $boundaries,
-        public readonly bool $recordMinMax = true,
+        public readonly bool $recordMinMax,
+        public readonly bool $recordSum,
     ) {}
 
     public function initialize(): ExplicitBucketHistogramSummary {
@@ -30,8 +31,8 @@ final class ExplicitBucketHistogramAggregation implements Aggregation {
             0,
             0,
             0,
-            $this->recordMinMax ? +INF : NAN,
-            $this->recordMinMax ? -INF : NAN,
+            +INF,
+            -INF,
             array_fill(0, count($this->boundaries) + 1, 0),
         );
     }
@@ -85,9 +86,9 @@ final class ExplicitBucketHistogramAggregation implements Aggregation {
         foreach ($attributes as $key => $dataPointAttributes) {
             $dataPoints[] = new HistogramDataPoint(
                 $summaries[$key]->count,
-                $summaries[$key]->sum,
-                $summaries[$key]->min,
-                $summaries[$key]->max,
+                $this->recordSum ? $summaries[$key]->sum : null,
+                $this->recordMinMax ? $summaries[$key]->min : null,
+                $this->recordMinMax ? $summaries[$key]->max : null,
                 $summaries[$key]->buckets,
                 $this->boundaries,
                 $dataPointAttributes,

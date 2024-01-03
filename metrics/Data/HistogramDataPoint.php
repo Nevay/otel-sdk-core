@@ -15,9 +15,9 @@ final class HistogramDataPoint implements DataPoint {
      */
     public function __construct(
         public readonly int $count,
-        public readonly float|int $sum,
-        public readonly float|int $min,
-        public readonly float|int $max,
+        public readonly float|int|null $sum,
+        public readonly float|int|null $min,
+        public readonly float|int|null $max,
         public readonly array $bucketCounts,
         public readonly array $explicitBounds,
         public readonly Attributes $attributes,
