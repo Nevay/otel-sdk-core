@@ -4,10 +4,13 @@ namespace Nevay\OtelSDK\Metrics\Internal;
 use Nevay\OtelSDK\Metrics\AggregationResolver;
 use Nevay\OtelSDK\Metrics\CardinalityLimitResolver;
 use Nevay\OtelSDK\Metrics\ExemplarReservoirResolver;
+use Nevay\OtelSDK\Metrics\Internal\Registry\MetricCollector;
 use Nevay\OtelSDK\Metrics\MetricReader;
 use Nevay\OtelSDK\Metrics\TemporalityResolver;
 
 final class MetricReaderConfiguration {
+
+    public readonly MeterMetricProducer $metricProducer;
 
     public function __construct(
         public readonly MetricReader $metricReader,
@@ -16,4 +19,9 @@ final class MetricReaderConfiguration {
         public readonly ExemplarReservoirResolver $exemplarReservoirResolver,
         public readonly CardinalityLimitResolver $cardinalityLimitResolver,
     ) {}
+
+    public function initMetricProducer(MetricCollector $metricCollector): void {
+        $this->metricProducer = new MeterMetricProducer($metricCollector);
+        $this->metricReader->registerProducer($this->metricProducer);
+    }
 }

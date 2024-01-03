@@ -42,14 +42,14 @@ final class MeterState {
     private array $instrumentIdentities = [];
 
     /**
-     * @param iterable<MeterMetricProducer> $producers
+     * @param iterable<MetricReaderConfiguration> $metricReaderConfigurations
      * @param WeakMap<object, ObservableCallbackDestructor> $destructors
      */
     public function __construct(
         public readonly MetricRegistry $registry,
         private readonly Resource $resource,
         private readonly Clock $clock,
-        private readonly iterable $producers,
+        public readonly iterable $metricReaderConfigurations,
         private readonly ViewRegistry $viewRegistry,
         private readonly StalenessHandlerFactory $stalenessHandlerFactory,
         public readonly WeakMap $destructors,
@@ -108,7 +108,9 @@ final class MeterState {
                 $streams[$streamId] = $stream;
                 $dedup[$dedupId] = $streamId;
             }
-            $view->metricProducer->registerMetricSource($streamId, $view->descriptor, $streams[$streamId], $view->temporality);
+            $stream = $streams[$streamId];
+            $source = new MetricStreamSource($view->descriptor, $stream, $stream->register($view->temporality));
+            $view->metricProducer->registerMetricSource($streamId, $source);
         }
 
         $streamIds = array_keys($streams);
@@ -163,7 +165,9 @@ final class MeterState {
                 $streams[$streamId] = $stream;
                 $dedup[$dedupId] = $streamId;
             }
-            $view->metricProducer->registerMetricSource($streamId, $view->descriptor, $streams[$streamId], $view->temporality);
+            $stream = $streams[$streamId];
+            $source = new MetricStreamSource($view->descriptor, $stream, $stream->register($view->temporality));
+            $view->metricProducer->registerMetricSource($streamId, $source);
         }
 
         $streamIds = array_keys($streams);
@@ -179,7 +183,6 @@ final class MeterState {
         return $this->asynchronous[$instrumentationScopeId][$instrumentId] = [
             $instrument,
             $stalenessHandler,
-            new WeakMap(),
         ];
     }
 
@@ -214,19 +217,26 @@ final class MeterState {
                 $streamTemporality,
             );
 
-            foreach ($this->producers as $producer) {
-                if (!$producerTemporality = $producer->temporalityResolver->resolveTemporality($descriptor)) {
+            $viewAggregation = $view->aggregationResolver?->resolveAggregation($instrument->type, $instrument->advisory);
+            if (!$viewAggregation && $view->aggregationResolver) {
+                $this->logger?->warning('View aggregation "{aggregation}" incompatible with instrument type "{instrument_type}", dropping view "{view}"', [
+                    'aggregation' => $view->aggregationResolver,
+                    'instrument_type' => $instrument->type,
+                    'view' => $descriptor->name,
+                ]);
+                continue;
+            }
+
+            foreach ($this->metricReaderConfigurations as $metricReaderConfiguration) {
+                if (!$producerTemporality = $metricReaderConfiguration->temporalityResolver->resolveTemporality($descriptor)) {
+                    continue;
+                }
+                if (!$aggregation = $viewAggregation ?? $metricReaderConfiguration->aggregationResolver->resolveAggregation($instrument->type, $instrument->advisory)) {
                     continue;
                 }
 
-                $aggregationResolver = $view->aggregationResolver ?? $producer->aggregationResolver ?: null;
-                $exemplarReservoirResolver = $view->exemplarReservoirResolver ?? $producer->exemplarReservoirResolver ?: null;
-                $cardinalityLimitResolver = $view->cardinalityLimitResolver ?? $producer->cardinalityLimitResolver ?: null;
-
-                if (!$aggregation = $aggregationResolver?->resolveAggregation($instrument->type, $instrument->advisory)) {
-                    continue;
-                }
-
+                $exemplarReservoirResolver = $view->exemplarReservoirResolver ?? $metricReaderConfiguration->exemplarReservoirResolver ?: null;
+                $cardinalityLimitResolver = $view->cardinalityLimitResolver ?? $metricReaderConfiguration->cardinalityLimitResolver ?: null;
                 $exemplarReservoirFactory = $exemplarReservoirResolver?->resolveExemplarReservoir($aggregation);
                 $cardinalityLimit = $cardinalityLimitResolver?->resolveCardinalityLimit($instrument->type);
 
@@ -236,7 +246,7 @@ final class MeterState {
                     $aggregation,
                     $exemplarReservoirFactory,
                     $cardinalityLimit,
-                    $producer,
+                    $metricReaderConfiguration->metricProducer,
                     $producerTemporality,
                 );
             }
@@ -247,8 +257,8 @@ final class MeterState {
         $this->startTimestamp = null;
         foreach ($streamIds as $streamId) {
             $this->registry->unregisterStream($streamId);
-            foreach ($this->producers as $producer) {
-                $producer->unregisterStream($streamId);
+            foreach ($this->metricReaderConfigurations as $metricReaderConfiguration) {
+                $metricReaderConfiguration->metricProducer->unregisterStream($streamId);
             }
         }
     }

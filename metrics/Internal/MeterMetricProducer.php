@@ -2,45 +2,24 @@
 namespace Nevay\OtelSDK\Metrics\Internal;
 
 use Amp\Cancellation;
-use Nevay\OtelSDK\Metrics\AggregationResolver;
-use Nevay\OtelSDK\Metrics\CardinalityLimitResolver;
-use Nevay\OtelSDK\Metrics\Data\Descriptor;
 use Nevay\OtelSDK\Metrics\Data\Metric;
-use Nevay\OtelSDK\Metrics\Data\Temporality;
-use Nevay\OtelSDK\Metrics\ExemplarReservoirResolver;
 use Nevay\OtelSDK\Metrics\Internal\Registry\MetricCollector;
-use Nevay\OtelSDK\Metrics\Internal\Stream\MetricStream;
 use Nevay\OtelSDK\Metrics\MetricFilter;
 use Nevay\OtelSDK\Metrics\MetricFilterResult;
 use Nevay\OtelSDK\Metrics\MetricProducer;
-use Nevay\OtelSDK\Metrics\TemporalityResolver;
 use function array_keys;
 use function count;
 
 final class MeterMetricProducer implements MetricProducer {
 
     private readonly MetricCollector $collector;
-    public readonly TemporalityResolver $temporalityResolver;
-    public readonly AggregationResolver $aggregationResolver;
-    public readonly ExemplarReservoirResolver $exemplarReservoirResolver;
-    public readonly CardinalityLimitResolver $cardinalityLimitResolver;
 
     /** @var array<int, list<MetricStreamSource>> */
     private array $sources = [];
     private ?array $streamIds = null;
 
-    public function __construct(
-        MetricCollector $collector,
-        TemporalityResolver $temporalityResolver,
-        AggregationResolver $aggregationResolver,
-        ExemplarReservoirResolver $exemplarReservoirResolver,
-        CardinalityLimitResolver $cardinalityLimitResolver,
-    ) {
+    public function __construct(MetricCollector $collector) {
         $this->collector = $collector;
-        $this->temporalityResolver = $temporalityResolver;
-        $this->aggregationResolver = $aggregationResolver;
-        $this->exemplarReservoirResolver = $exemplarReservoirResolver;
-        $this->cardinalityLimitResolver = $cardinalityLimitResolver;
     }
 
     public function unregisterStream(int $streamId): void {
@@ -52,12 +31,8 @@ final class MeterMetricProducer implements MetricProducer {
         $this->streamIds = null;
     }
 
-    public function registerMetricSource(int $streamId, Descriptor $descriptor, MetricStream $stream, Temporality $temporality): void {
-        $this->sources[$streamId][] = new MetricStreamSource(
-            $descriptor,
-            $stream,
-            $stream->register($temporality),
-        );
+    public function registerMetricSource(int $streamId, MetricStreamSource $streamSource): void {
+        $this->sources[$streamId][] = $streamSource;
         $this->streamIds = null;
     }
 

@@ -23,7 +23,6 @@ final class MeterProvider implements MeterProviderInterface, Provider {
 
     private readonly MeterState $meterState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
-    private readonly iterable $metricReaders;
 
     /**
      * @param iterable<MetricReaderConfiguration> $metricReaderConfigurations
@@ -41,34 +40,21 @@ final class MeterProvider implements MeterProviderInterface, Provider {
     ) {
         $registry = new MetricRegistry($contextStorage, $metricAttributesFactory, $clock, $logger);
 
-        $metricProducers = [];
-        $metricReaders = [];
-        foreach ($metricReaderConfigurations as $configuration) {
-            $producer = new MeterMetricProducer(
-                $registry,
-                $configuration->temporalityResolver,
-                $configuration->aggregationResolver,
-                $configuration->exemplarReservoirResolver,
-                $configuration->cardinalityLimitResolver,
-            );
-            $configuration->metricReader->registerProducer($producer);
-
-            $metricProducers[] = $producer;
-            $metricReaders[] = $configuration->metricReader;
+        foreach ($metricReaderConfigurations as $metricReaderConfiguration) {
+            $metricReaderConfiguration->initMetricProducer($registry);
         }
 
         $this->meterState = new MeterState(
             $registry,
             $resource,
             $clock,
-            $metricProducers,
+            $metricReaderConfigurations,
             $viewRegistry,
             $stalenessHandlerFactory,
             new WeakMap(),
             $logger,
         );
         $this->instrumentationScopeAttributesFactory = $instrumentationScopeAttributesFactory;
-        $this->metricReaders = $metricReaders;
     }
 
     public function getMeter(
@@ -90,8 +76,8 @@ final class MeterProvider implements MeterProviderInterface, Provider {
         $shutdown = static function(MetricReader $r, ?Cancellation $cancellation): bool {
             return $r->shutdown($cancellation);
         };
-        foreach ($this->metricReaders as $metricReader) {
-            $futures[] = async($shutdown, $metricReader, $cancellation);
+        foreach ($this->meterState->metricReaderConfigurations as $metricReaderConfiguration) {
+            $futures[] = async($shutdown, $metricReaderConfiguration->metricReader, $cancellation);
         }
 
         $success = true;
@@ -109,8 +95,8 @@ final class MeterProvider implements MeterProviderInterface, Provider {
         $shutdown = static function(MetricReader $r, ?Cancellation $cancellation): bool {
             return $r->forceFlush($cancellation);
         };
-        foreach ($this->metricReaders as $metricReader) {
-            $futures[] = async($shutdown, $metricReader, $cancellation);
+        foreach ($this->meterState->metricReaderConfigurations as $metricReaderConfiguration) {
+            $futures[] = async($shutdown, $metricReaderConfiguration->metricReader, $cancellation);
         }
 
         $success = true;

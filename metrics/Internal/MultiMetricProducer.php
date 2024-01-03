@@ -15,9 +15,13 @@ final class MultiMetricProducer implements MetricProducer {
     public array $metricProducers = [];
 
     public function produce(?MetricFilter $metricFilter = null, ?Cancellation $cancellation = null): iterable {
+        if (!$this->metricProducers) {
+            return [];
+        }
+
         $queue = new Queue();
         $pending = count($this->metricProducers);
-        $handler = static function(MetricProducer $metricProducer, ?MetricFilter $metricFilter, Cancellation $cancellation, Queue $queue) use (&$pending): void {
+        $handler = static function(MetricProducer $metricProducer, ?MetricFilter $metricFilter, ?Cancellation $cancellation, Queue $queue) use (&$pending): void {
             try {
                 if (!$queue->isDisposed()) {
                     foreach ($metricProducer->produce($metricFilter, $cancellation) as $metric) {
