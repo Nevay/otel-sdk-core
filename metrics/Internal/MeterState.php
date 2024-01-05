@@ -4,6 +4,7 @@ namespace Nevay\OtelSDK\Metrics\Internal;
 use Nevay\OtelSDK\Common\Clock;
 use Nevay\OtelSDK\Common\InstrumentationScope;
 use Nevay\OtelSDK\Common\Resource;
+use Nevay\OtelSDK\Metrics\Aggregation\DropAggregation;
 use Nevay\OtelSDK\Metrics\AttributeProcessor\FilteredAttributeProcessor;
 use Nevay\OtelSDK\Metrics\Data\Descriptor;
 use Nevay\OtelSDK\Metrics\Data\Temporality;
@@ -231,7 +232,9 @@ final class MeterState {
                 if (!$producerTemporality = $metricReaderConfiguration->temporalityResolver->resolveTemporality($descriptor)) {
                     continue;
                 }
-                if (!$aggregation = $viewAggregation ?? $metricReaderConfiguration->aggregationResolver->resolveAggregation($instrument->type, $instrument->advisory)) {
+
+                $aggregation = $viewAggregation ?? $metricReaderConfiguration->aggregationResolver->resolveAggregation($instrument->type, $instrument->advisory);
+                if (!$aggregation || $aggregation instanceof DropAggregation) {
                     continue;
                 }
 
