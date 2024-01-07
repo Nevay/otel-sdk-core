@@ -49,13 +49,13 @@ final class TracerProviderBuilder {
         return $this;
     }
 
-    public function setIdGenerator(IdGenerator $idGenerator): self {
+    public function setIdGenerator(?IdGenerator $idGenerator): self {
         $this->idGenerator = $idGenerator;
 
         return $this;
     }
 
-    public function setSampler(Sampler $sampler): self {
+    public function setSampler(?Sampler $sampler): self {
         $this->sampler = $sampler;
 
         return $this;
