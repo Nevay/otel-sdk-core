@@ -8,6 +8,7 @@ use Nevay\OtelSDK\Metrics\Aggregation\DropAggregation;
 use Nevay\OtelSDK\Metrics\AttributeProcessor\FilteredAttributeProcessor;
 use Nevay\OtelSDK\Metrics\Data\Descriptor;
 use Nevay\OtelSDK\Metrics\Data\Temporality;
+use Nevay\OtelSDK\Metrics\ExemplarReservoirResolver;
 use Nevay\OtelSDK\Metrics\Instrument;
 use Nevay\OtelSDK\Metrics\Internal\Instrument\ObservableCallbackDestructor;
 use Nevay\OtelSDK\Metrics\Internal\Registry\MetricRegistry;
@@ -19,6 +20,7 @@ use Nevay\OtelSDK\Metrics\Internal\Stream\DefaultMetricAggregatorFactory;
 use Nevay\OtelSDK\Metrics\Internal\Stream\SynchronousMetricStream;
 use Nevay\OtelSDK\Metrics\Internal\View\ResolvedView;
 use Nevay\OtelSDK\Metrics\Internal\View\ViewRegistry;
+use Nevay\OtelSDK\Metrics\MetricReader;
 use Nevay\OtelSDK\Metrics\View;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -43,14 +45,17 @@ final class MeterState {
     private array $instrumentIdentities = [];
 
     /**
-     * @param iterable<MetricReaderConfiguration> $metricReaderConfigurations
+     * @param array<MetricReader> $metricReaders
+     * @param array<MeterMetricProducer> $metricProducers
      * @param WeakMap<object, ObservableCallbackDestructor> $destructors
      */
     public function __construct(
         public readonly MetricRegistry $registry,
         private readonly Resource $resource,
         private readonly Clock $clock,
-        public readonly iterable $metricReaderConfigurations,
+        public readonly array $metricReaders,
+        private readonly array $metricProducers,
+        private readonly ExemplarReservoirResolver $exemplarReservoirResolver,
         private readonly ViewRegistry $viewRegistry,
         private readonly StalenessHandlerFactory $stalenessHandlerFactory,
         public readonly WeakMap $destructors,
@@ -228,18 +233,18 @@ final class MeterState {
                 continue;
             }
 
-            foreach ($this->metricReaderConfigurations as $metricReaderConfiguration) {
-                if (!$producerTemporality = $metricReaderConfiguration->temporalityResolver->resolveTemporality($descriptor)) {
+            foreach ($this->metricReaders as $i => $metricReader) {
+                if (!$producerTemporality = $metricReader->resolveTemporality($descriptor)) {
                     continue;
                 }
 
-                $aggregation = $viewAggregation ?? $metricReaderConfiguration->aggregationResolver->resolveAggregation($instrument->type, $instrument->advisory);
+                $aggregation = $viewAggregation ?? $metricReader->resolveAggregation($instrument->type, $instrument->advisory);
                 if (!$aggregation || $aggregation instanceof DropAggregation) {
                     continue;
                 }
 
-                $exemplarReservoirResolver = $view->exemplarReservoirResolver ?? $metricReaderConfiguration->exemplarReservoirResolver ?: null;
-                $cardinalityLimitResolver = $view->cardinalityLimitResolver ?? $metricReaderConfiguration->cardinalityLimitResolver ?: null;
+                $exemplarReservoirResolver = $view->exemplarReservoirResolver ?? $this->exemplarReservoirResolver ?: null;
+                $cardinalityLimitResolver = $view->cardinalityLimitResolver ?? $metricReader ?: null;
                 $exemplarReservoirFactory = $exemplarReservoirResolver?->resolveExemplarReservoir($aggregation);
                 $cardinalityLimit = $cardinalityLimitResolver?->resolveCardinalityLimit($instrument->type);
 
@@ -249,7 +254,7 @@ final class MeterState {
                     $aggregation,
                     $exemplarReservoirFactory,
                     $cardinalityLimit,
-                    $metricReaderConfiguration->metricProducer,
+                    $this->metricProducers[$i],
                     $producerTemporality,
                 );
             }
@@ -260,8 +265,8 @@ final class MeterState {
         $this->startTimestamp = null;
         foreach ($streamIds as $streamId) {
             $this->registry->unregisterStream($streamId);
-            foreach ($this->metricReaderConfigurations as $metricReaderConfiguration) {
-                $metricReaderConfiguration->metricProducer->unregisterStream($streamId);
+            foreach ($this->metricProducers as $metricProducer) {
+                $metricProducer->unregisterStream($streamId);
             }
         }
     }

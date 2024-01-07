@@ -8,7 +8,7 @@ use Nevay\OtelSDK\Metrics\Data\Metric;
 /**
  * @see https://opentelemetry.io/docs/specs/otel/metrics/sdk/#metricexporter
  */
-interface MetricExporter {
+interface MetricExporter extends TemporalityResolver, AggregationResolver, CardinalityLimitResolver {
 
     /**
      * @param iterable<Metric> $batch

@@ -7,7 +7,6 @@ use Nevay\OtelSDK\Common\Resource;
 use Nevay\OtelSDK\Common\SystemClock;
 use Nevay\OtelSDK\Common\UnlimitedAttributesFactory;
 use Nevay\OtelSDK\Metrics\Internal\MeterProvider;
-use Nevay\OtelSDK\Metrics\Internal\MetricReaderConfiguration;
 use Nevay\OtelSDK\Metrics\Internal\StalenessHandler\DelayedStalenessHandlerFactory;
 use Nevay\OtelSDK\Metrics\Internal\View\MutableViewRegistry;
 use OpenTelemetry\API\Metrics\MeterProviderInterface;
@@ -17,9 +16,11 @@ final class MeterProviderBuilder {
 
     /** @var list<Resource> */
     private array $resources = [];
-    /** @var list<MetricReaderConfiguration> */
-    private array $metricReaderConfigurations = [];
+    /** @var list<MetricReader> */
+    private array $metricReaders = [];
+    private ExemplarReservoirResolver $exemplarReservoirResolver = ExemplarReservoirResolvers::None;
     private readonly MutableViewRegistry $viewRegistry;
+
 
     public function __construct() {
         $this->viewRegistry = new MutableViewRegistry();
@@ -30,24 +31,18 @@ final class MeterProviderBuilder {
 
         return $this;
     }
-
-    public function addMetricReader(
-        MetricReader $metricReader,
-        TemporalityResolver $temporalityResolver = TemporalityResolvers::LowMemory,
-        AggregationResolver $aggregationResolver = AggregationResolvers::Default,
-        ExemplarReservoirResolver $exemplarReservoirResolver = ExemplarReservoirResolvers::None,
-        CardinalityLimitResolver $cardinalityLimitResolver = CardinalityLimitResolvers::Default,
-    ): self {
-        $this->metricReaderConfigurations[] = new MetricReaderConfiguration(
-            $metricReader,
-            $temporalityResolver,
-            $aggregationResolver,
-            $exemplarReservoirResolver,
-            $cardinalityLimitResolver,
-        );
+    public function addMetricReader(MetricReader $metricReader): self {
+        $this->metricReaders[] = $metricReader;
 
         return $this;
     }
+
+    public function setExemplarReservoirResolver(ExemplarReservoirResolver $exemplarReservoirResolver): self {
+        $this->exemplarReservoirResolver = $exemplarReservoirResolver;
+
+        return $this;
+    }
+
 
     public function addView(
         View $view,
@@ -70,7 +65,8 @@ final class MeterProviderBuilder {
             UnlimitedAttributesFactory::create(),
             SystemClock::create(),
             AttributesLimitingFactory::create(),
-            $this->metricReaderConfigurations,
+            $this->metricReaders,
+            $this->exemplarReservoirResolver,
             clone $this->viewRegistry,
             new DelayedStalenessHandlerFactory(24 * 60 * 60),
             $logger,

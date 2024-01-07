@@ -8,6 +8,7 @@ use Nevay\OtelSDK\Common\Clock;
 use Nevay\OtelSDK\Common\InstrumentationScope;
 use Nevay\OtelSDK\Common\Provider;
 use Nevay\OtelSDK\Common\Resource;
+use Nevay\OtelSDK\Metrics\ExemplarReservoirResolver;
 use Nevay\OtelSDK\Metrics\Internal\Registry\MetricRegistry;
 use Nevay\OtelSDK\Metrics\Internal\StalenessHandler\StalenessHandlerFactory;
 use Nevay\OtelSDK\Metrics\Internal\View\ViewRegistry;
@@ -25,7 +26,7 @@ final class MeterProvider implements MeterProviderInterface, Provider {
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
 
     /**
-     * @param iterable<MetricReaderConfiguration> $metricReaderConfigurations
+     * @param list<MetricReader> $metricReaders
      */
     public function __construct(
         ?ContextStorageInterface $contextStorage,
@@ -33,22 +34,27 @@ final class MeterProvider implements MeterProviderInterface, Provider {
         AttributesFactory $instrumentationScopeAttributesFactory,
         Clock $clock,
         AttributesFactory $metricAttributesFactory,
-        iterable $metricReaderConfigurations,
+        array $metricReaders,
+        ExemplarReservoirResolver $exemplarReservoirResolver,
         ViewRegistry $viewRegistry,
         StalenessHandlerFactory $stalenessHandlerFactory,
         ?LoggerInterface $logger,
     ) {
         $registry = new MetricRegistry($contextStorage, $metricAttributesFactory, $clock, $logger);
 
-        foreach ($metricReaderConfigurations as $metricReaderConfiguration) {
-            $metricReaderConfiguration->initMetricProducer($registry);
+        $metricProducers = [];
+        foreach ($metricReaders as $metricReader) {
+            $metricProducers[] = $metricProducer = new MeterMetricProducer($registry);
+            $metricReader->registerProducer($metricProducer);
         }
 
         $this->meterState = new MeterState(
             $registry,
             $resource,
             $clock,
-            $metricReaderConfigurations,
+            $metricReaders,
+            $metricProducers,
+            $exemplarReservoirResolver,
             $viewRegistry,
             $stalenessHandlerFactory,
             new WeakMap(),
@@ -76,8 +82,8 @@ final class MeterProvider implements MeterProviderInterface, Provider {
         $shutdown = static function(MetricReader $r, ?Cancellation $cancellation): bool {
             return $r->shutdown($cancellation);
         };
-        foreach ($this->meterState->metricReaderConfigurations as $metricReaderConfiguration) {
-            $futures[] = async($shutdown, $metricReaderConfiguration->metricReader, $cancellation);
+        foreach ($this->meterState->metricReaders as $metricReader) {
+            $futures[] = async($shutdown, $metricReader, $cancellation);
         }
 
         $success = true;
@@ -95,8 +101,8 @@ final class MeterProvider implements MeterProviderInterface, Provider {
         $shutdown = static function(MetricReader $r, ?Cancellation $cancellation): bool {
             return $r->forceFlush($cancellation);
         };
-        foreach ($this->meterState->metricReaderConfigurations as $metricReaderConfiguration) {
-            $futures[] = async($shutdown, $metricReaderConfiguration->metricReader, $cancellation);
+        foreach ($this->meterState->metricReaders as $metricReader) {
+            $futures[] = async($shutdown, $metricReader, $cancellation);
         }
 
         $success = true;

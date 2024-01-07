@@ -7,6 +7,10 @@ use Amp\Future;
 use Amp\TimeoutCancellation;
 use Composer\InstalledVersions;
 use InvalidArgumentException;
+use Nevay\OtelSDK\Metrics\Aggregation;
+use Nevay\OtelSDK\Metrics\Data\Descriptor;
+use Nevay\OtelSDK\Metrics\Data\Temporality;
+use Nevay\OtelSDK\Metrics\InstrumentType;
 use Nevay\OtelSDK\Metrics\Internal\MultiMetricProducer;
 use Nevay\OtelSDK\Metrics\MetricExporter;
 use Nevay\OtelSDK\Metrics\MetricFilter;
@@ -152,6 +156,18 @@ final class PullMetricReader implements MetricReader {
         }
 
         return true;
+    }
+
+    public function resolveTemporality(Descriptor $descriptor): ?Temporality {
+        return $this->metricExporter->resolveTemporality($descriptor);
+    }
+
+    public function resolveAggregation(InstrumentType $instrumentType, array $advisory = []): ?Aggregation {
+        return $this->metricExporter->resolveAggregation($instrumentType, $advisory);
+    }
+
+    public function resolveCardinalityLimit(InstrumentType $instrumentType): ?int {
+        return $this->metricExporter->resolveCardinalityLimit($instrumentType);
     }
 
     /**

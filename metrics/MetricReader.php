@@ -6,7 +6,7 @@ use Amp\Cancellation;
 /**
  * @see https://opentelemetry.io/docs/specs/otel/metrics/sdk/#metricreader
  */
-interface MetricReader {
+interface MetricReader extends TemporalityResolver, AggregationResolver, CardinalityLimitResolver {
 
     /**
      * @see https://opentelemetry.io/docs/specs/otel/metrics/sdk/#metricproducer
