@@ -12,13 +12,13 @@ final class FilteredReservoir implements ExemplarReservoir {
         private readonly ExemplarFilter $filter,
     ) {}
 
-    public function offer(int|string $index, float|int $value, Attributes $attributes, ContextInterface $context, int $timestamp): void {
+    public function offer(float|int $value, Attributes $attributes, ContextInterface $context, int $timestamp): void {
         if ($this->filter->accepts($value, $attributes, $context, $timestamp)) {
-            $this->reservoir->offer($index, $value, $attributes, $context, $timestamp);
+            $this->reservoir->offer($value, $attributes, $context, $timestamp);
         }
     }
 
-    public function collect(array $dataPointAttributes): array {
+    public function collect(Attributes $dataPointAttributes): array {
         return $this->reservoir->collect($dataPointAttributes);
     }
 }

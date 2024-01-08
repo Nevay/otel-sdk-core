@@ -2,8 +2,11 @@
 namespace Nevay\OtelSDK\Metrics\Internal\Stream;
 
 use GMP;
+use Nevay\OtelSDK\Common\Attributes;
 use Nevay\OtelSDK\Metrics\Aggregation;
 use Nevay\OtelSDK\Metrics\Data\Data;
+use Nevay\OtelSDK\Metrics\Data\Exemplar;
+use const INF;
 
 /**
  * @template TSummary
@@ -93,16 +96,50 @@ final class DeltaStorage {
     }
 
     private function mergeInto(Metric $into, Metric $metric): void {
-        foreach ($metric->summaries as $k => $summary) {
+        $overflowExemplars = [];
+        foreach ($metric->attributes as $k => $attributes) {
+            $summary = $metric->summaries[$k];
+            $exemplars = $metric->exemplars[$k] ?? [];
+
             if (Overflow::check($into->attributes, $k, $this->cardinalityLimit)) {
+                self::mergeOverflowExemplars($overflowExemplars, $exemplars, $attributes->toArray());
+
                 $k = Overflow::INDEX;
-                $into->attributes[$k] ??= Overflow::attributes();
+                $attributes = Overflow::attributes();
+                $exemplars = [];
             }
-            $into->attributes[$k] ??= $metric->attributes[$k];
+
+            $into->attributes[$k] ??= $attributes;
             $into->summaries[$k] = isset($into->summaries[$k])
                 ? $this->aggregation->merge($into->summaries[$k], $summary)
                 : $summary;
+
+            if ($exemplars) {
+                $into->exemplars[$k] = $exemplars + ($into->exemplars[$k] ?? []);
+            }
         }
-        $into->exemplars += $metric->exemplars;
+
+        if ($overflowExemplars) {
+            $k = Overflow::INDEX;
+            self::mergeOverflowExemplars($overflowExemplars, $metric->exemplars[$k] ?? [], []);
+            $into->exemplars[$k] = $overflowExemplars + ($into->exemplars[$k] ?? []);
+        }
+    }
+
+    /**
+     * @param array<Exemplar> $overflowExemplars
+     * @param array<Exemplar> $exemplars
+     */
+    private static function mergeOverflowExemplars(array &$overflowExemplars, array $exemplars, array $dataPointAttributes): void {
+        foreach ($exemplars as $i => $exemplar) {
+            if ($exemplar->timestamp > ($overflowExemplars[$i]->timestamp ?? -INF)) {
+                $overflowExemplars[$i] = new Exemplar(
+                    $exemplar->value,
+                    $exemplar->timestamp,
+                    new Attributes($exemplar->attributes->toArray() + $dataPointAttributes, $exemplar->attributes->getDroppedAttributesCount()),
+                    $exemplar->spanContext,
+                );
+            }
+        }
     }
 }

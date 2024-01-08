@@ -4,7 +4,6 @@ namespace Nevay\OtelSDK\Metrics\Internal\Stream;
 use GMP;
 use Nevay\OtelSDK\Metrics\Aggregation;
 use Nevay\OtelSDK\Metrics\Data\Data;
-use Nevay\OtelSDK\Metrics\Data\Exemplar;
 use Nevay\OtelSDK\Metrics\Data\Temporality;
 use function assert;
 use function extension_loaded;
@@ -100,7 +99,7 @@ final class SynchronousMetricStream implements MetricStream {
         return $this->aggregation->toData(
             $metric->attributes,
             $metric->summaries,
-            Exemplar::groupByIndex($metric->exemplars),
+            $metric->exemplars,
             $metric->timestamp,
             $this->timestamp,
             $temporality,

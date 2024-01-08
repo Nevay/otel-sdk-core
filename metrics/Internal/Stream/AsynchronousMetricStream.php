@@ -3,7 +3,6 @@ namespace Nevay\OtelSDK\Metrics\Internal\Stream;
 
 use Nevay\OtelSDK\Metrics\Aggregation;
 use Nevay\OtelSDK\Metrics\Data\Data;
-use Nevay\OtelSDK\Metrics\Data\Exemplar;
 use Nevay\OtelSDK\Metrics\Data\Temporality;
 use function array_search;
 use function count;
@@ -84,7 +83,7 @@ final class AsynchronousMetricStream implements MetricStream {
         return $this->aggregation->toData(
             $metric->attributes,
             $metric->summaries,
-            Exemplar::groupByIndex($metric->exemplars),
+            $metric->exemplars,
             $startTimestamp,
             $metric->timestamp,
             $temporality,

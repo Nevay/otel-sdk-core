@@ -19,16 +19,12 @@ final class BucketStorage {
 
     public function __construct(int $size = 0) {
         $this->buckets = array_fill(0, $size, null);
-        for ($i = 0; $i < $size; $i++) {
-            $this->buckets[$i] = new BucketEntry();
-        }
     }
 
-    public function store(int $bucket, int|string $index, float|int $value, Attributes $attributes, ContextInterface $context, int $timestamp): void {
+    public function store(int $bucket, float|int $value, Attributes $attributes, ContextInterface $context, int $timestamp): void {
         assert($bucket <= count($this->buckets));
 
         $exemplar = $this->buckets[$bucket] ??= new BucketEntry();
-        $exemplar->index = $index;
         $exemplar->value = $value;
         $exemplar->timestamp = $timestamp;
         $exemplar->attributes = $attributes;
@@ -40,28 +36,25 @@ final class BucketStorage {
     }
 
     /**
-     * @param array<Attributes> $dataPointAttributes
      * @return array<Exemplar>
      */
-    public function collect(array $dataPointAttributes): array {
+    public function collect(Attributes $dataPointAttributes): array {
         $exemplars = [];
         foreach ($this->buckets as $bucket => $entry) {
-            if (!isset($entry->index)) {
+            if (!isset($entry->value)) {
                 continue;
             }
 
             $exemplars[$bucket] = new Exemplar(
-                $entry->index,
                 $entry->value,
                 $entry->timestamp,
                 $this->filterExemplarAttributes(
-                    $dataPointAttributes[$entry->index],
+                    $dataPointAttributes,
                     $entry->attributes,
                 ),
                 $entry->spanContext,
             );
             unset(
-                $entry->index,
                 $entry->value,
                 $entry->timestamp,
                 $entry->attributes,

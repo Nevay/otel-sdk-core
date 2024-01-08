@@ -19,12 +19,12 @@ final class AlignedHistogramBucketExemplarReservoir implements ExemplarReservoir
         $this->boundaries = $boundaries;
     }
 
-    public function offer(int|string $index, float|int $value, Attributes $attributes, ContextInterface $context, int $timestamp): void {
+    public function offer(float|int $value, Attributes $attributes, ContextInterface $context, int $timestamp): void {
         for ($i = 0, $n = count($this->boundaries); $i < $n && $this->boundaries[$i] < $value; $i++) {}
-        $this->storage->store($i, $index, $value, $attributes, $context, $timestamp);
+        $this->storage->store($i, $value, $attributes, $context, $timestamp);
     }
 
-    public function collect(array $dataPointAttributes): array {
+    public function collect(Attributes $dataPointAttributes): array {
         return $this->storage->collect($dataPointAttributes);
     }
 }

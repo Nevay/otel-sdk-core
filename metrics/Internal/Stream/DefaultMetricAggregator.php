@@ -18,11 +18,15 @@ final class DefaultMetricAggregator implements MetricAggregator {
 
     private readonly Aggregation $aggregation;
     private readonly ?AttributeProcessor $attributeProcessor;
-    private readonly ?ExemplarReservoir $exemplarReservoir;
+    private readonly ?ExemplarReservoirFactory $exemplarReservoirFactory;
     private readonly ?int $cardinalityLimit;
 
+    /** @var array<Attributes> */
     private array $attributes = [];
+    /** @var array<TSummary> */
     private array $summaries = [];
+    /** @var array<ExemplarReservoir> */
+    private array $exemplarReservoirs = [];
 
     /**
      * @param Aggregation<TSummary, Data> $aggregation
@@ -35,7 +39,7 @@ final class DefaultMetricAggregator implements MetricAggregator {
     ) {
         $this->aggregation = $aggregation;
         $this->attributeProcessor = $attributeProcessor;
-        $this->exemplarReservoir = $exemplarReservoirFactory?->createExemplarReservoir();
+        $this->exemplarReservoirFactory = $exemplarReservoirFactory;
         $this->cardinalityLimit = $cardinalityLimit;
     }
 
@@ -55,17 +59,24 @@ final class DefaultMetricAggregator implements MetricAggregator {
             $context,
             $timestamp,
         );
-        if ($index !== Overflow::INDEX) {
-            $this->exemplarReservoir?->offer($index, $value, $attributes, $context, $timestamp);
+        if ($this->exemplarReservoirFactory) {
+            $this->exemplarReservoirs[$index] ??= $this->exemplarReservoirFactory->createExemplarReservoir();
+            $this->exemplarReservoirs[$index]->offer($value, $attributes, $context, $timestamp);
         }
     }
 
     public function collect(int $timestamp): Metric {
-        $exemplars = $this->exemplarReservoir?->collect($this->attributes) ?? [];
+        $exemplars = [];
+        foreach ($this->exemplarReservoirs as $index => $exemplarReservoir) {
+            if ($dataPointExemplars = $exemplarReservoir->collect($this->attributes[$index])) {
+                $exemplars[$index] = $dataPointExemplars;
+            }
+        }
         $metric = new Metric($this->attributes, $this->summaries, $timestamp, $exemplars);
 
         $this->attributes = [];
         $this->summaries = [];
+        $this->exemplarReservoirs = [];
 
         return $metric;
     }

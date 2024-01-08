@@ -28,7 +28,7 @@ final class SimpleFixedSizeExemplarReservoir implements ExemplarReservoir {
         $this->size = $size;
     }
 
-    public function offer(int|string $index, float|int $value, Attributes $attributes, ContextInterface $context, int $timestamp): void {
+    public function offer(float|int $value, Attributes $attributes, ContextInterface $context, int $timestamp): void {
         if ($this->measurements < $this->size) {
             $bucket = $this->measurements;
         } else {
@@ -39,11 +39,11 @@ final class SimpleFixedSizeExemplarReservoir implements ExemplarReservoir {
         }
         $this->measurements++;
         if ($bucket < $this->size) {
-            $this->storage->store($bucket, $index, $value, $attributes, $context, $timestamp);
+            $this->storage->store($bucket, $value, $attributes, $context, $timestamp);
         }
     }
 
-    public function collect(array $dataPointAttributes): array {
+    public function collect(Attributes $dataPointAttributes): array {
         $this->measurements = 0;
 
         return $this->storage->collect($dataPointAttributes);

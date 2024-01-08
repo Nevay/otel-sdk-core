@@ -9,7 +9,6 @@ use OpenTelemetry\API\Trace\SpanContextInterface;
  */
 final class BucketEntry {
 
-    public int|string $index;
     public float|int $value;
     public int $timestamp;
     public Attributes $attributes;

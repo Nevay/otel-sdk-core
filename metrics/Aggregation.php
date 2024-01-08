@@ -46,7 +46,7 @@ interface Aggregation {
     /**
      * @param array<Attributes> $attributes
      * @param array<TSummary> $summaries
-     * @param array<list<Exemplar>> $exemplars
+     * @param array<iterable<Exemplar>> $exemplars
      * @return TData
      */
     public function toData(
