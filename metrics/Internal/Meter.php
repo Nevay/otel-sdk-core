@@ -39,9 +39,6 @@ final class Meter implements MeterInterface {
         return $dummy ??= (new \ReflectionClass(Instrument::class))->newInstanceWithoutConstructor();
     }
 
-    /**
-     * @experimental
-     */
     public function batchObserve(callable $callback, AsynchronousInstrument $instrument, AsynchronousInstrument ...$instruments): ObservableCallbackInterface {
         $referenceCounters = [];
         $handles = [];
