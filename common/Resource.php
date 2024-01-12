@@ -126,7 +126,7 @@ final class Resource {
 
     private static function packageVersion(string $package): ?string {
         if (class_exists(InstalledVersions::class) && InstalledVersions::isInstalled($package)) {
-            return InstalledVersions::getVersionRanges($package);
+            return InstalledVersions::getPrettyVersion($package);
         }
 
         return null;
