@@ -6,7 +6,7 @@
     "require": {
         "php-64bit": "^8.1",
         "amphp/amp": "^3.0",
-        "tbachert/spi": "^0.1"
+        "tbachert/spi": "^0.1 || ^0.2"
     },
     "autoload": {
         "psr-4": {
