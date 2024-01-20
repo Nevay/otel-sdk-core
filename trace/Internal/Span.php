@@ -171,6 +171,9 @@ final class Span extends \OpenTelemetry\API\Trace\Span implements ReadWriteSpan,
         if (!$this->isRecording()) {
             return $this;
         }
+        if (!$context->isValid()) {
+            return $this;
+        }
         if ($this->tracerState->linkCountLimit === count($this->links)) {
             $this->droppedLinksCount++;
             return $this;
