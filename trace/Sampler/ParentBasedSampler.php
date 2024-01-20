@@ -39,14 +39,14 @@ final class ParentBasedSampler implements Sampler {
         return $sampler->shouldSample($context, $traceId, $spanName, $spanKind, $attributes, $links);
     }
 
-    public function getDescription(): string {
+    public function __toString(): string {
         return sprintf(
             'ParentBased{%s,%s,%s,%s,%s}',
-            $this->root->getDescription(),
-            $this->remoteParentSampled->getDescription(),
-            $this->remoteParentNotSampled->getDescription(),
-            $this->localParentSampled->getDescription(),
-            $this->localParentNotSampled->getDescription(),
+            $this->root,
+            $this->remoteParentSampled,
+            $this->remoteParentNotSampled,
+            $this->localParentSampled,
+            $this->localParentNotSampled,
         );
     }
 }

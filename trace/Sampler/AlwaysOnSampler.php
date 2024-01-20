@@ -21,7 +21,7 @@ final class AlwaysOnSampler implements Sampler {
         return SamplingDecision::RecordAndSample;
     }
 
-    public function getDescription(): string {
+    public function __toString(): string {
         return 'AlwaysOnSampler';
     }
 }

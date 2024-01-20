@@ -42,5 +42,5 @@ interface Sampler {
      *
      * @see https://opentelemetry.io/docs/specs/otel/trace/sdk/#getdescription
      */
-    public function getDescription(): string;
+    public function __toString(): string;
 }

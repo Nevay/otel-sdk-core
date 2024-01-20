@@ -41,7 +41,7 @@ final class TraceIdRatioBasedSampler implements Sampler {
             : SamplingDecision::Drop;
     }
 
-    public function getDescription(): string {
+    public function __toString(): string {
         return sprintf('TraceIdRatioBased{%F}', $this->ratio);
     }
 }

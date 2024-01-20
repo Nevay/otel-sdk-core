@@ -21,7 +21,7 @@ final class AlwaysOffSampler implements Sampler {
         return SamplingDecision::Drop;
     }
 
-    public function getDescription(): string {
+    public function __toString(): string {
         return 'AlwaysOffSampler';
     }
 }
