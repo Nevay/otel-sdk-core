@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Common\Provider;
+namespace Nevay\OTelSDK\Common\Provider;
 
 use Amp\Cancellation;
 use Amp\Future;
-use Nevay\OtelSDK\Common\Provider;
+use Nevay\OTelSDK\Common\Provider;
 use function Amp\async;
 
 final class MultiProvider implements Provider {

@@ -1,17 +1,17 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Trace;
+namespace Nevay\OTelSDK\Trace;
 
-use Nevay\OtelSDK\Common\AttributesLimitingFactory;
-use Nevay\OtelSDK\Common\Provider;
-use Nevay\OtelSDK\Common\Resource;
-use Nevay\OtelSDK\Common\SystemClock;
-use Nevay\OtelSDK\Common\SystemHighResolutionTime;
-use Nevay\OtelSDK\Common\UnlimitedAttributesFactory;
-use Nevay\OtelSDK\Trace\IdGenerator\RandomIdGenerator;
-use Nevay\OtelSDK\Trace\Internal\TracerProvider;
-use Nevay\OtelSDK\Trace\Sampler\AlwaysOnSampler;
-use Nevay\OtelSDK\Trace\Sampler\ParentBasedSampler;
-use Nevay\OtelSDK\Trace\SpanProcessor\MultiSpanProcessor;
+use Nevay\OTelSDK\Common\AttributesLimitingFactory;
+use Nevay\OTelSDK\Common\Provider;
+use Nevay\OTelSDK\Common\Resource;
+use Nevay\OTelSDK\Common\SystemClock;
+use Nevay\OTelSDK\Common\SystemHighResolutionTime;
+use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
+use Nevay\OTelSDK\Trace\IdGenerator\RandomIdGenerator;
+use Nevay\OTelSDK\Trace\Internal\TracerProvider;
+use Nevay\OTelSDK\Trace\Sampler\AlwaysOnSampler;
+use Nevay\OTelSDK\Trace\Sampler\ParentBasedSampler;
+use Nevay\OTelSDK\Trace\SpanProcessor\MultiSpanProcessor;
 use OpenTelemetry\API\Trace\TracerProviderInterface;
 use Psr\Log\LoggerInterface;
 

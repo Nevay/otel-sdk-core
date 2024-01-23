@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\AttributeProcessor;
+namespace Nevay\OTelSDK\Metrics\AttributeProcessor;
 
-use Nevay\OtelSDK\Common\Attributes;
-use Nevay\OtelSDK\Metrics\AttributeProcessor;
+use Nevay\OTelSDK\Common\Attributes;
+use Nevay\OTelSDK\Metrics\AttributeProcessor;
 use OpenTelemetry\Context\ContextInterface;
 
 final class NoopAttributeProcessor implements AttributeProcessor {

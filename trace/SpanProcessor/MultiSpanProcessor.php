@@ -1,11 +1,11 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Trace\SpanProcessor;
+namespace Nevay\OTelSDK\Trace\SpanProcessor;
 
 use Amp\Cancellation;
 use Amp\Future;
-use Nevay\OtelSDK\Trace\ReadableSpan;
-use Nevay\OtelSDK\Trace\ReadWriteSpan;
-use Nevay\OtelSDK\Trace\SpanProcessor;
+use Nevay\OTelSDK\Trace\ReadableSpan;
+use Nevay\OTelSDK\Trace\ReadWriteSpan;
+use Nevay\OTelSDK\Trace\SpanProcessor;
 use OpenTelemetry\Context\ContextInterface;
 use function Amp\async;
 

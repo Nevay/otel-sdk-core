@@ -1,12 +1,12 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Internal;
+namespace Nevay\OTelSDK\Metrics\Internal;
 
 use Amp\Cancellation;
-use Nevay\OtelSDK\Metrics\Data\Metric;
-use Nevay\OtelSDK\Metrics\Internal\Registry\MetricCollector;
-use Nevay\OtelSDK\Metrics\MetricFilter;
-use Nevay\OtelSDK\Metrics\MetricFilterResult;
-use Nevay\OtelSDK\Metrics\MetricProducer;
+use Nevay\OTelSDK\Metrics\Data\Metric;
+use Nevay\OTelSDK\Metrics\Internal\Registry\MetricCollector;
+use Nevay\OTelSDK\Metrics\MetricFilter;
+use Nevay\OTelSDK\Metrics\MetricFilterResult;
+use Nevay\OTelSDK\Metrics\MetricProducer;
 use function array_keys;
 use function count;
 

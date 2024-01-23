@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Internal\Instrument;
+namespace Nevay\OTelSDK\Metrics\Internal\Instrument;
 
-use Nevay\OtelSDK\Metrics\Internal\Registry\MetricWriter;
-use Nevay\OtelSDK\Metrics\Internal\StalenessHandler\ReferenceCounter;
+use Nevay\OTelSDK\Metrics\Internal\Registry\MetricWriter;
+use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\ReferenceCounter;
 use WeakMap;
 
 final class ObservableCallbackDestructor {

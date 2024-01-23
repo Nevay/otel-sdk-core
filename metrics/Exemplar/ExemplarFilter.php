@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Exemplar;
+namespace Nevay\OTelSDK\Metrics\Exemplar;
 
-use Nevay\OtelSDK\Common\Attributes;
+use Nevay\OTelSDK\Common\Attributes;
 use OpenTelemetry\Context\ContextInterface;
 
 interface ExemplarFilter {

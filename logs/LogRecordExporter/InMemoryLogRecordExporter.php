@@ -1,10 +1,10 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Logs\LogRecordExporter;
+namespace Nevay\OTelSDK\Logs\LogRecordExporter;
 
 use Amp\Cancellation;
 use Amp\Future;
-use Nevay\OtelSDK\Logs\LogRecordExporter;
-use Nevay\OtelSDK\Logs\ReadableLogRecord;
+use Nevay\OTelSDK\Logs\LogRecordExporter;
+use Nevay\OTelSDK\Logs\ReadableLogRecord;
 
 final class InMemoryLogRecordExporter implements LogRecordExporter {
 

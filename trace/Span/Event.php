@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Trace\Span;
+namespace Nevay\OTelSDK\Trace\Span;
 
-use Nevay\OtelSDK\Common\Attributes;
+use Nevay\OTelSDK\Common\Attributes;
 
 final class Event {
 

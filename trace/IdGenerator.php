@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Trace;
+namespace Nevay\OTelSDK\Trace;
 
 /**
  * Generator for trace ids and span ids.

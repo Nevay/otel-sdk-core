@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Internal\Registry;
+namespace Nevay\OTelSDK\Metrics\Internal\Registry;
 
 use Exception;
 

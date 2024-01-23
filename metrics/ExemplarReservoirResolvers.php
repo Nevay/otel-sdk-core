@@ -1,12 +1,12 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics;
+namespace Nevay\OTelSDK\Metrics;
 
 use Closure;
-use Nevay\OtelSDK\Metrics\Aggregation\ExplicitBucketHistogramAggregation;
-use Nevay\OtelSDK\Metrics\Exemplar\AlignedHistogramBucketExemplarReservoirFactory;
-use Nevay\OtelSDK\Metrics\Exemplar\ExemplarFilter\WithSampledTraceExemplarFilter;
-use Nevay\OtelSDK\Metrics\Exemplar\FilteredReservoirFactory;
-use Nevay\OtelSDK\Metrics\Exemplar\SimpleFixedSizeExemplarReservoirFactory;
+use Nevay\OTelSDK\Metrics\Aggregation\ExplicitBucketHistogramAggregation;
+use Nevay\OTelSDK\Metrics\Exemplar\AlignedHistogramBucketExemplarReservoirFactory;
+use Nevay\OTelSDK\Metrics\Exemplar\ExemplarFilter\WithSampledTraceExemplarFilter;
+use Nevay\OTelSDK\Metrics\Exemplar\FilteredReservoirFactory;
+use Nevay\OTelSDK\Metrics\Exemplar\SimpleFixedSizeExemplarReservoirFactory;
 
 enum ExemplarReservoirResolvers implements ExemplarReservoirResolver {
 

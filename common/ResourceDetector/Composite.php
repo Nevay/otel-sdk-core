@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
 
-namespace Nevay\OtelSDK\Common\ResourceDetector;
+namespace Nevay\OTelSDK\Common\ResourceDetector;
 
-use Nevay\OtelSDK\Common\Resource;
-use Nevay\OtelSDK\Common\ResourceDetector;
+use Nevay\OTelSDK\Common\Resource;
+use Nevay\OTelSDK\Common\ResourceDetector;
 use function Amp\async;
 
 final class Composite implements ResourceDetector {

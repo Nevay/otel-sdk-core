@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Internal;
+namespace Nevay\OTelSDK\Metrics\Internal;
 
-use Nevay\OtelSDK\Metrics\Data\Descriptor;
-use Nevay\OtelSDK\Metrics\Internal\Stream\MetricStream;
+use Nevay\OTelSDK\Metrics\Data\Descriptor;
+use Nevay\OTelSDK\Metrics\Internal\Stream\MetricStream;
 
 final class MetricStreamSource {
 

@@ -1,13 +1,13 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Trace;
+namespace Nevay\OTelSDK\Trace;
 
-use Nevay\OtelSDK\Common\Attributes;
-use Nevay\OtelSDK\Common\InstrumentationScope;
-use Nevay\OtelSDK\Common\Resource;
-use Nevay\OtelSDK\Trace\Span\Event;
-use Nevay\OtelSDK\Trace\Span\Kind;
-use Nevay\OtelSDK\Trace\Span\Link;
-use Nevay\OtelSDK\Trace\Span\Status;
+use Nevay\OTelSDK\Common\Attributes;
+use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Common\Resource;
+use Nevay\OTelSDK\Trace\Span\Event;
+use Nevay\OTelSDK\Trace\Span\Kind;
+use Nevay\OTelSDK\Trace\Span\Link;
+use Nevay\OTelSDK\Trace\Span\Status;
 use OpenTelemetry\API\Trace\SpanContextInterface;
 
 /**

@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Trace\Internal;
+namespace Nevay\OTelSDK\Trace\Internal;
 
-use Nevay\OtelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Common\InstrumentationScope;
 use OpenTelemetry\API\Trace\SpanBuilderInterface;
 use OpenTelemetry\API\Trace\TracerInterface;
 

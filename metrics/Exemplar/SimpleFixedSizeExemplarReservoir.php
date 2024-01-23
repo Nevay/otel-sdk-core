@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Exemplar;
+namespace Nevay\OTelSDK\Metrics\Exemplar;
 
-use Nevay\OtelSDK\Common\Attributes;
-use Nevay\OtelSDK\Metrics\ExemplarReservoir;
+use Nevay\OTelSDK\Common\Attributes;
+use Nevay\OTelSDK\Metrics\ExemplarReservoir;
 use OpenTelemetry\Context\ContextInterface;
 use Random\Engine\PcgOneseq128XslRr64;
 use Random\RandomException;

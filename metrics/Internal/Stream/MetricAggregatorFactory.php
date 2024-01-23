@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Internal\Stream;
+namespace Nevay\OTelSDK\Metrics\Internal\Stream;
 
 /**
  * @template TSummary

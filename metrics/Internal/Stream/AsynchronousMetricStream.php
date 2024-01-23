@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Internal\Stream;
+namespace Nevay\OTelSDK\Metrics\Internal\Stream;
 
-use Nevay\OtelSDK\Metrics\Aggregation;
-use Nevay\OtelSDK\Metrics\Data\Data;
-use Nevay\OtelSDK\Metrics\Data\Temporality;
+use Nevay\OTelSDK\Metrics\Aggregation;
+use Nevay\OTelSDK\Metrics\Data\Data;
+use Nevay\OTelSDK\Metrics\Data\Temporality;
 use function array_search;
 use function count;
 

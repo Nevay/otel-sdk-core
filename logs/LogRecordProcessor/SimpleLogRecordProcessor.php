@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Logs\LogRecordProcessor;
+namespace Nevay\OTelSDK\Logs\LogRecordProcessor;
 
 use Amp\Cancellation;
 use Amp\DeferredFuture;
@@ -7,10 +7,10 @@ use Amp\Future;
 use Amp\TimeoutCancellation;
 use Composer\InstalledVersions;
 use InvalidArgumentException;
-use Nevay\OtelSDK\Logs\LogRecordExporter;
-use Nevay\OtelSDK\Logs\LogRecordProcessor;
-use Nevay\OtelSDK\Logs\ReadableLogRecord;
-use Nevay\OtelSDK\Logs\ReadWriteLogRecord;
+use Nevay\OTelSDK\Logs\LogRecordExporter;
+use Nevay\OTelSDK\Logs\LogRecordProcessor;
+use Nevay\OTelSDK\Logs\ReadableLogRecord;
+use Nevay\OTelSDK\Logs\ReadWriteLogRecord;
 use OpenTelemetry\API\Metrics\MeterProviderInterface;
 use OpenTelemetry\API\Metrics\ObservableCallbackInterface;
 use OpenTelemetry\API\Metrics\ObserverInterface;

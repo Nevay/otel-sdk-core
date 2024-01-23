@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Logs\LogRecordExporter;
+namespace Nevay\OTelSDK\Logs\LogRecordExporter;
 
 use Amp\Cancellation;
 use Amp\Future;
-use Nevay\OtelSDK\Logs\LogRecordExporter;
+use Nevay\OTelSDK\Logs\LogRecordExporter;
 
 final class NoopLogRecordExporter implements LogRecordExporter {
 

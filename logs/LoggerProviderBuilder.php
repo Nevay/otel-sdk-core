@@ -1,13 +1,13 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Logs;
+namespace Nevay\OTelSDK\Logs;
 
-use Nevay\OtelSDK\Common\AttributesLimitingFactory;
-use Nevay\OtelSDK\Common\Provider;
-use Nevay\OtelSDK\Common\Resource;
-use Nevay\OtelSDK\Common\SystemClock;
-use Nevay\OtelSDK\Common\UnlimitedAttributesFactory;
-use Nevay\OtelSDK\Logs\Internal\LoggerProvider;
-use Nevay\OtelSDK\Logs\LogRecordProcessor\MultiLogRecordProcessor;
+use Nevay\OTelSDK\Common\AttributesLimitingFactory;
+use Nevay\OTelSDK\Common\Provider;
+use Nevay\OTelSDK\Common\Resource;
+use Nevay\OTelSDK\Common\SystemClock;
+use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
+use Nevay\OTelSDK\Logs\Internal\LoggerProvider;
+use Nevay\OTelSDK\Logs\LogRecordProcessor\MultiLogRecordProcessor;
 use OpenTelemetry\API\Logs\LoggerProviderInterface;
 use Psr\Log\LoggerInterface;
 

@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Data;
+namespace Nevay\OTelSDK\Metrics\Data;
 
 enum Temporality {
 

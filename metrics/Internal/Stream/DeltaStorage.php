@@ -1,11 +1,11 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Internal\Stream;
+namespace Nevay\OTelSDK\Metrics\Internal\Stream;
 
 use GMP;
-use Nevay\OtelSDK\Common\Attributes;
-use Nevay\OtelSDK\Metrics\Aggregation;
-use Nevay\OtelSDK\Metrics\Data\Data;
-use Nevay\OtelSDK\Metrics\Data\Exemplar;
+use Nevay\OTelSDK\Common\Attributes;
+use Nevay\OTelSDK\Metrics\Aggregation;
+use Nevay\OTelSDK\Metrics\Data\Data;
+use Nevay\OTelSDK\Metrics\Data\Exemplar;
 use const INF;
 
 /**

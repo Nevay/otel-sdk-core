@@ -1,16 +1,16 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Trace\Internal;
+namespace Nevay\OTelSDK\Trace\Internal;
 
 use Amp\Cancellation;
-use Nevay\OtelSDK\Common\AttributesFactory;
-use Nevay\OtelSDK\Common\Clock;
-use Nevay\OtelSDK\Common\HighResolutionTime;
-use Nevay\OtelSDK\Common\InstrumentationScope;
-use Nevay\OtelSDK\Common\Provider;
-use Nevay\OtelSDK\Common\Resource;
-use Nevay\OtelSDK\Trace\IdGenerator;
-use Nevay\OtelSDK\Trace\Sampler;
-use Nevay\OtelSDK\Trace\SpanProcessor;
+use Nevay\OTelSDK\Common\AttributesFactory;
+use Nevay\OTelSDK\Common\Clock;
+use Nevay\OTelSDK\Common\HighResolutionTime;
+use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Common\Provider;
+use Nevay\OTelSDK\Common\Resource;
+use Nevay\OTelSDK\Trace\IdGenerator;
+use Nevay\OTelSDK\Trace\Sampler;
+use Nevay\OTelSDK\Trace\SpanProcessor;
 use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\API\Trace\TracerProviderInterface;
 use OpenTelemetry\Context\ContextStorageInterface;

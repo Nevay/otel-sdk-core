@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Logs\Internal;
+namespace Nevay\OTelSDK\Logs\Internal;
 
-use Nevay\OtelSDK\Common\ContextResolver;
-use Nevay\OtelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Common\ContextResolver;
+use Nevay\OTelSDK\Common\InstrumentationScope;
 use OpenTelemetry\API\Logs\LoggerInterface;
 use OpenTelemetry\API\Logs\LogRecord;
 use OpenTelemetry\API\Trace\Span;

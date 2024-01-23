@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Trace\IdGenerator;
+namespace Nevay\OTelSDK\Trace\IdGenerator;
 
-use Nevay\OtelSDK\Trace\IdGenerator;
+use Nevay\OTelSDK\Trace\IdGenerator;
 use Random\Engine\PcgOneseq128XslRr64;
 use Random\RandomException;
 use Random\Randomizer;

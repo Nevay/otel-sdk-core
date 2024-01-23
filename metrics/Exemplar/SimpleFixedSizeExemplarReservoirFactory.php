@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Exemplar;
+namespace Nevay\OTelSDK\Metrics\Exemplar;
 
-use Nevay\OtelSDK\Metrics\ExemplarReservoir;
-use Nevay\OtelSDK\Metrics\ExemplarReservoirFactory;
+use Nevay\OTelSDK\Metrics\ExemplarReservoir;
+use Nevay\OTelSDK\Metrics\ExemplarReservoirFactory;
 use Random\Randomizer;
 
 final class SimpleFixedSizeExemplarReservoirFactory implements ExemplarReservoirFactory {

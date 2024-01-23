@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Internal\Registry;
+namespace Nevay\OTelSDK\Metrics\Internal\Registry;
 
-use Nevay\OtelSDK\Common\AttributesFactory;
-use Nevay\OtelSDK\Common\ContextResolver;
-use Nevay\OtelSDK\Metrics\Internal\Stream\MetricAggregator;
+use Nevay\OTelSDK\Common\AttributesFactory;
+use Nevay\OTelSDK\Common\ContextResolver;
+use Nevay\OTelSDK\Metrics\Internal\Stream\MetricAggregator;
 use OpenTelemetry\API\Metrics\ObserverInterface;
 
 final class MultiObserver implements ObserverInterface {

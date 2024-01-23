@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Logs;
+namespace Nevay\OTelSDK\Logs;
 
-use Nevay\OtelSDK\Common\Attributes;
-use Nevay\OtelSDK\Common\InstrumentationScope;
-use Nevay\OtelSDK\Common\Resource;
+use Nevay\OTelSDK\Common\Attributes;
+use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Common\Resource;
 use OpenTelemetry\API\Trace\SpanContextInterface;
 
 interface ReadableLogRecord {

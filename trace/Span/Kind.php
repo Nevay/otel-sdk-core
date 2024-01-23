@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Trace\Span;
+namespace Nevay\OTelSDK\Trace\Span;
 
 use OpenTelemetry\API\Trace\SpanKind;
 

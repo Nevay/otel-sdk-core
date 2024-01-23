@@ -1,16 +1,16 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Logs\Internal;
+namespace Nevay\OTelSDK\Logs\Internal;
 
-use Nevay\OtelSDK\Common\Attributes;
-use Nevay\OtelSDK\Common\AttributesBuilder;
-use Nevay\OtelSDK\Common\InstrumentationScope;
-use Nevay\OtelSDK\Common\Resource;
+use Nevay\OTelSDK\Common\Attributes;
+use Nevay\OTelSDK\Common\AttributesBuilder;
+use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Common\Resource;
 use OpenTelemetry\API\Trace\SpanContextInterface;
 
 /**
  * @internal
  */
-final class ReadWriteLogRecord implements \Nevay\OtelSDK\Logs\ReadWriteLogRecord {
+final class ReadWriteLogRecord implements \Nevay\OTelSDK\Logs\ReadWriteLogRecord {
 
     public function __construct(
         private readonly InstrumentationScope $instrumentationScope,

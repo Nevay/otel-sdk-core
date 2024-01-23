@@ -1,10 +1,10 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Logs\LogRecordProcessor;
+namespace Nevay\OTelSDK\Logs\LogRecordProcessor;
 
 use Amp\Cancellation;
 use Amp\Future;
-use Nevay\OtelSDK\Logs\LogRecordProcessor;
-use Nevay\OtelSDK\Logs\ReadWriteLogRecord;
+use Nevay\OTelSDK\Logs\LogRecordProcessor;
+use Nevay\OTelSDK\Logs\ReadWriteLogRecord;
 use OpenTelemetry\Context\ContextInterface;
 use function Amp\async;
 use function array_key_first;

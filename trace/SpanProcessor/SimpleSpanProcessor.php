@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Trace\SpanProcessor;
+namespace Nevay\OTelSDK\Trace\SpanProcessor;
 
 use Amp\Cancellation;
 use Amp\DeferredFuture;
@@ -7,10 +7,10 @@ use Amp\Future;
 use Amp\TimeoutCancellation;
 use Composer\InstalledVersions;
 use InvalidArgumentException;
-use Nevay\OtelSDK\Trace\ReadableSpan;
-use Nevay\OtelSDK\Trace\ReadWriteSpan;
-use Nevay\OtelSDK\Trace\SpanExporter;
-use Nevay\OtelSDK\Trace\SpanProcessor;
+use Nevay\OTelSDK\Trace\ReadableSpan;
+use Nevay\OTelSDK\Trace\ReadWriteSpan;
+use Nevay\OTelSDK\Trace\SpanExporter;
+use Nevay\OTelSDK\Trace\SpanProcessor;
 use OpenTelemetry\API\Metrics\MeterProviderInterface;
 use OpenTelemetry\API\Metrics\ObservableCallbackInterface;
 use OpenTelemetry\API\Metrics\ObserverInterface;

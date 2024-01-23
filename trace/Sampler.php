@@ -1,9 +1,9 @@
 <?php
-namespace Nevay\OtelSDK\Trace;
+namespace Nevay\OTelSDK\Trace;
 
-use Nevay\OtelSDK\Common\Attributes;
-use Nevay\OtelSDK\Trace\Span\Kind;
-use Nevay\OtelSDK\Trace\Span\Link;
+use Nevay\OTelSDK\Common\Attributes;
+use Nevay\OTelSDK\Trace\Span\Kind;
+use Nevay\OTelSDK\Trace\Span\Link;
 use OpenTelemetry\Context\ContextInterface;
 
 /**

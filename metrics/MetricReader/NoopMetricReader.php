@@ -1,13 +1,13 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\MetricReader;
+namespace Nevay\OTelSDK\Metrics\MetricReader;
 
 use Amp\Cancellation;
-use Nevay\OtelSDK\Metrics\Aggregation;
-use Nevay\OtelSDK\Metrics\Data\Descriptor;
-use Nevay\OtelSDK\Metrics\Data\Temporality;
-use Nevay\OtelSDK\Metrics\InstrumentType;
-use Nevay\OtelSDK\Metrics\MetricProducer;
-use Nevay\OtelSDK\Metrics\MetricReader;
+use Nevay\OTelSDK\Metrics\Aggregation;
+use Nevay\OTelSDK\Metrics\Data\Descriptor;
+use Nevay\OTelSDK\Metrics\Data\Temporality;
+use Nevay\OTelSDK\Metrics\InstrumentType;
+use Nevay\OTelSDK\Metrics\MetricProducer;
+use Nevay\OTelSDK\Metrics\MetricReader;
 
 final class NoopMetricReader implements MetricReader {
 

@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Aggregation;
+namespace Nevay\OTelSDK\Metrics\Aggregation;
 
-use Nevay\OtelSDK\Metrics\Aggregation;
-use Nevay\OtelSDK\Metrics\AggregationResolver;
-use Nevay\OtelSDK\Metrics\InstrumentType;
+use Nevay\OTelSDK\Metrics\Aggregation;
+use Nevay\OTelSDK\Metrics\AggregationResolver;
+use Nevay\OTelSDK\Metrics\InstrumentType;
 
 final class ExplicitBucketHistogramAggregationResolver implements AggregationResolver {
 

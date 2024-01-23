@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Logs;
+namespace Nevay\OTelSDK\Logs;
 
 use Amp\Cancellation;
 use Amp\CancelledException;

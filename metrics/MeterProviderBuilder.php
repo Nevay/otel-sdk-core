@@ -1,14 +1,14 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics;
+namespace Nevay\OTelSDK\Metrics;
 
-use Nevay\OtelSDK\Common\AttributesLimitingFactory;
-use Nevay\OtelSDK\Common\Provider;
-use Nevay\OtelSDK\Common\Resource;
-use Nevay\OtelSDK\Common\SystemClock;
-use Nevay\OtelSDK\Common\UnlimitedAttributesFactory;
-use Nevay\OtelSDK\Metrics\Internal\MeterProvider;
-use Nevay\OtelSDK\Metrics\Internal\StalenessHandler\DelayedStalenessHandlerFactory;
-use Nevay\OtelSDK\Metrics\Internal\View\MutableViewRegistry;
+use Nevay\OTelSDK\Common\AttributesLimitingFactory;
+use Nevay\OTelSDK\Common\Provider;
+use Nevay\OTelSDK\Common\Resource;
+use Nevay\OTelSDK\Common\SystemClock;
+use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
+use Nevay\OTelSDK\Metrics\Internal\MeterProvider;
+use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\DelayedStalenessHandlerFactory;
+use Nevay\OTelSDK\Metrics\Internal\View\MutableViewRegistry;
 use OpenTelemetry\API\Metrics\MeterProviderInterface;
 use Psr\Log\LoggerInterface;
 

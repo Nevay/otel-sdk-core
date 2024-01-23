@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Internal\Instrument;
+namespace Nevay\OTelSDK\Metrics\Internal\Instrument;
 
-use Nevay\OtelSDK\Metrics\Instrument;
+use Nevay\OTelSDK\Metrics\Instrument;
 
 interface InstrumentHandle {
 

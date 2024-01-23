@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics;
+namespace Nevay\OTelSDK\Metrics;
 
-use Nevay\OtelSDK\Common\Attributes;
-use Nevay\OtelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Common\Attributes;
+use Nevay\OTelSDK\Common\InstrumentationScope;
 
 /**
  * @experimental

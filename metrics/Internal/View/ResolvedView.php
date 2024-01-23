@@ -1,12 +1,12 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Internal\View;
+namespace Nevay\OTelSDK\Metrics\Internal\View;
 
-use Nevay\OtelSDK\Metrics\Aggregation;
-use Nevay\OtelSDK\Metrics\AttributeProcessor;
-use Nevay\OtelSDK\Metrics\Data\Descriptor;
-use Nevay\OtelSDK\Metrics\Data\Temporality;
-use Nevay\OtelSDK\Metrics\ExemplarReservoirFactory;
-use Nevay\OtelSDK\Metrics\Internal\MeterMetricProducer;
+use Nevay\OTelSDK\Metrics\Aggregation;
+use Nevay\OTelSDK\Metrics\AttributeProcessor;
+use Nevay\OTelSDK\Metrics\Data\Descriptor;
+use Nevay\OTelSDK\Metrics\Data\Temporality;
+use Nevay\OTelSDK\Metrics\ExemplarReservoirFactory;
+use Nevay\OTelSDK\Metrics\Internal\MeterMetricProducer;
 
 final class ResolvedView {
 

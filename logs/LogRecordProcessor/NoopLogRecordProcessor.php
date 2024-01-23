@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Logs\LogRecordProcessor;
+namespace Nevay\OTelSDK\Logs\LogRecordProcessor;
 
 use Amp\Cancellation;
-use Nevay\OtelSDK\Logs\LogRecordProcessor;
-use Nevay\OtelSDK\Logs\ReadWriteLogRecord;
+use Nevay\OTelSDK\Logs\LogRecordProcessor;
+use Nevay\OTelSDK\Logs\ReadWriteLogRecord;
 use OpenTelemetry\Context\ContextInterface;
 
 final class NoopLogRecordProcessor implements LogRecordProcessor {

@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Data;
+namespace Nevay\OTelSDK\Metrics\Data;
 
-use Nevay\OtelSDK\Common\InstrumentationScope;
-use Nevay\OtelSDK\Common\Resource;
-use Nevay\OtelSDK\Metrics\InstrumentType;
+use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Common\Resource;
+use Nevay\OTelSDK\Metrics\InstrumentType;
 
 final class Descriptor {
 

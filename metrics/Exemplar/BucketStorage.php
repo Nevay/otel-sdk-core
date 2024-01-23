@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Exemplar;
+namespace Nevay\OTelSDK\Metrics\Exemplar;
 
-use Nevay\OtelSDK\Common\Attributes;
-use Nevay\OtelSDK\Metrics\Data\Exemplar;
+use Nevay\OTelSDK\Common\Attributes;
+use Nevay\OTelSDK\Metrics\Data\Exemplar;
 use OpenTelemetry\API\Trace\Span;
 use OpenTelemetry\Context\ContextInterface;
 use function array_fill;

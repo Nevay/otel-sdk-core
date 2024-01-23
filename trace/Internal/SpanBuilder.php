@@ -1,13 +1,13 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Trace\Internal;
+namespace Nevay\OTelSDK\Trace\Internal;
 
-use Nevay\OtelSDK\Common\AttributesBuilder;
-use Nevay\OtelSDK\Common\ClockAware;
-use Nevay\OtelSDK\Common\ContextResolver;
-use Nevay\OtelSDK\Common\InstrumentationScope;
-use Nevay\OtelSDK\Common\MonotonicClock;
-use Nevay\OtelSDK\Trace\Span\Kind;
-use Nevay\OtelSDK\Trace\Span\Link;
+use Nevay\OTelSDK\Common\AttributesBuilder;
+use Nevay\OTelSDK\Common\ClockAware;
+use Nevay\OTelSDK\Common\ContextResolver;
+use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Common\MonotonicClock;
+use Nevay\OTelSDK\Trace\Span\Kind;
+use Nevay\OTelSDK\Trace\Span\Link;
 use OpenTelemetry\API\Trace\SpanBuilderInterface;
 use OpenTelemetry\API\Trace\SpanContextInterface;
 use OpenTelemetry\API\Trace\SpanContextValidator;

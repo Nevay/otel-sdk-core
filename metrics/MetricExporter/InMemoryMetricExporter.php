@@ -1,20 +1,20 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\MetricExporter;
+namespace Nevay\OTelSDK\Metrics\MetricExporter;
 
 use Amp\Cancellation;
 use Amp\Future;
-use Nevay\OtelSDK\Metrics\Aggregation;
-use Nevay\OtelSDK\Metrics\AggregationResolver;
-use Nevay\OtelSDK\Metrics\AggregationResolvers;
-use Nevay\OtelSDK\Metrics\CardinalityLimitResolver;
-use Nevay\OtelSDK\Metrics\CardinalityLimitResolvers;
-use Nevay\OtelSDK\Metrics\Data\Descriptor;
-use Nevay\OtelSDK\Metrics\Data\Metric;
-use Nevay\OtelSDK\Metrics\Data\Temporality;
-use Nevay\OtelSDK\Metrics\InstrumentType;
-use Nevay\OtelSDK\Metrics\MetricExporter;
-use Nevay\OtelSDK\Metrics\TemporalityResolver;
-use Nevay\OtelSDK\Metrics\TemporalityResolvers;
+use Nevay\OTelSDK\Metrics\Aggregation;
+use Nevay\OTelSDK\Metrics\AggregationResolver;
+use Nevay\OTelSDK\Metrics\AggregationResolvers;
+use Nevay\OTelSDK\Metrics\CardinalityLimitResolver;
+use Nevay\OTelSDK\Metrics\CardinalityLimitResolvers;
+use Nevay\OTelSDK\Metrics\Data\Descriptor;
+use Nevay\OTelSDK\Metrics\Data\Metric;
+use Nevay\OTelSDK\Metrics\Data\Temporality;
+use Nevay\OTelSDK\Metrics\InstrumentType;
+use Nevay\OTelSDK\Metrics\MetricExporter;
+use Nevay\OTelSDK\Metrics\TemporalityResolver;
+use Nevay\OTelSDK\Metrics\TemporalityResolvers;
 
 final class InMemoryMetricExporter implements MetricExporter {
 

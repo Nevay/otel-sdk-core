@@ -1,12 +1,12 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Trace\Sampler;
+namespace Nevay\OTelSDK\Trace\Sampler;
 
 use InvalidArgumentException;
-use Nevay\OtelSDK\Common\Attributes;
-use Nevay\OtelSDK\Trace\Sampler;
-use Nevay\OtelSDK\Trace\SamplingDecision;
-use Nevay\OtelSDK\Trace\SamplingResult;
-use Nevay\OtelSDK\Trace\Span\Kind;
+use Nevay\OTelSDK\Common\Attributes;
+use Nevay\OTelSDK\Trace\Sampler;
+use Nevay\OTelSDK\Trace\SamplingDecision;
+use Nevay\OTelSDK\Trace\SamplingResult;
+use Nevay\OTelSDK\Trace\Span\Kind;
 use OpenTelemetry\Context\ContextInterface;
 use function sprintf;
 use function substr_compare;

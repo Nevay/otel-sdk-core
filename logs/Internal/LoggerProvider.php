@@ -1,13 +1,13 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Logs\Internal;
+namespace Nevay\OTelSDK\Logs\Internal;
 
 use Amp\Cancellation;
-use Nevay\OtelSDK\Common\AttributesFactory;
-use Nevay\OtelSDK\Common\Clock;
-use Nevay\OtelSDK\Common\InstrumentationScope;
-use Nevay\OtelSDK\Common\Provider;
-use Nevay\OtelSDK\Common\Resource;
-use Nevay\OtelSDK\Logs\LogRecordProcessor;
+use Nevay\OTelSDK\Common\AttributesFactory;
+use Nevay\OTelSDK\Common\Clock;
+use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Common\Provider;
+use Nevay\OTelSDK\Common\Resource;
+use Nevay\OTelSDK\Logs\LogRecordProcessor;
 use OpenTelemetry\API\Logs\LoggerInterface;
 use OpenTelemetry\API\Logs\LoggerProviderInterface;
 use OpenTelemetry\Context\ContextStorageInterface;

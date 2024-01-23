@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Internal\StalenessHandler;
+namespace Nevay\OTelSDK\Metrics\Internal\StalenessHandler;
 
 use Closure;
 

@@ -1,11 +1,11 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Aggregation;
+namespace Nevay\OTelSDK\Metrics\Aggregation;
 
-use Nevay\OtelSDK\Common\Attributes;
-use Nevay\OtelSDK\Metrics\Aggregation;
-use Nevay\OtelSDK\Metrics\Data\Gauge;
-use Nevay\OtelSDK\Metrics\Data\NumberDataPoint;
-use Nevay\OtelSDK\Metrics\Data\Temporality;
+use Nevay\OTelSDK\Common\Attributes;
+use Nevay\OTelSDK\Metrics\Aggregation;
+use Nevay\OTelSDK\Metrics\Data\Gauge;
+use Nevay\OTelSDK\Metrics\Data\NumberDataPoint;
+use Nevay\OTelSDK\Metrics\Data\Temporality;
 use OpenTelemetry\Context\ContextInterface;
 use const NAN;
 

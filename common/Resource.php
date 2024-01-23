@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Common;
+namespace Nevay\OTelSDK\Common;
 
 use Composer\InstalledVersions;
 use InvalidArgumentException;

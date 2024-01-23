@@ -10,7 +10,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Nevay\\OtelSDK\\Common\\": ""
+            "Nevay\\OTelSDK\\Common\\": ""
         }
     },
     "extra": {

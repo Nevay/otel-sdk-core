@@ -1,10 +1,10 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Logs\Internal;
+namespace Nevay\OTelSDK\Logs\Internal;
 
-use Nevay\OtelSDK\Common\AttributesFactory;
-use Nevay\OtelSDK\Common\Clock;
-use Nevay\OtelSDK\Common\Resource;
-use Nevay\OtelSDK\Logs\LogRecordProcessor;
+use Nevay\OTelSDK\Common\AttributesFactory;
+use Nevay\OTelSDK\Common\Clock;
+use Nevay\OTelSDK\Common\Resource;
+use Nevay\OTelSDK\Logs\LogRecordProcessor;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface;
 

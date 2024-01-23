@@ -1,18 +1,18 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Internal\Registry;
+namespace Nevay\OTelSDK\Metrics\Internal\Registry;
 
 use Amp\Cancellation;
 use Amp\CancelledException;
 use Amp\Future;
 use Closure;
 use Exception;
-use Nevay\OtelSDK\Common\AttributesFactory;
-use Nevay\OtelSDK\Common\Clock;
-use Nevay\OtelSDK\Common\ContextResolver;
-use Nevay\OtelSDK\Metrics\Instrument;
-use Nevay\OtelSDK\Metrics\Internal\Stream\MetricAggregator;
-use Nevay\OtelSDK\Metrics\Internal\Stream\MetricAggregatorFactory;
-use Nevay\OtelSDK\Metrics\Internal\Stream\MetricStream;
+use Nevay\OTelSDK\Common\AttributesFactory;
+use Nevay\OTelSDK\Common\Clock;
+use Nevay\OTelSDK\Common\ContextResolver;
+use Nevay\OTelSDK\Metrics\Instrument;
+use Nevay\OTelSDK\Metrics\Internal\Stream\MetricAggregator;
+use Nevay\OTelSDK\Metrics\Internal\Stream\MetricAggregatorFactory;
+use Nevay\OTelSDK\Metrics\Internal\Stream\MetricStream;
 use OpenTelemetry\Context\ContextInterface;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface;

@@ -1,11 +1,11 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Internal;
+namespace Nevay\OTelSDK\Metrics\Internal;
 
 use Amp\Cancellation;
 use Amp\Pipeline\DisposedException;
 use Amp\Pipeline\Queue;
-use Nevay\OtelSDK\Metrics\MetricFilter;
-use Nevay\OtelSDK\Metrics\MetricProducer;
+use Nevay\OTelSDK\Metrics\MetricFilter;
+use Nevay\OTelSDK\Metrics\MetricProducer;
 use Revolt\EventLoop;
 use function count;
 

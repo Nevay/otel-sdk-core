@@ -1,12 +1,12 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Internal;
+namespace Nevay\OTelSDK\Metrics\Internal;
 
-use Nevay\OtelSDK\Metrics\Data\Data;
-use Nevay\OtelSDK\Metrics\Data\Descriptor;
-use Nevay\OtelSDK\Metrics\Data\Temporality;
-use Nevay\OtelSDK\Metrics\Internal\Stream\Metric;
-use Nevay\OtelSDK\Metrics\Internal\Stream\MetricStream;
-use Nevay\OtelSDK\Metrics\MetricFilter;
+use Nevay\OTelSDK\Metrics\Data\Data;
+use Nevay\OTelSDK\Metrics\Data\Descriptor;
+use Nevay\OTelSDK\Metrics\Data\Temporality;
+use Nevay\OTelSDK\Metrics\Internal\Stream\Metric;
+use Nevay\OTelSDK\Metrics\Internal\Stream\MetricStream;
+use Nevay\OTelSDK\Metrics\MetricFilter;
 
 /**
  * @template TSummary

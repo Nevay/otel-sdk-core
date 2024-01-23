@@ -1,10 +1,10 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Trace\SpanExporter;
+namespace Nevay\OTelSDK\Trace\SpanExporter;
 
 use Amp\Cancellation;
 use Amp\Future;
-use Nevay\OtelSDK\Trace\ReadableSpan;
-use Nevay\OtelSDK\Trace\SpanExporter;
+use Nevay\OTelSDK\Trace\ReadableSpan;
+use Nevay\OTelSDK\Trace\SpanExporter;
 
 final class InMemorySpanExporter implements SpanExporter {
 

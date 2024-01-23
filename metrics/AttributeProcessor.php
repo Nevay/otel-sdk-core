@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics;
+namespace Nevay\OTelSDK\Metrics;
 
-use Nevay\OtelSDK\Common\Attributes;
+use Nevay\OTelSDK\Common\Attributes;
 use OpenTelemetry\Context\ContextInterface;
 
 interface AttributeProcessor {

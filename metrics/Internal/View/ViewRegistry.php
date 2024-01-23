@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Internal\View;
+namespace Nevay\OTelSDK\Metrics\Internal\View;
 
-use Nevay\OtelSDK\Common\InstrumentationScope;
-use Nevay\OtelSDK\Metrics\Instrument;
-use Nevay\OtelSDK\Metrics\View;
+use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Metrics\Instrument;
+use Nevay\OTelSDK\Metrics\View;
 
 interface ViewRegistry {
 

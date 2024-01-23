@@ -1,13 +1,13 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\MetricExporter;
+namespace Nevay\OTelSDK\Metrics\MetricExporter;
 
 use Amp\Cancellation;
 use Amp\Future;
-use Nevay\OtelSDK\Metrics\Aggregation;
-use Nevay\OtelSDK\Metrics\Data\Descriptor;
-use Nevay\OtelSDK\Metrics\Data\Temporality;
-use Nevay\OtelSDK\Metrics\InstrumentType;
-use Nevay\OtelSDK\Metrics\MetricExporter;
+use Nevay\OTelSDK\Metrics\Aggregation;
+use Nevay\OTelSDK\Metrics\Data\Descriptor;
+use Nevay\OTelSDK\Metrics\Data\Temporality;
+use Nevay\OTelSDK\Metrics\InstrumentType;
+use Nevay\OTelSDK\Metrics\MetricExporter;
 
 final class NoopMetricExporter implements MetricExporter {
 

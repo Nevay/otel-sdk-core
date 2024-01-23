@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Internal\Registry;
+namespace Nevay\OTelSDK\Metrics\Internal\Registry;
 
 use Closure;
-use Nevay\OtelSDK\Metrics\Instrument;
+use Nevay\OTelSDK\Metrics\Instrument;
 use OpenTelemetry\Context\ContextInterface;
 
 interface MetricWriter {

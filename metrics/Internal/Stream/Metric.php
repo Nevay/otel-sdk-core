@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Internal\Stream;
+namespace Nevay\OTelSDK\Metrics\Internal\Stream;
 
-use Nevay\OtelSDK\Common\Attributes;
-use Nevay\OtelSDK\Metrics\Data\Exemplar;
+use Nevay\OTelSDK\Common\Attributes;
+use Nevay\OTelSDK\Metrics\Data\Exemplar;
 
 /**
  * @template TSummary

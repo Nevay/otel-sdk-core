@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics;
+namespace Nevay\OTelSDK\Metrics;
 
-use Nevay\OtelSDK\Metrics\Aggregation\ExplicitBucketHistogramAggregationResolver;
-use Nevay\OtelSDK\Metrics\Aggregation\LastValueAggregationResolver;
-use Nevay\OtelSDK\Metrics\Aggregation\SumAggregationResolver;
+use Nevay\OTelSDK\Metrics\Aggregation\ExplicitBucketHistogramAggregationResolver;
+use Nevay\OTelSDK\Metrics\Aggregation\LastValueAggregationResolver;
+use Nevay\OTelSDK\Metrics\Aggregation\SumAggregationResolver;
 use function assert;
 
 enum AggregationResolvers implements AggregationResolver {

@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Metrics\Internal;
+namespace Nevay\OTelSDK\Metrics\Internal;
 
 use Closure;
 use ReflectionFunction;

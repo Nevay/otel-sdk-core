@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
-namespace Nevay\OtelSDK\Common\Provider;
+namespace Nevay\OTelSDK\Common\Provider;
 
 use Amp\Cancellation;
-use Nevay\OtelSDK\Common\Provider;
+use Nevay\OTelSDK\Common\Provider;
 
 final class NoopProvider implements Provider {
 
