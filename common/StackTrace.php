@@ -50,6 +50,20 @@ final class StackTrace {
     }
 
     /**
+     * Formats a backtrace in a java-like format.
+     *
+     * @param array $trace trace to format
+     * @param int $offset frame offset to start at, the innermost $offset frames will be skipped
+     * @return string formatted backtrace
+     */
+    public static function formatBacktrace(array $trace, int $offset = 0, int $flags = 0): string {
+        $s = '';
+        self::writeFrames($s, $flags, self::traceFrames($trace, $offset), null, 0);
+
+        return $s;
+    }
+
+    /**
      * @param Frames|null $enclosing
      * @param array<int, Throwable> $seen
      */
@@ -69,7 +83,7 @@ final class StackTrace {
             }
             $seen[spl_object_id($e)] = $e;
 
-            $frames = self::frames($e);
+            $frames = self::exceptionFrames($e);
             self::writeInlineHeader($s, $flags, $e);
             self::writeFrames($s, $flags, $frames, $enclosing, $indent + 1);
 
@@ -155,10 +169,17 @@ final class StackTrace {
     /**
      * @return Frames
      */
-    private static function frames(Throwable $e): array {
+    private static function exceptionFrames(Throwable $e): array {
+        $frames = self::traceFrames($e->getTrace(), 0);
+        $frames[0]['file'] = $e->getFile();
+        $frames[0]['line'] = $e->getLine();
+
+        return $frames;
+    }
+
+    private static function traceFrames(array $trace, int $offset): array {
         $frames = [];
-        $trace = $e->getTrace();
-        for ($i = 0; $i < count($trace) + 1; $i++) {
+        for ($i = $offset; $i < count($trace) + 1; $i++) {
             /** @psalm-suppress InvalidArrayOffset */
             $frames[] = [
                 'function' => $trace[$i]['function'] ?? '{main}',
@@ -168,8 +189,6 @@ final class StackTrace {
                 'line' => $trace[$i - 1]['line'] ?? null,
             ];
         }
-        $frames[0]['file'] = $e->getFile();
-        $frames[0]['line'] = $e->getLine();
 
         return $frames;
     }
