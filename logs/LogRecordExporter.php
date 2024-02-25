@@ -4,13 +4,16 @@ namespace Nevay\OTelSDK\Logs;
 use Amp\Cancellation;
 use Amp\CancelledException;
 use Amp\Future;
+use Nevay\OTelSDK\Common\Internal\Export\Exporter;
 
 /**
  * Exports telemetry data.
  *
+ * @extends Exporter<ReadableLogRecord>
+ *
  * @see https://opentelemetry.io/docs/specs/otel/logs/sdk/#logrecordexporter
  */
-interface LogRecordExporter {
+interface LogRecordExporter extends Exporter {
 
     /**
      * Exports a batch of {@link ReadableLogRecord}s.

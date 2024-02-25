@@ -9,6 +9,7 @@ use Nevay\OTelSDK\Metrics\MetricFilterResult;
 use Nevay\OTelSDK\Metrics\MetricProducer;
 use function array_keys;
 use function count;
+use const COUNT_RECURSIVE;
 
 final class MeterMetricProducer implements MetricProducer {
 
@@ -16,6 +17,7 @@ final class MeterMetricProducer implements MetricProducer {
 
     /** @var array<int, list<MetricStreamSource>> */
     private array $sources = [];
+    /** @var list<int>|null */
     private ?array $streamIds = null;
 
     public function __construct(MetricCollector $collector) {
@@ -44,17 +46,22 @@ final class MeterMetricProducer implements MetricProducer {
             ? $this->streamIds ??= array_keys($this->sources)
             : array_keys($sources);
 
-        $this->collector->collectAndPush($streamIds, $cancellation);
-        unset($streamIds, $metricFilter, $cancellation);
+        return new SizedTraversable(
+            (function() use ($sources, $streamIds, $cancellation) {
+                $this->collector->collectAndPush($streamIds, $cancellation);
+                unset($streamIds, $cancellation);
 
-        foreach ($sources as $streamSources) {
-            foreach ($streamSources as $source) {
-                yield new Metric(
-                    $source->descriptor,
-                    $source->stream->collect($source->reader),
-                );
-            }
-        }
+                foreach ($sources as $streamSources) {
+                    foreach ($streamSources as $source) {
+                        yield new Metric(
+                            $source->descriptor,
+                            $source->stream->collect($source->reader),
+                        );
+                    }
+                }
+            })(),
+            count($sources, COUNT_RECURSIVE) - count($sources),
+        );
     }
 
     /**

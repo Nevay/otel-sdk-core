@@ -3,12 +3,14 @@ namespace Nevay\OTelSDK\Metrics;
 
 use Amp\Cancellation;
 use Amp\Future;
+use Nevay\OTelSDK\Common\Internal\Export\Exporter;
 use Nevay\OTelSDK\Metrics\Data\Metric;
 
 /**
+ * @extends Exporter<Metric>
  * @see https://opentelemetry.io/docs/specs/otel/metrics/sdk/#metricexporter
  */
-interface MetricExporter extends TemporalityResolver, AggregationResolver, CardinalityLimitResolver {
+interface MetricExporter extends Exporter, TemporalityResolver, AggregationResolver, CardinalityLimitResolver {
 
     /**
      * @param iterable<Metric> $batch

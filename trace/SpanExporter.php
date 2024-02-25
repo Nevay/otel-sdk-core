@@ -4,13 +4,16 @@ namespace Nevay\OTelSDK\Trace;
 use Amp\Cancellation;
 use Amp\CancelledException;
 use Amp\Future;
+use Nevay\OTelSDK\Common\Internal\Export\Exporter;
 
 /**
  * Exports telemetry data.
  *
+ * @extends Exporter<ReadableSpan>
+ *
  * @see https://opentelemetry.io/docs/specs/otel/trace/sdk/#span-exporter
  */
-interface SpanExporter {
+interface SpanExporter extends Exporter {
 
     /**
      * Exports a batch of {@link ReadableSpan}s.

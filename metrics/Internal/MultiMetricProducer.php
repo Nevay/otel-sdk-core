@@ -15,16 +15,13 @@ final class MultiMetricProducer implements MetricProducer {
     public array $metricProducers = [];
 
     public function produce(?MetricFilter $metricFilter = null, ?Cancellation $cancellation = null): iterable {
-        if (!$this->metricProducers) {
-            return [];
-        }
-
         $queue = new Queue();
+        $count = 0;
         $pending = count($this->metricProducers);
-        $handler = static function(MetricProducer $metricProducer, ?MetricFilter $metricFilter, ?Cancellation $cancellation, Queue $queue) use (&$pending): void {
+        $handler = static function(iterable $metrics, Queue $queue) use (&$pending): void {
             try {
                 if (!$queue->isDisposed()) {
-                    foreach ($metricProducer->produce($metricFilter, $cancellation) as $metric) {
+                    foreach ($metrics as $metric) {
                         $queue->push($metric);
                     }
                 }
@@ -36,9 +33,14 @@ final class MultiMetricProducer implements MetricProducer {
             }
         };
         foreach ($this->metricProducers as $metricProducer) {
-            EventLoop::queue($handler, $metricProducer, $metricFilter, $cancellation, $queue);
+            $metrics = $metricProducer->produce($metricFilter, $cancellation);
+            $count += count($metrics);
+            EventLoop::queue($handler, $metrics, $queue);
+        }
+        if (!$pending) {
+            $queue->complete();
         }
 
-        return $queue->iterate();
+        return new SizedTraversable($queue->iterate(), $count);
     }
 }

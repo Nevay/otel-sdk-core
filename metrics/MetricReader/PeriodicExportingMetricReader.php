@@ -2,15 +2,14 @@
 namespace Nevay\OTelSDK\Metrics\MetricReader;
 
 use Amp\Cancellation;
-use Amp\DeferredFuture;
-use Amp\Future;
-use Amp\TimeoutCancellation;
-use Composer\InstalledVersions;
 use InvalidArgumentException;
+use Nevay\OTelSDK\Common\Internal\Export\ExportingProcessor;
+use Nevay\OTelSDK\Common\Internal\Export\Listener\NoopListener;
 use Nevay\OTelSDK\Metrics\Aggregation;
 use Nevay\OTelSDK\Metrics\Data\Descriptor;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use Nevay\OTelSDK\Metrics\InstrumentType;
+use Nevay\OTelSDK\Metrics\Internal\MetricExportDriver;
 use Nevay\OTelSDK\Metrics\Internal\MultiMetricProducer;
 use Nevay\OTelSDK\Metrics\MetricExporter;
 use Nevay\OTelSDK\Metrics\MetricFilter;
@@ -18,13 +17,12 @@ use Nevay\OTelSDK\Metrics\MetricProducer;
 use Nevay\OTelSDK\Metrics\MetricReader;
 use Nevay\OTelSDK\Metrics\MetricReaderAware;
 use OpenTelemetry\API\Metrics\MeterProviderInterface;
-use OpenTelemetry\API\Metrics\ObservableCallbackInterface;
-use OpenTelemetry\API\Metrics\ObserverInterface;
+use OpenTelemetry\API\Metrics\Noop\NoopMeterProvider;
+use OpenTelemetry\API\Trace\NoopTracerProvider;
+use OpenTelemetry\API\Trace\TracerProviderInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Revolt\EventLoop;
-use Revolt\EventLoop\Suspension;
-use Throwable;
-use WeakReference;
-use function assert;
 use function sprintf;
 
 /**
@@ -32,32 +30,12 @@ use function sprintf;
  */
 final class PeriodicExportingMetricReader implements MetricReader {
 
-    private const ATTRIBUTES_PROCESSOR = ['reader' => 'periodic'];
-    private const ATTRIBUTES_PENDING   = self::ATTRIBUTES_PROCESSOR + ['state' => 'pending'];
-    private const ATTRIBUTES_SUCCESS   = self::ATTRIBUTES_PROCESSOR + ['state' => 'success'];
-    private const ATTRIBUTES_FAILURE   = self::ATTRIBUTES_PROCESSOR + ['state' => 'failure'];
-    private const ATTRIBUTES_ERROR     = self::ATTRIBUTES_PROCESSOR + ['state' => 'error'];
-
     private readonly MetricExporter $metricExporter;
-    private readonly float $exportInterval;
-    private readonly float $exportTimeout;
-    private readonly float $collectTimeout;
-    private readonly ?MetricFilter $metricFilter;
+    private readonly ExportingProcessor $processor;
     private readonly MultiMetricProducer $metricProducer;
-    private readonly string $workerCallbackId;
     private readonly string $exportIntervalCallbackId;
 
-    private int $processed = 0;
-    private int $processedBatchId = 0;
-    /** @var array{0: int<0, max>, 1: int<0, max>} */
-    private array $exportResult = [0, 0];
-    /** @var array<int, DeferredFuture> */
-    private array $flush = [];
-    private ?Suspension $worker = null;
-
     private bool $closed = false;
-
-    private ?ObservableCallbackInterface $exportsObserver = null;
 
     /**
      * @param MetricExporter $metricExporter exporter to push metrics to
@@ -67,8 +45,11 @@ final class PeriodicExportingMetricReader implements MetricReader {
      * @param int<0, max> $collectTimeoutMillis collect timeout in milliseconds
      * @param MetricFilter|null $metricFilter metric filter to apply to metrics
      *        and attributes during collect
-     * @param Future<MeterProviderInterface>|null $meterProvider meter provider
-     *        for self diagnostics
+     * @param TracerProviderInterface $tracerProvider tracer provider for self
+     *        diagnostics
+     * @param MeterProviderInterface $meterProvider meter provider for self
+     *        diagnostics
+     * @param LoggerInterface $logger logger for self diagnostics
      *
      * @noinspection PhpConditionAlreadyCheckedInspection
      */
@@ -78,7 +59,9 @@ final class PeriodicExportingMetricReader implements MetricReader {
         int $exportTimeoutMillis = 30000,
         int $collectTimeoutMillis = 30000,
         ?MetricFilter $metricFilter = null,
-        ?Future $meterProvider = null,
+        TracerProviderInterface $tracerProvider = new NoopTracerProvider(),
+        MeterProviderInterface $meterProvider = new NoopMeterProvider(),
+        LoggerInterface $logger = new NullLogger(),
     ) {
         if ($exportIntervalMillis < 0) {
             throw new InvalidArgumentException(sprintf('Export interval (%d) must be greater than or equal to zero', $exportIntervalMillis));
@@ -91,21 +74,24 @@ final class PeriodicExportingMetricReader implements MetricReader {
         }
 
         $this->metricExporter = $metricExporter;
-        $this->exportInterval = $exportIntervalMillis / 1000;
-        $this->exportTimeout = $exportTimeoutMillis / 1000;
-        $this->collectTimeout = $collectTimeoutMillis / 1000;
-        $this->metricFilter = $metricFilter;
         $this->metricProducer = new MultiMetricProducer();
 
-        $reference = WeakReference::create($this);
-        $this->workerCallbackId = EventLoop::defer(static fn() => self::worker($reference, $meterProvider));
+        $this->processor = $processor = new ExportingProcessor(
+            $metricExporter,
+            new MetricExportDriver($this->metricProducer, $metricFilter, $collectTimeoutMillis),
+            new NoopListener(),
+            $exportTimeoutMillis,
+            $tracerProvider,
+            $meterProvider,
+            $logger,
+            'metrics',
+            'tbachert/otel-sdk-metrics',
+        );
         $this->exportIntervalCallbackId = EventLoop::unreference(EventLoop::repeat(
-            $this->exportInterval,
-            static function() use ($reference): void {
-                $self = $reference->get();
-                assert($self instanceof self);
-                $self->flush();
-            }
+            $exportIntervalMillis / 1000,
+            static function() use ($processor): void {
+                $processor->flush();
+            },
         ));
 
         if ($metricExporter instanceof MetricReaderAware) {
@@ -113,38 +99,9 @@ final class PeriodicExportingMetricReader implements MetricReader {
         }
     }
 
-    private function initMetrics(WeakReference $reference, MeterProviderInterface $meterProvider): void {
-        $meter = $meterProvider->getMeter('tbachert/otel-sdk-metrics',
-            InstalledVersions::getPrettyVersion('tbachert/otel-sdk-metrics'));
-
-        $this->exportsObserver = $meter
-            ->createObservableUpDownCounter(
-                'otel.metrics.metric_reader.exports',
-                '{exports}',
-                'The number of exports handled by the metric reader',
-            )
-            ->observe(static function(ObserverInterface $observer) use ($reference): void {
-                $self = $reference->get();
-                assert($self instanceof self);
-                $pending = $self->processedBatchId - $self->processed;
-                $success = $self->exportResult[true];
-                $failure = $self->exportResult[false];
-                $error = $self->processed - $success - $failure;
-
-                $observer->observe($pending, self::ATTRIBUTES_PENDING);
-                $observer->observe($success, self::ATTRIBUTES_SUCCESS);
-                $observer->observe($failure, self::ATTRIBUTES_FAILURE);
-                $observer->observe($error, self::ATTRIBUTES_ERROR);
-            });
-    }
-
     public function __destruct() {
-        $this->resumeWorker();
         $this->closed = true;
-        EventLoop::cancel($this->workerCallbackId);
         EventLoop::cancel($this->exportIntervalCallbackId);
-
-        $this->exportsObserver?->detach();
     }
 
     public function registerProducer(MetricProducer $metricProducer): void {
@@ -156,7 +113,7 @@ final class PeriodicExportingMetricReader implements MetricReader {
             return false;
         }
 
-        $this->flush()->await($cancellation);
+        $this->processor->flush()?->await($cancellation);
 
         return true;
     }
@@ -167,14 +124,9 @@ final class PeriodicExportingMetricReader implements MetricReader {
         }
 
         $this->closed = true;
+        EventLoop::cancel($this->exportIntervalCallbackId);
 
-        try {
-            $this->flush()->await($cancellation);
-        } finally {
-            $success = $this->metricExporter->shutdown($cancellation);
-        }
-
-        return $success;
+        return $this->processor->shutdown($cancellation);
     }
 
     public function forceFlush(?Cancellation $cancellation = null): bool {
@@ -182,13 +134,7 @@ final class PeriodicExportingMetricReader implements MetricReader {
             return false;
         }
 
-        try {
-            $this->flush()->await($cancellation);
-        } finally {
-            $success = $this->metricExporter->forceFlush($cancellation);
-        }
-
-        return $success;
+        return $this->processor->forceFlush($cancellation);
     }
 
     public function resolveTemporality(Descriptor $descriptor): ?Temporality {
@@ -201,63 +147,5 @@ final class PeriodicExportingMetricReader implements MetricReader {
 
     public function resolveCardinalityLimit(InstrumentType $instrumentType): ?int {
         return $this->metricExporter->resolveCardinalityLimit($instrumentType);
-    }
-
-    /**
-     * @param WeakReference<self> $r
-     * @param Future<MeterProviderInterface>|null $meterProvider
-     */
-    private static function worker(WeakReference $r, ?Future $meterProvider): void {
-        $p = $r->get();
-        assert($p instanceof self);
-
-        $worker = EventLoop::getSuspension();
-        $meterProvider?->map(static fn(MeterProviderInterface $meterProvider) => $p->initMetrics($r, $meterProvider));
-        unset($meterProvider);
-
-        do {
-            while ($p->flush) {
-                $id = ++$p->processedBatchId;
-                try {
-                    $future = $p->metricExporter->export(
-                        $p->metricProducer->produce($p->metricFilter, new TimeoutCancellation($p->collectTimeout)),
-                        new TimeoutCancellation($p->exportTimeout),
-                    );
-                } catch (Throwable $e) {
-                    $future = Future::error($e);
-                }
-                $future = $future
-                    ->map(static fn(bool $success) => $p->exportResult[$success]++)
-                    ->finally(static fn() => $p->processed++);
-
-                ($p->flush[$id] ?? null)?->complete();
-                EventLoop::queue($worker->resume(...));
-                unset($p->flush[$id], $future, $e);
-                $worker->suspend();
-            }
-
-            if ($p->closed) {
-                return;
-            }
-
-            $p->worker = $worker;
-            $p = null;
-            $worker->suspend();
-        } while ($p = $r->get());
-    }
-
-    private function resumeWorker(): void {
-        $this->worker?->resume();
-        $this->worker = null;
-    }
-
-    /**
-     * Flushes the batch. The returned future will be resolved after the batch
-     * was sent to the exporter.
-     */
-    private function flush(): Future {
-        $this->resumeWorker();
-
-        return ($this->flush[$this->processedBatchId + 1] ??= new DeferredFuture())->getFuture();
     }
 }
