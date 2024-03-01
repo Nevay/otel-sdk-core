@@ -50,8 +50,13 @@ final class Resource {
      * @see ServiceLoader::register()
      */
     public static function detect(): Resource {
-        $detector = new ResourceDetector\Composite(...ServiceLoader::load(ResourceDetector::class));
-        return Resource::default()->merge($detector->getResource());
+        $resources = [];
+        foreach (ServiceLoader::load(ResourceDetector::class) as $detector) {
+            $resources[] = $detector->getResource();
+        }
+        $resources[] = Resource::default();
+
+        return Resource::mergeAll(...$resources);
     }
 
     /**
