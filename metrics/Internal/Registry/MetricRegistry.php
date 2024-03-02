@@ -3,7 +3,7 @@ namespace Nevay\OTelSDK\Metrics\Internal\Registry;
 
 use Amp\Cancellation;
 use Amp\CancelledException;
-use Amp\Future;
+use Amp\Sync\Barrier;
 use Closure;
 use Exception;
 use Nevay\OTelSDK\Common\AttributesFactory;
@@ -16,7 +16,7 @@ use Nevay\OTelSDK\Metrics\Internal\Stream\MetricStream;
 use OpenTelemetry\Context\ContextInterface;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface;
-use function Amp\async;
+use Revolt\EventLoop;
 use function array_keys;
 use function count;
 
@@ -156,10 +156,21 @@ final class MetricRegistry implements MetricWriter, MetricCollector {
 
             $aggregators[$streamId] = $aggregator;
         }
+
         $noopObserver = new NoopObserver();
-        $handler = function(int $callbackId, array $callbackArguments) use ($observers, $noopObserver): void {
-            if (!$callback = $this->asynchronousCallbacks[$callbackId] ?? null) {
-                throw new AsynchronousCallbackUnregisteredException();
+        $registered = &$this->asynchronousCallbacks;
+        $logger = $this->logger;
+        $barrier = $callbacks
+            ? new Barrier(count($callbacks))
+            : null;
+        $handler = static function(int $callbackId, array $callbackArguments) use ($observers, $noopObserver, $timestamp, &$callbacks, &$registered, $logger, $barrier, $cancellation): void {
+            if (!$callback = $registered[$callbackId] ?? null) {
+                $barrier->arrive();
+                $logger?->info('Callback unregistered during asynchronous metric collection', [
+                    'callback_id' => $callbackId,
+                    'collection_timestamp' => $timestamp,
+                ]);
+                return;
             }
 
             $args = [];
@@ -167,30 +178,29 @@ final class MetricRegistry implements MetricWriter, MetricCollector {
                 $args[] = $observers[$instrumentId] ?? $noopObserver;
             }
 
-            $callback(...$args);
-        };
-        $futures = [];
-        foreach ($callbacks as $callbackId => $callbackArguments) {
-            $futures[$callbackId] = async($handler, $callbackId, $callbackArguments);
-        }
-        try {
-            foreach (Future::iterate($futures, $cancellation) as $callbackId => $future) {
-                try {
-                    $future->await();
-                    unset($callbacks[$callbackId]);
-                } catch (AsynchronousCallbackUnregisteredException) {
-                    $this->logger?->info('Callback unregistered during asynchronous metric collection', [
-                        'callback_id' => $callbackId,
-                        'collection_timestamp' => $timestamp,
-                    ]);
-                } catch (Exception $e) {
-                    $this->logger?->error('Exception thrown by callback during asynchronous metric collection', [
-                        'exception' => $e,
-                        'callback_id' => $callbackId,
-                        'collection_timestamp' => $timestamp,
-                    ]);
-                }
+            $cancellationId = $cancellation?->subscribe(EventLoop::getSuspension()->throw(...));
+
+            try {
+                $callback(...$args);
+                unset($callbacks[$callbackId]);
+            } catch (CancelledException) {
+            } catch (Exception $e) {
+                $logger?->error('Exception thrown by callback during asynchronous metric collection', [
+                    'exception' => $e,
+                    'callback_id' => $callbackId,
+                    'collection_timestamp' => $timestamp,
+                ]);
+            } finally {
+                $barrier->arrive();
+                $cancellation?->unsubscribe($cancellationId);
             }
+        };
+        foreach ($callbacks as $callbackId => $callbackArguments) {
+            EventLoop::queue($handler, $callbackId, $callbackArguments);
+        }
+
+        try {
+            $barrier?->await($cancellation);
         } catch (CancelledException) {
             $this->logger?->warning('Asynchronous metric collection cancelled', [
                 'collection_timestamp' => $timestamp,
@@ -199,8 +209,7 @@ final class MetricRegistry implements MetricWriter, MetricCollector {
 
         if ($callbacks) {
             $this->logger?->warning('Failed to invoke some callbacks during asynchronous metric collection', [
-                'total_failed_callbacks' => count($callbacks),
-                'total_registered_callbacks' => count($futures),
+                'failed_callbacks' => count($callbacks),
                 'failed_callback_ids' => array_keys($callbacks),
                 'collection_timestamp' => $timestamp,
             ]);
