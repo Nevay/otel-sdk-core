@@ -1,7 +1,6 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Metrics;
 
-use Nevay\OTelSDK\Common\AttributesLimitingFactory;
 use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Common\SystemClock;
@@ -43,7 +42,6 @@ final class MeterProviderBuilder {
         return $this;
     }
 
-
     public function addView(
         View $view,
         ?InstrumentType $type = null,
@@ -64,7 +62,7 @@ final class MeterProviderBuilder {
             Resource::mergeAll(...$this->resources),
             UnlimitedAttributesFactory::create(),
             SystemClock::create(),
-            AttributesLimitingFactory::create(),
+            UnlimitedAttributesFactory::create(),
             $this->metricReaders,
             $this->exemplarReservoirResolver,
             clone $this->viewRegistry,
