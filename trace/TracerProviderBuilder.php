@@ -8,6 +8,7 @@ use Nevay\OTelSDK\Common\SystemClock;
 use Nevay\OTelSDK\Common\SystemHighResolutionTime;
 use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
 use Nevay\OTelSDK\Trace\IdGenerator\RandomIdGenerator;
+use Nevay\OTelSDK\Trace\Internal\LogDiscardedSpanProcessor;
 use Nevay\OTelSDK\Trace\Internal\TracerProvider;
 use Nevay\OTelSDK\Trace\Sampler\AlwaysOnSampler;
 use Nevay\OTelSDK\Trace\Sampler\ParentBasedSampler;
@@ -129,6 +130,11 @@ final class TracerProviderBuilder {
         $eventCountLimit = $this->eventCountLimit ?? 128;
         $linkCountLimit = $this->linkCountLimit ?? 128;
 
+        $spanProcessors = $this->spanProcessors;
+        if ($logger) {
+            $spanProcessors[] = new LogDiscardedSpanProcessor($logger);
+        }
+
         return new TracerProvider(
             null,
             Resource::mergeAll(...$this->resources),
@@ -137,7 +143,7 @@ final class TracerProviderBuilder {
             SystemHighResolutionTime::create(),
             $idGenerator,
             $sampler,
-            MultiSpanProcessor::composite(...$this->spanProcessors),
+            MultiSpanProcessor::composite(...$spanProcessors),
             $spanAttributesFactory,
             $eventAttributesFactory,
             $linkAttributesFactory,

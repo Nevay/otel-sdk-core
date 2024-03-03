@@ -6,6 +6,7 @@ use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Common\SystemClock;
 use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
+use Nevay\OTelSDK\Logs\Internal\LogDiscardedLogRecordProcessor;
 use Nevay\OTelSDK\Logs\Internal\LoggerProvider;
 use Nevay\OTelSDK\Logs\LogRecordProcessor\MultiLogRecordProcessor;
 use OpenTelemetry\API\Logs\LoggerProviderInterface;
@@ -55,12 +56,17 @@ final class LoggerProviderBuilder {
             $this->logRecordAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
         );
 
+        $logRecordProcessors = $this->logRecordProcessors;
+        if ($logger) {
+            $logRecordProcessors[] = new LogDiscardedLogRecordProcessor($logger);
+        }
+
         return new LoggerProvider(
             null,
             Resource::mergeAll(...$this->resources),
             UnlimitedAttributesFactory::create(),
             SystemClock::create(),
-            MultiLogRecordProcessor::composite(...$this->logRecordProcessors),
+            MultiLogRecordProcessor::composite(...$logRecordProcessors),
             $logRecordAttributesFactory,
             $logger,
         );
