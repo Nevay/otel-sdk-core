@@ -196,6 +196,7 @@ final class ExportingProcessor {
         }
 
         $future
+            ->catch(static fn() => false)
             ->finally(static fn() => $listener->onFinished($count));
 
         $future
