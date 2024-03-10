@@ -2,6 +2,7 @@
     "name": "tbachert/otel-sdk-trace",
     "description": "OpenTelemetry SDK trace signal",
     "keywords": ["opentelemetry", "otel", "sdk", "tracing"],
+    "license": "Apache-2.0",
     "require": {
         "php-64bit": "^8.1",
         "composer-runtime-api": "^2.0",

@@ -2,6 +2,7 @@
     "name": "tbachert/otel-sdk-metrics",
     "description": "OpenTelemetry SDK metrics signal",
     "keywords": ["opentelemetry", "otel", "sdk", "metrics"],
+    "license": "Apache-2.0",
     "require": {
         "php-64bit": "^8.1",
         "composer-runtime-api": "^2.0",
