@@ -5,11 +5,11 @@ use Nevay\OTelSDK\Trace\IdGenerator;
 use Random\Engine\PcgOneseq128XslRr64;
 use Random\RandomException;
 use Random\Randomizer;
+use function assert;
+use function mt_getrandmax;
 use function mt_rand;
 use function pack;
 use function strspn;
-use const PHP_INT_MAX;
-use const PHP_INT_MIN;
 use const PHP_VERSION_ID;
 
 final class RandomIdGenerator implements IdGenerator {
@@ -34,8 +34,10 @@ final class RandomIdGenerator implements IdGenerator {
             } catch (RandomException) {}
         }
 
+        assert(($n = mt_getrandmax()) >= (1 << 31) - 1 && !($n & $n + 1));
         do {
-            $r = mt_rand(PHP_INT_MIN, PHP_INT_MAX);
+            $c = mt_rand();
+            $r = mt_rand() ^ mt_rand() << 31 ^ $c << 62;
         } while (!$r);
 
         return pack('Q', $r);
@@ -48,12 +50,18 @@ final class RandomIdGenerator implements IdGenerator {
             } catch (RandomException) {}
         }
 
+        assert(($n = mt_getrandmax()) >= (1 << 31) - 1 && !($n & $n + 1));
         do {
-            $hi = mt_rand(PHP_INT_MIN, PHP_INT_MAX);
-            $lo = mt_rand(PHP_INT_MIN, PHP_INT_MAX);
+            $c = mt_rand();
+            $hi = mt_rand() ^ mt_rand() << 31 ^ $c << 62;
+            $lo = mt_rand() ^ mt_rand() << 31 ^ $c << 60;
         } while (!$hi && !$lo);
 
         return pack('Q2', $hi, $lo);
+    }
+
+    public function traceFlags(): int {
+        return 0x2;
     }
 
     /**

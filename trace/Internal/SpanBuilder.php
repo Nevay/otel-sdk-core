@@ -108,6 +108,9 @@ final class SpanBuilder implements SpanBuilderInterface {
 
         $traceId = $parentSpanContext?->getTraceIdBinary()
             ?? $this->tracerState->idGenerator->generateTraceIdBinary();
+        $flags = $parentSpanContext?->getTraceFlags()
+            ?? $this->tracerState->idGenerator->traceFlags();
+        $flags &= 0x2;
 
         $name = $this->name;
         $spanKind = $this->spanKind;
@@ -128,7 +131,7 @@ final class SpanBuilder implements SpanBuilderInterface {
             ?? $parentSpanContext?->getTraceState();
 
         $spanId = $this->tracerState->idGenerator->generateSpanIdBinary();
-        $flags = $samplingResult->traceFlags();
+        $flags |= $samplingResult->traceFlags();
         $spanContext = new SpanContext($traceId, $spanId, $flags, $traceState);
         assert(SpanContextValidator::isValidTraceId($spanContext->getTraceId()));
         assert(SpanContextValidator::isValidSpanId($spanContext->getSpanId()));

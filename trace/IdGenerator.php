@@ -21,4 +21,11 @@ interface IdGenerator {
      * @return string non-zero trace id in binary format
      */
     public function generateTraceIdBinary(): string;
+
+    /**
+     * Returns trace flags that should be associated with new traces.
+     *
+     * @return int trace flags to associate with new traces
+     */
+    public function traceFlags(): int;
 }
