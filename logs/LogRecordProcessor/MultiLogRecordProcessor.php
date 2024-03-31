@@ -40,8 +40,8 @@ final class MultiLogRecordProcessor implements LogRecordProcessor {
         $shutdown = static function(LogRecordProcessor $p, ?Cancellation $cancellation): bool {
             return $p->shutdown($cancellation);
         };
-        foreach ($this->logRecordProcessors as $spanProcessor) {
-            $futures[] = async($shutdown, $spanProcessor, $cancellation);
+        foreach ($this->logRecordProcessors as $logRecordProcessor) {
+            $futures[] = async($shutdown, $logRecordProcessor, $cancellation);
         }
 
         $success = true;
@@ -59,8 +59,8 @@ final class MultiLogRecordProcessor implements LogRecordProcessor {
         $forceFlush = static function(LogRecordProcessor $p, ?Cancellation $cancellation): bool {
             return $p->forceFlush($cancellation);
         };
-        foreach ($this->logRecordProcessors as $spanProcessor) {
-            $futures[] = async($forceFlush, $spanProcessor, $cancellation);
+        foreach ($this->logRecordProcessors as $logRecordProcessor) {
+            $futures[] = async($forceFlush, $logRecordProcessor, $cancellation);
         }
 
         $success = true;
