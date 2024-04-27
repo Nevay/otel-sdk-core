@@ -2,14 +2,17 @@
 namespace Nevay\OTelSDK\Logs\Internal;
 
 use Amp\Cancellation;
+use Closure;
 use Nevay\OTelSDK\Common\AttributesFactory;
 use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
+use Nevay\OTelSDK\Logs\LoggerConfig;
 use Nevay\OTelSDK\Logs\LogRecordProcessor;
 use OpenTelemetry\API\Logs\LoggerInterface;
 use OpenTelemetry\API\Logs\LoggerProviderInterface;
+use OpenTelemetry\API\Logs\NoopLogger;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface as PsrLoggerInterface;
 
@@ -20,11 +23,16 @@ final class LoggerProvider implements LoggerProviderInterface, Provider {
 
     private readonly LoggerState $loggerState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
+    private readonly Closure $loggerConfigurator;
 
+    /**
+     * @param Closure(InstrumentationScope): LoggerConfig $loggerConfigurator
+     */
     public function __construct(
         ?ContextStorageInterface $contextStorage,
         Resource $resource,
         AttributesFactory $instrumentationScopeAttributesFactory,
+        Closure $loggerConfigurator,
         Clock $clock,
         LogRecordProcessor $logRecordProcessor,
         AttributesFactory $logRecordAttributesFactory,
@@ -39,6 +47,7 @@ final class LoggerProvider implements LoggerProviderInterface, Provider {
             $logger,
         );
         $this->instrumentationScopeAttributesFactory = $instrumentationScopeAttributesFactory;
+        $this->loggerConfigurator = $loggerConfigurator;
     }
 
     public function getLogger(
@@ -51,8 +60,15 @@ final class LoggerProvider implements LoggerProviderInterface, Provider {
             $this->loggerState->logger?->warning('Invalid logger name', ['name' => $name]);
         }
 
-        return new Logger($this->loggerState, new InstrumentationScope($name, $version, $schemaUrl,
-            $this->instrumentationScopeAttributesFactory->builder()->addAll($attributes)->build()));
+        $instrumentationScope = new InstrumentationScope($name, $version, $schemaUrl,
+            $this->instrumentationScopeAttributesFactory->builder()->addAll($attributes)->build());
+
+        $config = ($this->loggerConfigurator)($instrumentationScope);
+        if ($config->disabled) {
+            return new NoopLogger();
+        }
+
+        return new Logger($this->loggerState, $instrumentationScope);
     }
 
     public function shutdown(?Cancellation $cancellation = null): bool {

@@ -1,7 +1,9 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Trace;
 
+use Closure;
 use Nevay\OTelSDK\Common\AttributesLimitingFactory;
+use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Common\SystemClock;
@@ -25,6 +27,8 @@ final class TracerProviderBuilder {
 
     private ?IdGenerator $idGenerator = null;
     private ?Sampler $sampler = null;
+
+    private ?Closure $tracerConfigurator = null;
 
     private ?int $attributeCountLimit = null;
     private ?int $attributeValueLengthLimit = null;
@@ -58,6 +62,17 @@ final class TracerProviderBuilder {
 
     public function setSampler(?Sampler $sampler): self {
         $this->sampler = $sampler;
+
+        return $this;
+    }
+
+    /**
+     * @param Closure(InstrumentationScope): TracerConfig $tracerConfigurator
+     *
+     * @experimental
+     */
+    public function setTracerConfigurator(Closure $tracerConfigurator): self {
+        $this->tracerConfigurator = $tracerConfigurator;
 
         return $this;
     }
@@ -135,10 +150,14 @@ final class TracerProviderBuilder {
             $spanProcessors[] = new LogDiscardedSpanProcessor($logger);
         }
 
+        $tracerConfigurator = $this->tracerConfigurator
+            ?? static fn(InstrumentationScope $instrumentationScope): TracerConfig => new TracerConfig();
+
         return new TracerProvider(
             null,
             Resource::mergeAll(...$this->resources),
             UnlimitedAttributesFactory::create(),
+            $tracerConfigurator,
             SystemClock::create(),
             SystemHighResolutionTime::create(),
             $idGenerator,

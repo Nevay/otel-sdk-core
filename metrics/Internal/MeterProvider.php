@@ -3,6 +3,7 @@ namespace Nevay\OTelSDK\Metrics\Internal;
 
 use Amp\Cancellation;
 use Amp\Future;
+use Closure;
 use Nevay\OTelSDK\Common\AttributesFactory;
 use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\InstrumentationScope;
@@ -12,9 +13,11 @@ use Nevay\OTelSDK\Metrics\ExemplarReservoirResolver;
 use Nevay\OTelSDK\Metrics\Internal\Registry\MetricRegistry;
 use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\StalenessHandlerFactory;
 use Nevay\OTelSDK\Metrics\Internal\View\ViewRegistry;
+use Nevay\OTelSDK\Metrics\MeterConfig;
 use Nevay\OTelSDK\Metrics\MetricReader;
 use OpenTelemetry\API\Metrics\MeterInterface;
 use OpenTelemetry\API\Metrics\MeterProviderInterface;
+use OpenTelemetry\API\Metrics\Noop\NoopMeter;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface;
 use WeakMap;
@@ -24,14 +27,17 @@ final class MeterProvider implements MeterProviderInterface, Provider {
 
     private readonly MeterState $meterState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
+    private readonly Closure $meterConfigurator;
 
     /**
+     * @param Closure(InstrumentationScope): MeterConfig $meterConfigurator
      * @param list<MetricReader> $metricReaders
      */
     public function __construct(
         ?ContextStorageInterface $contextStorage,
         Resource $resource,
         AttributesFactory $instrumentationScopeAttributesFactory,
+        Closure $meterConfigurator,
         Clock $clock,
         AttributesFactory $metricAttributesFactory,
         array $metricReaders,
@@ -61,6 +67,7 @@ final class MeterProvider implements MeterProviderInterface, Provider {
             $logger,
         );
         $this->instrumentationScopeAttributesFactory = $instrumentationScopeAttributesFactory;
+        $this->meterConfigurator = $meterConfigurator;
     }
 
     public function getMeter(
@@ -73,8 +80,15 @@ final class MeterProvider implements MeterProviderInterface, Provider {
             $this->meterState->logger?->warning('Invalid meter name', ['name' => $name]);
         }
 
-        return new Meter($this->meterState, new InstrumentationScope($name, $version, $schemaUrl,
-            $this->instrumentationScopeAttributesFactory->builder()->addAll($attributes)->build()));
+        $instrumentationScope = new InstrumentationScope($name, $version, $schemaUrl,
+            $this->instrumentationScopeAttributesFactory->builder()->addAll($attributes)->build());
+
+        $config = ($this->meterConfigurator)($instrumentationScope);
+        if ($config->disabled) {
+            return new NoopMeter();
+        }
+
+        return new Meter($this->meterState, $instrumentationScope);
     }
 
     public function shutdown(?Cancellation $cancellation = null): bool {

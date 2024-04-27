@@ -1,6 +1,8 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Metrics;
 
+use Closure;
+use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Common\SystemClock;
@@ -19,6 +21,8 @@ final class MeterProviderBuilder {
     private array $metricReaders = [];
     private ExemplarReservoirResolver $exemplarReservoirResolver = ExemplarReservoirResolvers::None;
     private readonly MutableViewRegistry $viewRegistry;
+
+    private ?Closure $meterConfigurator = null;
 
 
     public function __construct() {
@@ -56,11 +60,26 @@ final class MeterProviderBuilder {
         return $this;
     }
 
+    /**
+     * @param Closure(InstrumentationScope): MeterConfig $meterConfigurator
+     *
+     * @experimental
+     */
+    public function setMeterConfigurator(Closure $meterConfigurator): self {
+        $this->meterConfigurator = $meterConfigurator;
+
+        return $this;
+    }
+
     public function build(?LoggerInterface $logger = null): MeterProviderInterface&Provider {
+        $meterConfigurator = $this->meterConfigurator
+            ?? static fn(InstrumentationScope $instrumentationScope): MeterConfig => new MeterConfig();
+
         return new MeterProvider(
             null,
             Resource::mergeAll(...$this->resources),
             UnlimitedAttributesFactory::create(),
+            $meterConfigurator,
             SystemClock::create(),
             UnlimitedAttributesFactory::create(),
             $this->metricReaders,
