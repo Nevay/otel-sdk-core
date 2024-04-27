@@ -41,7 +41,7 @@ final class DelayedStalenessHandler implements StalenessHandler, ReferenceCounte
     }
 
     public function release(): void {
-        if (--$this->count === 0) {
+        if ($this->count !== null && --$this->count === 0) {
             EventLoop::enable($this->timerId);
         }
     }
