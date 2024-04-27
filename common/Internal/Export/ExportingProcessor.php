@@ -222,7 +222,7 @@ final class ExportingProcessor {
         assert($p instanceof self);
 
         $worker = EventLoop::getSuspension();
-        unset($tracerProvider, $meterProvider);
+        $pWorker = &$p->worker;
 
         do {
             while (!$p->queue->isEmpty() || $p->flush) {
@@ -234,17 +234,14 @@ final class ExportingProcessor {
                 $id = ++$p->processedBatchId;
                 ($p->flush[$id] ?? null)?->complete();
                 unset($p->flush[$id]);
-
-                EventLoop::defer($worker->resume(...));
-                $worker->suspend();
             }
 
-            if ($p->closed) {
-                return;
-            }
-
-            $p->worker = $worker;
             $p = null;
+            if ($r->get()->closed ?? true) {
+                break;
+            }
+
+            $pWorker = $worker;
             $worker->suspend();
         } while ($p = $r->get());
     }
