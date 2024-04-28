@@ -112,14 +112,11 @@ final class ExportingProcessor {
 
         try {
             $this->flush()?->await($cancellation);
-        } finally {
-            while (!$this->queue->isEmpty()) {
-                $this->drop(success: false, count: $this->driver->count($this->queue->dequeue()));
-            }
-            if ($this->driver->isBuffered() && $this->driver->hasPending()) {
-                $this->drop(success: false, count: $this->driver->count($this->driver->getPending()));
-            }
+        } catch (CancelledException $e) {
+            $this->drop(success: false, count: $this->drain($e));
 
+            throw $e;
+        } finally {
             $success = $this->exporter->shutdown($cancellation);
         }
 
@@ -141,6 +138,32 @@ final class ExportingProcessor {
     }
 
     /**
+     * Drains the internal state, returning the count of drained data.
+     *
+     * @param CancelledException $e exception that should be used to cancel
+     *        pending flush requests
+     * @return int count of drained data
+     *
+     * @see ExportingProcessorDriver::count()
+     */
+    private function drain(CancelledException $e): int {
+        $count = 0;
+        while (!$this->queue->isEmpty()) {
+            $count += $this->driver->count($this->queue->dequeue());
+        }
+        if ($this->driver->isBuffered()) {
+            $count += $this->driver->count($this->driver->getPending());
+        }
+
+        foreach ($this->flush as $flush) {
+            $flush->error($e);
+        }
+        $this->flush = [];
+
+        return $count;
+    }
+
+    /**
      * Flushes the batch. The returned future will be resolved after the batch
      * was sent to the exporter.
      */
@@ -152,7 +175,7 @@ final class ExportingProcessor {
 
         $this->resumeWorker();
 
-        return ($this->flush[$this->processedBatchId + $queued] ??= new DeferredFuture())->getFuture();
+        return ($this->flush[$this->processedBatchId + $queued] ??= new DeferredFuture())->getFuture()->ignore();
     }
 
     private function resumeWorker(): void {
