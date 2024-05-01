@@ -34,6 +34,7 @@ final class MeterProviderBuilder {
 
         return $this;
     }
+
     public function addMetricReader(MetricReader $metricReader): self {
         $this->metricReaders[] = $metricReader;
 
@@ -46,6 +47,22 @@ final class MeterProviderBuilder {
         return $this;
     }
 
+    /**
+     * Customizes telemetry pipelines.
+     *
+     * @param View $view parameters that defines the telemetry pipeline
+     * @param InstrumentType|null $type type of instruments to match
+     * @param string|null $name name of instruments to match, supports wildcard
+     *        patterns:
+     *        - `?` matches any single character
+     *        - `*` matches any number of any characters including none
+     * @param string|null $unit unit of instruments to match
+     * @param string|null $meterName name of meters to match
+     * @param string|null $meterVersion version of meters to match
+     * @param string|null $meterSchemaUrl schema url of meters to match
+     *
+     * @see https://opentelemetry.io/docs/specs/otel/metrics/sdk/#view
+     */
     public function addView(
         View $view,
         ?InstrumentType $type = null,
