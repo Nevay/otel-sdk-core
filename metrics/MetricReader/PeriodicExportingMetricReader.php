@@ -45,6 +45,8 @@ final class PeriodicExportingMetricReader implements MetricReader {
      * @param int<0, max> $collectTimeoutMillis collect timeout in milliseconds
      * @param MetricFilter|null $metricFilter metric filter to apply to metrics
      *        and attributes during collect
+     * @param iterable<MetricProducer> $metricProducers metric producers to
+     *        collect metrics from in addition to metrics from the SDK
      * @param TracerProviderInterface $tracerProvider tracer provider for self
      *        diagnostics
      * @param MeterProviderInterface $meterProvider meter provider for self
@@ -59,6 +61,7 @@ final class PeriodicExportingMetricReader implements MetricReader {
         int $exportTimeoutMillis = 30000,
         int $collectTimeoutMillis = 30000,
         ?MetricFilter $metricFilter = null,
+        iterable $metricProducers = [],
         TracerProviderInterface $tracerProvider = new NoopTracerProvider(),
         MeterProviderInterface $meterProvider = new NoopMeterProvider(),
         LoggerInterface $logger = new NullLogger(),
@@ -74,7 +77,7 @@ final class PeriodicExportingMetricReader implements MetricReader {
         }
 
         $this->metricExporter = $metricExporter;
-        $this->metricProducer = new MultiMetricProducer();
+        $this->metricProducer = new MultiMetricProducer($metricProducers);
 
         $this->processor = $processor = new ExportingProcessor(
             $metricExporter,

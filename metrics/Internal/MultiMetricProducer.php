@@ -14,6 +14,15 @@ final class MultiMetricProducer implements MetricProducer {
     /** @var list<MetricProducer> */
     public array $metricProducers = [];
 
+    /**
+     * @param iterable<MetricProducer> $metricProducers
+     */
+    public function __construct(iterable $metricProducers = []) {
+        foreach ($metricProducers as $metricProducer) {
+            $this->metricProducers[] = $metricProducer;
+        }
+    }
+
     public function produce(?MetricFilter $metricFilter = null, ?Cancellation $cancellation = null): iterable {
         $queue = new Queue();
         $count = 0;
