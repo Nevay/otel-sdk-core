@@ -1,6 +1,8 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Metrics;
 
+use Closure;
+
 final class View {
 
     /**
@@ -13,10 +15,9 @@ final class View {
      *        processor, false to disable attribute preprocessing
      * @param Aggregation|false|null $aggregation aggregation, false to drop the
      *        metric
-     * @param ExemplarReservoirResolver|false|null $exemplarReservoirResolver
-     *        exemplar reservoir resolver, false to disable exemplar sampling
-     * @param int<0, max>|false|null $cardinalityLimit aggregation cardinality limit,
-     *        false to disable cardinality limit
+     * @param Closure(Aggregator): ExemplarReservoir|null $exemplarReservoir
+     *        exemplar reservoir
+     * @param int<0, max>|null $cardinalityLimit aggregation cardinality limit
      */
     public function __construct(
         public readonly ?string $name = null,
@@ -24,8 +25,8 @@ final class View {
         public readonly string|false|null $description = null,
         public readonly AttributeProcessor|false|null $attributeProcessor = null,
         public readonly Aggregation|false|null $aggregation = null,
-        public readonly ExemplarReservoirResolver|false|null $exemplarReservoirResolver = null,
-        public readonly int|false|null $cardinalityLimit = null,
+        public readonly Closure|null $exemplarReservoir = null,
+        public readonly int|null $cardinalityLimit = null,
     ) {}
 
     public static function drop(): View {

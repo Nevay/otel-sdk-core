@@ -9,7 +9,9 @@ use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
-use Nevay\OTelSDK\Metrics\ExemplarReservoirResolver;
+use Nevay\OTelSDK\Metrics\Aggregator;
+use Nevay\OTelSDK\Metrics\ExemplarReservoir;
+use Nevay\OTelSDK\Metrics\Internal\Exemplar\ExemplarFilter;
 use Nevay\OTelSDK\Metrics\Internal\Registry\MetricRegistry;
 use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\StalenessHandlerFactory;
 use Nevay\OTelSDK\Metrics\Internal\View\ViewRegistry;
@@ -31,6 +33,7 @@ final class MeterProvider implements MeterProviderInterface, Provider {
 
     /**
      * @param Closure(InstrumentationScope): MeterConfig $meterConfigurator
+     * @param Closure(Aggregator): ExemplarReservoir $exemplarReservoir
      * @param list<MetricReader> $metricReaders
      */
     public function __construct(
@@ -41,7 +44,8 @@ final class MeterProvider implements MeterProviderInterface, Provider {
         Clock $clock,
         AttributesFactory $metricAttributesFactory,
         array $metricReaders,
-        ExemplarReservoirResolver $exemplarReservoirResolver,
+        ExemplarFilter $exemplarFilter,
+        Closure $exemplarReservoir,
         ViewRegistry $viewRegistry,
         StalenessHandlerFactory $stalenessHandlerFactory,
         ?LoggerInterface $logger,
@@ -60,7 +64,8 @@ final class MeterProvider implements MeterProviderInterface, Provider {
             $clock,
             $metricReaders,
             $metricProducers,
-            $exemplarReservoirResolver,
+            $exemplarFilter,
+            $exemplarReservoir,
             $viewRegistry,
             $stalenessHandlerFactory,
             new WeakMap(),

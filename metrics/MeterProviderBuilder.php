@@ -7,6 +7,12 @@ use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Common\SystemClock;
 use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
+use Nevay\OTelSDK\Metrics\Aggregation\ExplicitBucketHistogramAggregator;
+use Nevay\OTelSDK\Metrics\Exemplar\AlignedHistogramBucketExemplarReservoir;
+use Nevay\OTelSDK\Metrics\Exemplar\SimpleFixedSizeExemplarReservoir;
+use Nevay\OTelSDK\Metrics\Internal\Exemplar\AlwaysOffFilter;
+use Nevay\OTelSDK\Metrics\Internal\Exemplar\AlwaysOnFilter;
+use Nevay\OTelSDK\Metrics\Internal\Exemplar\TraceBasedFilter;
 use Nevay\OTelSDK\Metrics\Internal\MeterProvider;
 use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\DelayedStalenessHandlerFactory;
 use Nevay\OTelSDK\Metrics\Internal\View\MutableViewRegistry;
@@ -19,13 +25,16 @@ final class MeterProviderBuilder {
     private array $resources = [];
     /** @var list<MetricReader> */
     private array $metricReaders = [];
-    private ExemplarReservoirResolver $exemplarReservoirResolver = ExemplarReservoirResolvers::None;
+    private ExemplarFilter $exemplarFilter = ExemplarFilter::TraceBased;
+    private Closure $exemplarReservoir;
     private readonly MutableViewRegistry $viewRegistry;
 
     private ?Closure $meterConfigurator = null;
 
-
     public function __construct() {
+        $this->exemplarReservoir = static fn(Aggregator $aggregator) => $aggregator instanceof ExplicitBucketHistogramAggregator && $aggregator->boundaries
+            ? new AlignedHistogramBucketExemplarReservoir($aggregator->boundaries)
+            : new SimpleFixedSizeExemplarReservoir(1);
         $this->viewRegistry = new MutableViewRegistry();
     }
 
@@ -41,8 +50,17 @@ final class MeterProviderBuilder {
         return $this;
     }
 
-    public function setExemplarReservoirResolver(ExemplarReservoirResolver $exemplarReservoirResolver): self {
-        $this->exemplarReservoirResolver = $exemplarReservoirResolver;
+    public function setExemplarFilter(ExemplarFilter $exemplarFilter): self {
+        $this->exemplarFilter = $exemplarFilter;
+
+        return $this;
+    }
+
+    /**
+     * @param Closure(Aggregator): ExemplarReservoir $exemplarReservoir
+     */
+    public function setExemplarReservoir(Closure $exemplarReservoir): self {
+        $this->exemplarReservoir = $exemplarReservoir;
 
         return $this;
     }
@@ -100,7 +118,12 @@ final class MeterProviderBuilder {
             SystemClock::create(),
             UnlimitedAttributesFactory::create(),
             $this->metricReaders,
-            $this->exemplarReservoirResolver,
+            match ($this->exemplarFilter) {
+                ExemplarFilter::AlwaysOn => new AlwaysOnFilter(),
+                ExemplarFilter::AlwaysOff => new AlwaysOffFilter(),
+                ExemplarFilter::TraceBased => new TraceBasedFilter(),
+            },
+            $this->exemplarReservoir,
             clone $this->viewRegistry,
             new DelayedStalenessHandlerFactory(24 * 60 * 60),
             $logger,

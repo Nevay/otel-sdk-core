@@ -1,15 +1,18 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Metrics\Internal;
 
+use Closure;
 use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Metrics\Aggregation\DropAggregator;
+use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\AttributeProcessor\FilteredAttributeProcessor;
 use Nevay\OTelSDK\Metrics\Data\Descriptor;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
-use Nevay\OTelSDK\Metrics\ExemplarReservoirResolver;
+use Nevay\OTelSDK\Metrics\ExemplarReservoir;
 use Nevay\OTelSDK\Metrics\Instrument;
+use Nevay\OTelSDK\Metrics\Internal\Exemplar\ExemplarFilter;
 use Nevay\OTelSDK\Metrics\Internal\Instrument\ObservableCallbackDestructor;
 use Nevay\OTelSDK\Metrics\Internal\Registry\MetricRegistry;
 use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\ReferenceCounter;
@@ -47,6 +50,7 @@ final class MeterState {
     /**
      * @param array<MetricReader> $metricReaders
      * @param array<MeterMetricProducer> $metricProducers
+     * @param Closure(Aggregator): ExemplarReservoir $exemplarReservoir
      * @param WeakMap<object, ObservableCallbackDestructor> $destructors
      */
     public function __construct(
@@ -55,7 +59,8 @@ final class MeterState {
         private readonly Clock $clock,
         public readonly array $metricReaders,
         private readonly array $metricProducers,
-        private readonly ExemplarReservoirResolver $exemplarReservoirResolver,
+        private readonly ExemplarFilter $exemplarFilter,
+        private readonly Closure $exemplarReservoir,
         private readonly ViewRegistry $viewRegistry,
         private readonly StalenessHandlerFactory $stalenessHandlerFactory,
         public readonly WeakMap $destructors,
@@ -107,7 +112,8 @@ final class MeterState {
                 $streamId = $this->registry->registerSynchronousStream($instrument, $stream, new DefaultMetricAggregator(
                     $view->aggregator,
                     $view->attributeProcessor,
-                    $view->exemplarReservoirFactory,
+                    $view->exemplarFilter,
+                    $view->exemplarReservoir,
                     $view->cardinalityLimit,
                 ));
 
@@ -243,15 +249,15 @@ final class MeterState {
                     continue;
                 }
 
-                $exemplarReservoirResolver = $view->exemplarReservoirResolver ?? $this->exemplarReservoirResolver ?: null;
-                $exemplarReservoirFactory = $exemplarReservoirResolver?->resolveExemplarReservoir($aggregator);
-                $cardinalityLimit = $view->cardinalityLimit ?? $metricReader->resolveCardinalityLimit($instrument->type) ?? 2000 ?: null;
+                $exemplarReservoir = $view->exemplarReservoir ?? $this->exemplarReservoir;
+                $cardinalityLimit = $view->cardinalityLimit ?? $metricReader->resolveCardinalityLimit($instrument->type) ?? 2000;
 
                 yield new ResolvedView(
                     $descriptor,
                     $attributeProcessor,
                     $aggregator,
-                    $exemplarReservoirFactory,
+                    $this->exemplarFilter,
+                    $exemplarReservoir,
                     $cardinalityLimit,
                     $this->metricProducers[$i],
                     $producerTemporality,
@@ -360,7 +366,7 @@ final class MeterState {
         return ''
             . self::serialize($view->attributeProcessor)
             . self::serialize($view->aggregator)
-            . self::serialize($view->exemplarReservoirFactory)
+            . self::serialize(($view->exemplarReservoir)($view->aggregator))
             . $view->cardinalityLimit
         ;
     }

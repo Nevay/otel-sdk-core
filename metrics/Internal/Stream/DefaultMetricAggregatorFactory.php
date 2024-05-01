@@ -1,9 +1,11 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Metrics\Internal\Stream;
 
+use AssertionError;
 use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\AttributeProcessor;
 use Nevay\OTelSDK\Metrics\Data\Data;
+use Nevay\OTelSDK\Metrics\Internal\Exemplar\AlwaysOffFilter;
 
 /**
  * @template TSummary
@@ -21,6 +23,6 @@ final class DefaultMetricAggregatorFactory implements MetricAggregatorFactory {
     ) {}
 
     public function create(): MetricAggregator {
-        return new DefaultMetricAggregator($this->aggregator, $this->attributeProcessor, null, $this->cardinalityLimit);
+        return new DefaultMetricAggregator($this->aggregator, $this->attributeProcessor, new AlwaysOffFilter(), static fn() => throw new AssertionError(), $this->cardinalityLimit);
     }
 }

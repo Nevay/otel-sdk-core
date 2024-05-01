@@ -1,12 +1,13 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Metrics\Internal\Stream;
 
+use Closure;
 use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\AttributeProcessor;
 use Nevay\OTelSDK\Metrics\Data\Data;
 use Nevay\OTelSDK\Metrics\ExemplarReservoir;
-use Nevay\OTelSDK\Metrics\ExemplarReservoirFactory;
+use Nevay\OTelSDK\Metrics\Internal\Exemplar\ExemplarFilter;
 use OpenTelemetry\Context\ContextInterface;
 use function serialize;
 
@@ -18,7 +19,8 @@ final class DefaultMetricAggregator implements MetricAggregator {
 
     private readonly Aggregator $aggregator;
     private readonly ?AttributeProcessor $attributeProcessor;
-    private readonly ?ExemplarReservoirFactory $exemplarReservoirFactory;
+    private readonly ExemplarFilter $exemplarFilter;
+    private readonly Closure $exemplarReservoir;
     private readonly ?int $cardinalityLimit;
 
     /** @var array<Attributes> */
@@ -29,17 +31,20 @@ final class DefaultMetricAggregator implements MetricAggregator {
     private array $exemplarReservoirs = [];
 
     /**
-     * @param Aggregator<TSummary, Data> $aggregation
+     * @param Aggregator<TSummary, Data> $aggregator
+     * @param Closure(Aggregator): ExemplarReservoir $exemplarReservoir
      */
     public function __construct(
-        Aggregator $aggregation,
+        Aggregator $aggregator,
         ?AttributeProcessor $attributeProcessor,
-        ?ExemplarReservoirFactory $exemplarReservoirFactory,
+        ExemplarFilter $exemplarFilter,
+        Closure $exemplarReservoir,
         ?int $cardinalityLimit,
     ) {
-        $this->aggregator = $aggregation;
+        $this->aggregator = $aggregator;
         $this->attributeProcessor = $attributeProcessor;
-        $this->exemplarReservoirFactory = $exemplarReservoirFactory;
+        $this->exemplarFilter = $exemplarFilter;
+        $this->exemplarReservoir = $exemplarReservoir;
         $this->cardinalityLimit = $cardinalityLimit;
     }
 
@@ -59,8 +64,8 @@ final class DefaultMetricAggregator implements MetricAggregator {
             $context,
             $timestamp,
         );
-        if ($this->exemplarReservoirFactory) {
-            $this->exemplarReservoirs[$index] ??= $this->exemplarReservoirFactory->createExemplarReservoir();
+        if ($this->exemplarFilter->accepts($value, $attributes, $context, $timestamp)) {
+            $this->exemplarReservoirs[$index] ??= ($this->exemplarReservoir)($this->aggregator);
             $this->exemplarReservoirs[$index]->offer($value, $attributes, $context, $timestamp);
         }
     }
