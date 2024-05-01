@@ -3,6 +3,7 @@ namespace Nevay\OTelSDK\Metrics\MetricReader;
 
 use Amp\Cancellation;
 use Nevay\OTelSDK\Metrics\Aggregation;
+use Nevay\OTelSDK\Metrics\Aggregation\DropAggregation;
 use Nevay\OTelSDK\Metrics\Data\Descriptor;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use Nevay\OTelSDK\Metrics\InstrumentType;
@@ -31,8 +32,8 @@ final class NoopMetricReader implements MetricReader {
         return null;
     }
 
-    public function resolveAggregation(InstrumentType $instrumentType, array $advisory = []): ?Aggregation {
-        return null;
+    public function resolveAggregation(InstrumentType $instrumentType): Aggregation {
+        return new DropAggregation();
     }
 
     public function resolveCardinalityLimit(InstrumentType $instrumentType): ?int {

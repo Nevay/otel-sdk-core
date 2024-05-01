@@ -2,7 +2,7 @@
 namespace Nevay\OTelSDK\Metrics\Internal\Stream;
 
 use Nevay\OTelSDK\Common\Attributes;
-use Nevay\OTelSDK\Metrics\Aggregation;
+use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\AttributeProcessor;
 use Nevay\OTelSDK\Metrics\Data\Data;
 use Nevay\OTelSDK\Metrics\ExemplarReservoir;
@@ -16,7 +16,7 @@ use function serialize;
  */
 final class DefaultMetricAggregator implements MetricAggregator {
 
-    private readonly Aggregation $aggregation;
+    private readonly Aggregator $aggregator;
     private readonly ?AttributeProcessor $attributeProcessor;
     private readonly ?ExemplarReservoirFactory $exemplarReservoirFactory;
     private readonly ?int $cardinalityLimit;
@@ -29,15 +29,15 @@ final class DefaultMetricAggregator implements MetricAggregator {
     private array $exemplarReservoirs = [];
 
     /**
-     * @param Aggregation<TSummary, Data> $aggregation
+     * @param Aggregator<TSummary, Data> $aggregation
      */
     public function __construct(
-        Aggregation $aggregation,
+        Aggregator $aggregation,
         ?AttributeProcessor $attributeProcessor,
         ?ExemplarReservoirFactory $exemplarReservoirFactory,
         ?int $cardinalityLimit,
     ) {
-        $this->aggregation = $aggregation;
+        $this->aggregator = $aggregation;
         $this->attributeProcessor = $attributeProcessor;
         $this->exemplarReservoirFactory = $exemplarReservoirFactory;
         $this->cardinalityLimit = $cardinalityLimit;
@@ -52,8 +52,8 @@ final class DefaultMetricAggregator implements MetricAggregator {
             $filteredAttributes = Overflow::attributes();
         }
         $this->attributes[$index] ??= $filteredAttributes;
-        $this->aggregation->record(
-            $this->summaries[$index] ??= $this->aggregation->initialize(),
+        $this->aggregator->record(
+            $this->summaries[$index] ??= $this->aggregator->initialize(),
             $value,
             $attributes,
             $context,

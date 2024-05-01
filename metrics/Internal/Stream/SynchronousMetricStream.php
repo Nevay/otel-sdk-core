@@ -2,7 +2,7 @@
 namespace Nevay\OTelSDK\Metrics\Internal\Stream;
 
 use GMP;
-use Nevay\OTelSDK\Metrics\Aggregation;
+use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\Data\Data;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use function assert;
@@ -21,8 +21,8 @@ use const PHP_INT_SIZE;
  */
 final class SynchronousMetricStream implements MetricStream {
 
-    /** @var Aggregation<TSummary, TData> */
-    private Aggregation $aggregation;
+    /** @var Aggregator<TSummary, TData> */
+    private Aggregator $aggregator;
     private int $timestamp;
     /** @var DeltaStorage<TSummary> */
     private DeltaStorage $storage;
@@ -30,12 +30,12 @@ final class SynchronousMetricStream implements MetricStream {
     private int|GMP $cumulative = 0;
 
     /**
-     * @param Aggregation<TSummary, TData> $aggregation
+     * @param Aggregator<TSummary, TData> $aggregator
      */
-    public function __construct(Aggregation $aggregation, int $startTimestamp, ?int $cardinalityLimit) {
-        $this->aggregation = $aggregation;
+    public function __construct(Aggregator $aggregator, int $startTimestamp, ?int $cardinalityLimit) {
+        $this->aggregator = $aggregator;
         $this->timestamp = $startTimestamp;
-        $this->storage = new DeltaStorage($aggregation, $cardinalityLimit);
+        $this->storage = new DeltaStorage($aggregator, $cardinalityLimit);
     }
 
     public function temporality(): Temporality {
@@ -96,7 +96,7 @@ final class SynchronousMetricStream implements MetricStream {
             ? Temporality::Cumulative
             : Temporality::Delta;
 
-        return $this->aggregation->toData(
+        return $this->aggregator->toData(
             $metric->attributes,
             $metric->summaries,
             $metric->exemplars,

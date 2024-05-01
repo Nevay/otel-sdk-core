@@ -3,5 +3,5 @@ namespace Nevay\OTelSDK\Metrics;
 
 interface ExemplarReservoirResolver {
 
-    public function resolveExemplarReservoir(Aggregation $aggregation): ?ExemplarReservoirFactory;
+    public function resolveExemplarReservoir(Aggregator $aggregator): ?ExemplarReservoirFactory;
 }

@@ -122,8 +122,8 @@ final class PullMetricReader implements MetricReader {
         return $this->metricExporter->resolveTemporality($descriptor);
     }
 
-    public function resolveAggregation(InstrumentType $instrumentType, array $advisory = []): ?Aggregation {
-        return $this->metricExporter->resolveAggregation($instrumentType, $advisory);
+    public function resolveAggregation(InstrumentType $instrumentType): Aggregation {
+        return $this->metricExporter->resolveAggregation($instrumentType);
     }
 
     public function resolveCardinalityLimit(InstrumentType $instrumentType): ?int {

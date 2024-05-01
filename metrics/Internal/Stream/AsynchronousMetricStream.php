@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Metrics\Internal\Stream;
 
-use Nevay\OTelSDK\Metrics\Aggregation;
+use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\Data\Data;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use function array_search;
@@ -14,8 +14,8 @@ use function count;
  */
 final class AsynchronousMetricStream implements MetricStream {
 
-    /** @var Aggregation<TSummary, TData> */
-    private Aggregation $aggregation;
+    /** @var Aggregator<TSummary, TData> */
+    private Aggregator $aggregator;
     private int $startTimestamp;
     /** @var Metric<TSummary> */
     private Metric $metric;
@@ -24,10 +24,10 @@ final class AsynchronousMetricStream implements MetricStream {
     private array $lastReads = [];
 
     /**
-     * @param Aggregation<TSummary, TData> $aggregation
+     * @param Aggregator<TSummary, TData> $aggregation
      */
-    public function __construct(Aggregation $aggregation, int $startTimestamp) {
-        $this->aggregation = $aggregation;
+    public function __construct(Aggregator $aggregation, int $startTimestamp) {
+        $this->aggregator = $aggregation;
         $this->startTimestamp = $startTimestamp;
         $this->metric = new Metric([], [], $startTimestamp);
     }
@@ -80,7 +80,7 @@ final class AsynchronousMetricStream implements MetricStream {
             $metric = $this->diff($lastRead, $metric);
         }
 
-        return $this->aggregation->toData(
+        return $this->aggregator->toData(
             $metric->attributes,
             $metric->summaries,
             $metric->exemplars,
@@ -97,7 +97,7 @@ final class AsynchronousMetricStream implements MetricStream {
                 continue;
             }
 
-            $diff->summaries[$k] = $this->aggregation->diff($lastRead->summaries[$k], $summary);
+            $diff->summaries[$k] = $this->aggregator->diff($lastRead->summaries[$k], $summary);
         }
 
         return $diff;

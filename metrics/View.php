@@ -11,8 +11,8 @@ final class View {
      *        original description, false to ignore instrument description
      * @param AttributeProcessor|false|null $attributeProcessor attribute
      *        processor, false to disable attribute preprocessing
-     * @param AggregationResolver|false|null $aggregationResolver aggregation
-     *        resolver, false to drop the metric
+     * @param Aggregation|false|null $aggregation aggregation, false to drop the
+     *        metric
      * @param ExemplarReservoirResolver|false|null $exemplarReservoirResolver
      *        exemplar reservoir resolver, false to disable exemplar sampling
      * @param CardinalityLimitResolver|false|null $cardinalityLimitResolver
@@ -23,13 +23,13 @@ final class View {
         public readonly string|false|null $unit = null,
         public readonly string|false|null $description = null,
         public readonly AttributeProcessor|false|null $attributeProcessor = null,
-        public readonly AggregationResolver|false|null $aggregationResolver = null,
+        public readonly Aggregation|false|null $aggregation = null,
         public readonly ExemplarReservoirResolver|false|null $exemplarReservoirResolver = null,
         public readonly CardinalityLimitResolver|false|null $cardinalityLimitResolver = null,
     ) {}
 
     public static function drop(): View {
-        static $drop = new View(aggregationResolver: false);
+        static $drop = new View(aggregation: false);
         return $drop;
     }
 }

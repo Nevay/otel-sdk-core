@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Metrics\Internal\Stream;
 
-use Nevay\OTelSDK\Metrics\Aggregation;
+use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\AttributeProcessor;
 use Nevay\OTelSDK\Metrics\Data\Data;
 
@@ -12,15 +12,15 @@ use Nevay\OTelSDK\Metrics\Data\Data;
 final class DefaultMetricAggregatorFactory implements MetricAggregatorFactory {
 
     /**
-     * @param Aggregation<TSummary, Data> $aggregation
+     * @param Aggregator<TSummary, Data> $aggregator
      */
     public function __construct(
-        private readonly Aggregation $aggregation,
+        private readonly Aggregator $aggregator,
         private readonly ?AttributeProcessor $attributeProcessor,
         private readonly ?int $cardinalityLimit,
     ) {}
 
     public function create(): MetricAggregator {
-        return new DefaultMetricAggregator($this->aggregation, $this->attributeProcessor, null, $this->cardinalityLimit);
+        return new DefaultMetricAggregator($this->aggregator, $this->attributeProcessor, null, $this->cardinalityLimit);
     }
 }

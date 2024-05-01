@@ -3,7 +3,7 @@ namespace Nevay\OTelSDK\Metrics\Internal\Stream;
 
 use GMP;
 use Nevay\OTelSDK\Common\Attributes;
-use Nevay\OTelSDK\Metrics\Aggregation;
+use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\Data\Data;
 use Nevay\OTelSDK\Metrics\Data\Exemplar;
 use const INF;
@@ -13,16 +13,16 @@ use const INF;
  */
 final class DeltaStorage {
 
-    private readonly Aggregation $aggregation;
+    private readonly Aggregator $aggregator;
     private readonly ?int $cardinalityLimit;
     /** @var Delta<TSummary> */
     private readonly Delta $head;
 
     /**
-     * @param Aggregation<TSummary, Data> $aggregation
+     * @param Aggregator<TSummary, Data> $aggregator
      */
-    public function __construct(Aggregation $aggregation, ?int $cardinalityLimit) {
-        $this->aggregation = $aggregation;
+    public function __construct(Aggregator $aggregator, ?int $cardinalityLimit) {
+        $this->aggregator = $aggregator;
         $this->cardinalityLimit = $cardinalityLimit;
         $this->head = new Delta(new Metric([], [], 0), 0);
         unset($this->head->metric);
@@ -111,7 +111,7 @@ final class DeltaStorage {
 
             $into->attributes[$k] ??= $attributes;
             $into->summaries[$k] = isset($into->summaries[$k])
-                ? $this->aggregation->merge($into->summaries[$k], $summary)
+                ? $this->aggregator->merge($into->summaries[$k], $summary)
                 : $summary;
 
             if ($exemplars) {

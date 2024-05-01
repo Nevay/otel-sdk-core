@@ -4,7 +4,7 @@ namespace Nevay\OTelSDK\Metrics\Internal;
 use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Resource;
-use Nevay\OTelSDK\Metrics\Aggregation\DropAggregation;
+use Nevay\OTelSDK\Metrics\Aggregation\DropAggregator;
 use Nevay\OTelSDK\Metrics\AttributeProcessor\FilteredAttributeProcessor;
 use Nevay\OTelSDK\Metrics\Data\Descriptor;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
@@ -101,11 +101,11 @@ final class MeterState {
         foreach ($this->views($instrument, $instrumentationScope, Temporality::Delta) as $view) {
             $dedupId = self::streamDedupId($view);
             if (($streamId = $dedup[$dedupId] ?? null) === null) {
-                $stream = new SynchronousMetricStream($view->aggregation, $this->startTimestamp, $view->cardinalityLimit);
+                $stream = new SynchronousMetricStream($view->aggregator, $this->startTimestamp, $view->cardinalityLimit);
                 assert($stream->temporality() === $view->descriptor->temporality);
 
                 $streamId = $this->registry->registerSynchronousStream($instrument, $stream, new DefaultMetricAggregator(
-                    $view->aggregation,
+                    $view->aggregator,
                     $view->attributeProcessor,
                     $view->exemplarReservoirFactory,
                     $view->cardinalityLimit,
@@ -159,11 +159,11 @@ final class MeterState {
         foreach ($this->views($instrument, $instrumentationScope, Temporality::Cumulative) as $view) {
             $dedupId = self::streamDedupId($view);
             if (($streamId = $dedup[$dedupId] ?? null) === null) {
-                $stream = new AsynchronousMetricStream($view->aggregation, $this->startTimestamp);
+                $stream = new AsynchronousMetricStream($view->aggregator, $this->startTimestamp);
                 assert($stream->temporality() === $view->descriptor->temporality);
 
                 $streamId = $this->registry->registerAsynchronousStream($instrument, $stream, new DefaultMetricAggregatorFactory(
-                    $view->aggregation,
+                    $view->aggregator,
                     $view->attributeProcessor,
                     $view->cardinalityLimit,
                 ));
@@ -204,7 +204,7 @@ final class MeterState {
         }
 
         foreach ($views as $view) {
-            if ($view->aggregationResolver === false) {
+            if ($view->aggregation === false) {
                 continue;
             }
 
@@ -223,10 +223,10 @@ final class MeterState {
                 $streamTemporality,
             );
 
-            $viewAggregation = $view->aggregationResolver?->resolveAggregation($instrument->type, $instrument->advisory);
-            if (!$viewAggregation && $view->aggregationResolver) {
+            $viewAggregator = $view->aggregation?->aggregator($instrument->type, $instrument->advisory);
+            if (!$viewAggregator && $view->aggregation) {
                 $this->logger?->warning('View aggregation "{aggregation}" incompatible with instrument type "{instrument_type}", dropping view "{view}"', [
-                    'aggregation' => $view->aggregationResolver,
+                    'aggregation' => $view->aggregation,
                     'instrument_type' => $instrument->type,
                     'view' => $descriptor->name,
                 ]);
@@ -238,20 +238,20 @@ final class MeterState {
                     continue;
                 }
 
-                $aggregation = $viewAggregation ?? $metricReader->resolveAggregation($instrument->type, $instrument->advisory);
-                if (!$aggregation || $aggregation instanceof DropAggregation) {
+                $aggregator = $viewAggregator ?? $metricReader->resolveAggregation($instrument->type)->aggregator($instrument->type, $instrument->advisory);
+                if (!$aggregator || $aggregator instanceof DropAggregator) {
                     continue;
                 }
 
                 $exemplarReservoirResolver = $view->exemplarReservoirResolver ?? $this->exemplarReservoirResolver ?: null;
                 $cardinalityLimitResolver = $view->cardinalityLimitResolver ?? $metricReader ?: null;
-                $exemplarReservoirFactory = $exemplarReservoirResolver?->resolveExemplarReservoir($aggregation);
+                $exemplarReservoirFactory = $exemplarReservoirResolver?->resolveExemplarReservoir($aggregator);
                 $cardinalityLimit = $cardinalityLimitResolver?->resolveCardinalityLimit($instrument->type);
 
                 yield new ResolvedView(
                     $descriptor,
                     $attributeProcessor,
-                    $aggregation,
+                    $aggregator,
                     $exemplarReservoirFactory,
                     $cardinalityLimit,
                     $this->metricProducers[$i],
@@ -360,7 +360,7 @@ final class MeterState {
     private static function streamDedupId(ResolvedView $view): string {
         return ''
             . self::serialize($view->attributeProcessor)
-            . self::serialize($view->aggregation)
+            . self::serialize($view->aggregator)
             . self::serialize($view->exemplarReservoirFactory)
             . $view->cardinalityLimit
         ;

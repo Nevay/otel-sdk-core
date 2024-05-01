@@ -1,8 +1,7 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Metrics;
 
-use Closure;
-use Nevay\OTelSDK\Metrics\Aggregation\ExplicitBucketHistogramAggregation;
+use Nevay\OTelSDK\Metrics\Aggregation\ExplicitBucketHistogramAggregator;
 use Nevay\OTelSDK\Metrics\Exemplar\AlignedHistogramBucketExemplarReservoirFactory;
 use Nevay\OTelSDK\Metrics\Exemplar\ExemplarFilter\WithSampledTraceExemplarFilter;
 use Nevay\OTelSDK\Metrics\Exemplar\FilteredReservoirFactory;
@@ -21,18 +20,18 @@ enum ExemplarReservoirResolvers implements ExemplarReservoirResolver {
                 private readonly ?ExemplarReservoirFactory $exemplarReservoirFactory,
             ) {}
 
-            public function resolveExemplarReservoir(Aggregation $aggregation): ?ExemplarReservoirFactory {
+            public function resolveExemplarReservoir(Aggregator $aggregator): ?ExemplarReservoirFactory {
                 return $this->exemplarReservoirFactory;
             }
         };
     }
 
-    public function resolveExemplarReservoir(Aggregation $aggregation): ?ExemplarReservoirFactory {
+    public function resolveExemplarReservoir(Aggregator $aggregator): ?ExemplarReservoirFactory {
         return match ($this) {
-            self::All => $aggregation instanceof ExplicitBucketHistogramAggregation && $aggregation->boundaries
-                ? new AlignedHistogramBucketExemplarReservoirFactory($aggregation->boundaries)
+            self::All => $aggregator instanceof ExplicitBucketHistogramAggregator && $aggregator->boundaries
+                ? new AlignedHistogramBucketExemplarReservoirFactory($aggregator->boundaries)
                 : new SimpleFixedSizeExemplarReservoirFactory(),
-            self::WithSampledTrace => new FilteredReservoirFactory(self::All->resolveExemplarReservoir($aggregation), new WithSampledTraceExemplarFilter()),
+            self::WithSampledTrace => new FilteredReservoirFactory(self::All->resolveExemplarReservoir($aggregator), new WithSampledTraceExemplarFilter()),
             self::None => null,
         };
     }
