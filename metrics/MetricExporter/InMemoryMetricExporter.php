@@ -6,7 +6,6 @@ use Amp\Future;
 use Nevay\OTelSDK\Metrics\Aggregation;
 use Nevay\OTelSDK\Metrics\Aggregation\DefaultAggregation;
 use Nevay\OTelSDK\Metrics\CardinalityLimitResolver;
-use Nevay\OTelSDK\Metrics\CardinalityLimitResolvers;
 use Nevay\OTelSDK\Metrics\Data\Descriptor;
 use Nevay\OTelSDK\Metrics\Data\Metric;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
@@ -23,7 +22,7 @@ final class InMemoryMetricExporter implements MetricExporter {
     public function __construct(
         private readonly TemporalityResolver $temporalityResolver = TemporalityResolvers::LowMemory,
         private readonly Aggregation $aggregation = new DefaultAggregation(),
-        private readonly CardinalityLimitResolver $cardinalityLimitResolver = CardinalityLimitResolvers::Default,
+        private readonly ?CardinalityLimitResolver $cardinalityLimitResolver = null,
     ) {}
 
     public function export(iterable $batch, ?Cancellation $cancellation = null): Future {
@@ -63,6 +62,6 @@ final class InMemoryMetricExporter implements MetricExporter {
     }
 
     public function resolveCardinalityLimit(InstrumentType $instrumentType): ?int {
-        return $this->cardinalityLimitResolver->resolveCardinalityLimit($instrumentType);
+        return $this->cardinalityLimitResolver?->resolveCardinalityLimit($instrumentType);
     }
 }

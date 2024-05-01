@@ -15,8 +15,8 @@ final class View {
      *        metric
      * @param ExemplarReservoirResolver|false|null $exemplarReservoirResolver
      *        exemplar reservoir resolver, false to disable exemplar sampling
-     * @param CardinalityLimitResolver|false|null $cardinalityLimitResolver
-     *        cardinality limit resolver, false to ignore cardinality limit
+     * @param int<0, max>|false|null $cardinalityLimit aggregation cardinality limit,
+     *        false to disable cardinality limit
      */
     public function __construct(
         public readonly ?string $name = null,
@@ -25,7 +25,7 @@ final class View {
         public readonly AttributeProcessor|false|null $attributeProcessor = null,
         public readonly Aggregation|false|null $aggregation = null,
         public readonly ExemplarReservoirResolver|false|null $exemplarReservoirResolver = null,
-        public readonly CardinalityLimitResolver|false|null $cardinalityLimitResolver = null,
+        public readonly int|false|null $cardinalityLimit = null,
     ) {}
 
     public static function drop(): View {

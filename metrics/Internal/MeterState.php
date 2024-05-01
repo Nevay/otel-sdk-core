@@ -244,9 +244,8 @@ final class MeterState {
                 }
 
                 $exemplarReservoirResolver = $view->exemplarReservoirResolver ?? $this->exemplarReservoirResolver ?: null;
-                $cardinalityLimitResolver = $view->cardinalityLimitResolver ?? $metricReader ?: null;
                 $exemplarReservoirFactory = $exemplarReservoirResolver?->resolveExemplarReservoir($aggregator);
-                $cardinalityLimit = $cardinalityLimitResolver?->resolveCardinalityLimit($instrument->type);
+                $cardinalityLimit = $view->cardinalityLimit ?? $metricReader->resolveCardinalityLimit($instrument->type) ?? 2000 ?: null;
 
                 yield new ResolvedView(
                     $descriptor,
