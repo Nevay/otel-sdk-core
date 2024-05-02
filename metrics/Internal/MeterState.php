@@ -7,6 +7,7 @@ use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Metrics\Aggregation\DropAggregator;
 use Nevay\OTelSDK\Metrics\Aggregator;
+use Nevay\OTelSDK\Metrics\AttributeProcessor\DefaultAttributeProcessor;
 use Nevay\OTelSDK\Metrics\AttributeProcessor\FilteredAttributeProcessor;
 use Nevay\OTelSDK\Metrics\Data\Descriptor;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
@@ -204,8 +205,8 @@ final class MeterState {
     private function views(Instrument $instrument, InstrumentationScope $instrumentationScope, Temporality $streamTemporality): iterable {
         $views = $this->viewRegistry->find($instrument, $instrumentationScope) ?? [new View()];
 
-        $attributeProcessor = null;
-        if ($attributeKeys = $instrument->advisory['Attributes'] ?? null) {
+        $attributeProcessor = new DefaultAttributeProcessor();
+        if (($attributeKeys = $instrument->advisory['Attributes'] ?? null) !== null) {
             $attributeProcessor = new FilteredAttributeProcessor($attributeKeys);
         }
 
@@ -217,7 +218,7 @@ final class MeterState {
             $name = $view->name ?? $instrument->name;
             $unit = $view->unit ?? $instrument->unit ?: null;
             $description = $view->description ?? $instrument->description ?: null;
-            $attributeProcessor = $view->attributeProcessor ?? $attributeProcessor ?: null;
+            $viewAttributeProcessor = $view->attributeProcessor ?? $attributeProcessor ?: null;
 
             $descriptor = new Descriptor(
                 $this->resource,
@@ -254,7 +255,7 @@ final class MeterState {
 
                 yield new ResolvedView(
                     $descriptor,
-                    $attributeProcessor,
+                    $viewAttributeProcessor,
                     $aggregator,
                     $this->exemplarFilter,
                     $exemplarReservoir,

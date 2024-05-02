@@ -9,7 +9,6 @@ use Nevay\OTelSDK\Metrics\Data\Data;
 use Nevay\OTelSDK\Metrics\ExemplarReservoir;
 use Nevay\OTelSDK\Metrics\Internal\Exemplar\ExemplarFilter;
 use OpenTelemetry\Context\ContextInterface;
-use function serialize;
 
 /**
  * @template TSummary
@@ -36,7 +35,7 @@ final class DefaultMetricAggregator implements MetricAggregator {
      */
     public function __construct(
         Aggregator $aggregator,
-        ?AttributeProcessor $attributeProcessor,
+        AttributeProcessor $attributeProcessor,
         ExemplarFilter $exemplarFilter,
         Closure $exemplarReservoir,
         ?int $cardinalityLimit,
@@ -49,14 +48,12 @@ final class DefaultMetricAggregator implements MetricAggregator {
     }
 
     public function record(float|int $value, Attributes $attributes, ContextInterface $context, int $timestamp): void {
-        $filteredAttributes = $this->attributeProcessor?->process($attributes, $context) ?? $attributes;
-        $raw = $filteredAttributes->toArray();
-        $index = $raw ? serialize($raw) : 0;
+        $index = $this->attributeProcessor->uniqueIdentifier($attributes, $context);
         if (Overflow::check($this->attributes, $index, $this->cardinalityLimit)) {
             $index = Overflow::INDEX;
-            $filteredAttributes = Overflow::attributes();
+            $this->attributes[$index] ??= Overflow::attributes();
         }
-        $this->attributes[$index] ??= $filteredAttributes;
+        $this->attributes[$index] ??= $this->attributeProcessor->process($attributes, $context);
         $this->aggregator->record(
             $this->summaries[$index] ??= $this->aggregator->initialize(),
             $value,

@@ -7,4 +7,6 @@ use OpenTelemetry\Context\ContextInterface;
 interface AttributeProcessor {
 
     public function process(Attributes $attributes, ContextInterface $context): Attributes;
+
+    public function uniqueIdentifier(Attributes $attributes, ContextInterface $context): string;
 }

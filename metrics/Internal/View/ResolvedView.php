@@ -17,7 +17,7 @@ final class ResolvedView {
      */
     public function __construct(
         public readonly Descriptor $descriptor,
-        public readonly ?AttributeProcessor $attributeProcessor,
+        public readonly AttributeProcessor $attributeProcessor,
         public readonly Aggregator $aggregator,
         public readonly ExemplarFilter $exemplarFilter,
         public readonly Closure $exemplarReservoir,

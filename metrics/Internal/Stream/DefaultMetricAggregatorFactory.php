@@ -18,7 +18,7 @@ final class DefaultMetricAggregatorFactory implements MetricAggregatorFactory {
      */
     public function __construct(
         private readonly Aggregator $aggregator,
-        private readonly ?AttributeProcessor $attributeProcessor,
+        private readonly AttributeProcessor $attributeProcessor,
         private readonly ?int $cardinalityLimit,
     ) {}
 

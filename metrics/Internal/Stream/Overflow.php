@@ -5,7 +5,7 @@ use Nevay\OTelSDK\Common\Attributes;
 
 final class Overflow {
 
-    public final const INDEX = '';
+    public final const INDEX = -1;
 
     public static function check(array $indexed, int|string $index, ?int $cardinalityLimit): bool {
         return $cardinalityLimit !== null
