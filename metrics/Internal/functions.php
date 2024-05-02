@@ -5,6 +5,7 @@ use Closure;
 use ReflectionFunction;
 use stdClass;
 use WeakReference;
+use function str_starts_with;
 
 function closure(callable $callable): Closure {
     return $callable(...);
@@ -21,7 +22,7 @@ function weaken(Closure $closure, ?object &$target = null): Closure {
 
     $scope = $reflection->getClosureScopeClass();
     $name = $reflection->getShortName();
-    if ($name !== '{closure}') {
+    if (!str_starts_with($name, '{closure')) {
         $closure = fn(...$args) => $this->$name(...$args);
         if ($scope) {
             $closure = $closure->bindTo(null, $scope->name);
