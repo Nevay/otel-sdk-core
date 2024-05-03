@@ -3,6 +3,7 @@ namespace Nevay\OTelSDK\Metrics\Aggregation;
 
 use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Metrics\Aggregator;
+use Nevay\OTelSDK\Metrics\Data\DataPoint;
 use Nevay\OTelSDK\Metrics\Data\Histogram;
 use Nevay\OTelSDK\Metrics\Data\HistogramDataPoint;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
@@ -13,7 +14,7 @@ use const INF;
 use const NAN;
 
 /**
- * @implements Aggregator<ExplicitBucketHistogramSummary, Histogram>
+ * @implements Aggregator<ExplicitBucketHistogramSummary, Histogram, HistogramDataPoint>
  *
  * @internal
  */
@@ -76,30 +77,31 @@ final class ExplicitBucketHistogramAggregator implements Aggregator {
         return $right;
     }
 
-    public function toData(
-        array $attributes,
-        array $summaries,
-        array $exemplars,
+    public function toDataPoint(
+        Attributes $attributes,
+        mixed $summary,
+        iterable $exemplars,
         int $startTimestamp,
         int $timestamp,
+    ): DataPoint {
+        return new HistogramDataPoint(
+            $summary->count,
+            $this->recordSum ? $summary->sum : null,
+            $this->recordMinMax ? $summary->min : null,
+            $this->recordMinMax ? $summary->max : null,
+            $summary->buckets,
+            $this->boundaries,
+            $attributes,
+            $startTimestamp,
+            $timestamp,
+            $exemplars,
+        );
+    }
+
+    public function toData(
+        array $dataPoints,
         Temporality $temporality
     ): Histogram {
-        $dataPoints = [];
-        foreach ($attributes as $key => $dataPointAttributes) {
-            $dataPoints[] = new HistogramDataPoint(
-                $summaries[$key]->count,
-                $this->recordSum ? $summaries[$key]->sum : null,
-                $this->recordMinMax ? $summaries[$key]->min : null,
-                $this->recordMinMax ? $summaries[$key]->max : null,
-                $summaries[$key]->buckets,
-                $this->boundaries,
-                $dataPointAttributes,
-                $startTimestamp,
-                $timestamp,
-                $exemplars[$key] ?? [],
-            );
-        }
-
         return new Histogram(
             $dataPoints,
             $temporality,

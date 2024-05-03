@@ -5,6 +5,7 @@ use GMP;
 use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\Data\Data;
+use Nevay\OTelSDK\Metrics\Data\DataPoint;
 use Nevay\OTelSDK\Metrics\Data\Exemplar;
 use const INF;
 
@@ -19,12 +20,12 @@ final class DeltaStorage {
     private readonly Delta $head;
 
     /**
-     * @param Aggregator<TSummary, Data> $aggregator
+     * @param Aggregator<TSummary, Data, DataPoint> $aggregator
      */
     public function __construct(Aggregator $aggregator, ?int $cardinalityLimit) {
         $this->aggregator = $aggregator;
         $this->cardinalityLimit = $cardinalityLimit;
-        $this->head = new Delta(new Metric([], [], 0), 0);
+        $this->head = new Delta(new Metric([], 0), 0);
         unset($this->head->metric);
     }
 
@@ -97,32 +98,32 @@ final class DeltaStorage {
 
     private function mergeInto(Metric $into, Metric $metric): void {
         $overflowExemplars = [];
-        foreach ($metric->attributes as $k => $attributes) {
-            $summary = $metric->summaries[$k];
-            $exemplars = $metric->exemplars[$k] ?? [];
+        foreach ($metric->metricPoints as $index => $delta) {
+            if (Overflow::check($into->metricPoints, $index, $this->cardinalityLimit)) {
+                $index = Overflow::INDEX;
+                $into->metricPoints[$index] ??= new MetricPoint(
+                    Overflow::attributes(),
+                    $this->aggregator->initialize(),
+                );
 
-            if (Overflow::check($into->attributes, $k, $this->cardinalityLimit)) {
-                self::mergeOverflowExemplars($overflowExemplars, $exemplars, $attributes->toArray());
-
-                $k = Overflow::INDEX;
-                $attributes = Overflow::attributes();
-                $exemplars = [];
+                self::mergeOverflowExemplars($overflowExemplars, $delta->exemplars, $delta->attributes->toArray());
             }
 
-            $into->attributes[$k] ??= $attributes;
-            $into->summaries[$k] = isset($into->summaries[$k])
-                ? $this->aggregator->merge($into->summaries[$k], $summary)
-                : $summary;
+            $target = $into->metricPoints[$index] ??= new MetricPoint(
+                $delta->attributes,
+                $this->aggregator->initialize(),
+            );
 
-            if ($exemplars) {
-                $into->exemplars[$k] = $exemplars + ($into->exemplars[$k] ?? []);
-            }
+            $target->summary = $this->aggregator->merge($target->summary, $delta->summary);
+            $target->exemplars = $delta->exemplars + $target->exemplars;
         }
 
         if ($overflowExemplars) {
-            $k = Overflow::INDEX;
-            self::mergeOverflowExemplars($overflowExemplars, $metric->exemplars[$k] ?? [], []);
-            $into->exemplars[$k] = $overflowExemplars + ($into->exemplars[$k] ?? []);
+            $index = Overflow::INDEX;
+            self::mergeOverflowExemplars($overflowExemplars, $metric->metricPoints[$index]->exemplars ?? [], []);
+
+            $target = $into->metricPoints[$index];
+            $target->exemplars = $overflowExemplars + $target->exemplars;
         }
     }
 

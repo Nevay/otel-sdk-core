@@ -4,11 +4,12 @@ namespace Nevay\OTelSDK\Metrics\Aggregation;
 use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\Data\Data;
+use Nevay\OTelSDK\Metrics\Data\DataPoint;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use OpenTelemetry\Context\ContextInterface;
 
 /**
- * @implements Aggregator<null, Data>
+ * @implements Aggregator<null, Data, DataPoint>
  *
  * @internal
  */
@@ -30,7 +31,11 @@ final class DropAggregator implements Aggregator {
         return $right;
     }
 
-    public function toData(array $attributes, array $summaries, array $exemplars, int $startTimestamp, int $timestamp, Temporality $temporality): Data {
+    public function toDataPoint(Attributes $attributes, mixed $summary, iterable $exemplars, int $startTimestamp, int $timestamp): DataPoint {
+        return new class implements DataPoint {};
+    }
+
+    public function toData(array $dataPoints, Temporality $temporality): Data {
         return new class implements Data {
             public array $dataPoints = [];
         };

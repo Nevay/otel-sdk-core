@@ -3,13 +3,14 @@ namespace Nevay\OTelSDK\Metrics;
 
 use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Metrics\Data\Data;
-use Nevay\OTelSDK\Metrics\Data\Exemplar;
+use Nevay\OTelSDK\Metrics\Data\DataPoint;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use OpenTelemetry\Context\ContextInterface;
 
 /**
  * @template TSummary
- * @template-covariant TData of Data
+ * @template-covariant TData of Data<TDataPoint>
+ * @template-covariant TDataPoint of DataPoint
  */
 interface Aggregator {
 
@@ -44,17 +45,24 @@ interface Aggregator {
     public function diff(mixed $left, mixed $right): mixed;
 
     /**
-     * @param array<Attributes> $attributes
-     * @param array<TSummary> $summaries
-     * @param array<iterable<Exemplar>> $exemplars
+     * @param TSummary $summary
+     * @param iterable $exemplars
+     * @return TDataPoint
+     */
+    public function toDataPoint(
+        Attributes $attributes,
+        mixed $summary,
+        iterable $exemplars,
+        int $startTimestamp,
+        int $timestamp,
+    ): DataPoint;
+
+    /**
+     * @param array<TDataPoint> $dataPoints
      * @return TData
      */
     public function toData(
-        array $attributes,
-        array $summaries,
-        array $exemplars,
-        int $startTimestamp,
-        int $timestamp,
+        array $dataPoints,
         Temporality $temporality,
     ): Data;
 }

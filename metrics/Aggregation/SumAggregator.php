@@ -3,13 +3,14 @@ namespace Nevay\OTelSDK\Metrics\Aggregation;
 
 use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Metrics\Aggregator;
+use Nevay\OTelSDK\Metrics\Data\DataPoint;
 use Nevay\OTelSDK\Metrics\Data\NumberDataPoint;
 use Nevay\OTelSDK\Metrics\Data\Sum;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use OpenTelemetry\Context\ContextInterface;
 
 /**
- * @implements Aggregator<SumSummary, Sum>
+ * @implements Aggregator<SumSummary, Sum, NumberDataPoint>
  *
  * @internal
  */
@@ -44,25 +45,26 @@ final class SumAggregator implements Aggregator {
         return $right;
     }
 
-    public function toData(
-        array $attributes,
-        array $summaries,
-        array $exemplars,
+    public function toDataPoint(
+        Attributes $attributes,
+        mixed $summary,
+        iterable $exemplars,
         int $startTimestamp,
         int $timestamp,
+    ): DataPoint {
+        return new NumberDataPoint(
+            $summary->value,
+            $attributes,
+            $startTimestamp,
+            $timestamp,
+            $exemplars,
+        );
+    }
+
+    public function toData(
+        array $dataPoints,
         Temporality $temporality,
     ): Sum {
-        $dataPoints = [];
-        foreach ($attributes as $key => $dataPointAttributes) {
-            $dataPoints[] = new NumberDataPoint(
-                $summaries[$key]->value,
-                $dataPointAttributes,
-                $startTimestamp,
-                $timestamp,
-                $exemplars[$key] ?? [],
-            );
-        }
-
         return new Sum(
             $dataPoints,
             $temporality,

@@ -4,6 +4,7 @@ namespace Nevay\OTelSDK\Metrics\Internal\Stream;
 use GMP;
 use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\Data\Data;
+use Nevay\OTelSDK\Metrics\Data\DataPoint;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use function assert;
 use function extension_loaded;
@@ -21,7 +22,7 @@ use const PHP_INT_SIZE;
  */
 final class SynchronousMetricStream implements MetricStream {
 
-    /** @var Aggregator<TSummary, TData> */
+    /** @var Aggregator<TSummary, TData, DataPoint> */
     private Aggregator $aggregator;
     private int $timestamp;
     /** @var DeltaStorage<TSummary> */
@@ -30,7 +31,7 @@ final class SynchronousMetricStream implements MetricStream {
     private int|GMP $cumulative = 0;
 
     /**
-     * @param Aggregator<TSummary, TData> $aggregator
+     * @param Aggregator<TSummary, TData, DataPoint> $aggregator
      */
     public function __construct(Aggregator $aggregator, int $startTimestamp, ?int $cardinalityLimit) {
         $this->aggregator = $aggregator;
@@ -90,18 +91,25 @@ final class SynchronousMetricStream implements MetricStream {
 
     public function collect(int $reader): Data {
         $cumulative = ($this->cumulative >> $reader & 1) != 0;
-        $metric = $this->storage->collect($reader, $cumulative) ?? new Metric([], [], $this->timestamp);
+        $metric = $this->storage->collect($reader, $cumulative) ?? new Metric([], $this->timestamp);
 
         $temporality = $cumulative
             ? Temporality::Cumulative
             : Temporality::Delta;
 
+        $dataPoints = [];
+        foreach ($metric->metricPoints as $metricPoint) {
+            $dataPoints[] = $this->aggregator->toDataPoint(
+                $metricPoint->attributes,
+                $metricPoint->summary,
+                $metricPoint->exemplars,
+                $metric->timestamp,
+                $this->timestamp,
+            );
+        }
+
         return $this->aggregator->toData(
-            $metric->attributes,
-            $metric->summaries,
-            $metric->exemplars,
-            $metric->timestamp,
-            $this->timestamp,
+            $dataPoints,
             $temporality,
         );
     }

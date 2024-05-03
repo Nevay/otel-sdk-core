@@ -5,6 +5,7 @@ use Closure;
 use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\Data\Data;
+use Nevay\OTelSDK\Metrics\Data\DataPoint;
 use Nevay\OTelSDK\Metrics\ExemplarReservoir;
 use Nevay\OTelSDK\Metrics\Internal\AttributeProcessor\AttributeProcessor;
 use Nevay\OTelSDK\Metrics\Internal\Exemplar\ExemplarFilter;
@@ -23,15 +24,13 @@ final class DefaultMetricAggregator implements MetricAggregator {
     private readonly Closure $exemplarReservoir;
     private readonly ?int $cardinalityLimit;
 
-    /** @var array<Attributes> */
-    private array $attributes = [];
-    /** @var array<TSummary> */
-    private array $summaries = [];
+    /** @var array<MetricPoint> */
+    private array $metricPoints = [];
     /** @var array<ExemplarReservoir> */
     private array $exemplarReservoirs = [];
 
     /**
-     * @param Aggregator<TSummary, Data> $aggregator
+     * @param Aggregator<TSummary, Data, DataPoint> $aggregator
      * @param Closure(Aggregator): ExemplarReservoir $exemplarReservoir
      */
     public function __construct(
@@ -54,18 +53,20 @@ final class DefaultMetricAggregator implements MetricAggregator {
             default => hash('xxh128', $index, true),
             '' => 0,
         };
-        if (Overflow::check($this->attributes, $index, $this->cardinalityLimit)) {
+        if (Overflow::check($this->metricPoints, $index, $this->cardinalityLimit)) {
             $index = Overflow::INDEX;
-            $this->attributes[$index] ??= Overflow::attributes();
+            $this->metricPoints[$index] ??= new MetricPoint(
+                Overflow::attributes(),
+                $this->aggregator->initialize(),
+            );
         }
-        $this->attributes[$index] ??= $this->attributeProcessor->process($attributes, $context);
-        $this->aggregator->record(
-            $this->summaries[$index] ??= $this->aggregator->initialize(),
-            $value,
-            $attributes,
-            $context,
-            $timestamp,
+
+        $metricPoint = $this->metricPoints[$index] ??= new MetricPoint(
+            $this->attributeProcessor->process($attributes, $context),
+            $this->aggregator->initialize(),
         );
+
+        $this->aggregator->record($metricPoint->summary, $value, $attributes, $context, $timestamp);
         if ($this->exemplarFilter->accepts($value, $attributes, $context, $timestamp)) {
             $this->exemplarReservoirs[$index] ??= ($this->exemplarReservoir)($this->aggregator);
             $this->exemplarReservoirs[$index]->offer($value, $attributes, $context, $timestamp);
@@ -73,16 +74,11 @@ final class DefaultMetricAggregator implements MetricAggregator {
     }
 
     public function collect(int $timestamp): Metric {
-        $exemplars = [];
         foreach ($this->exemplarReservoirs as $index => $exemplarReservoir) {
-            if ($dataPointExemplars = $exemplarReservoir->collect($this->attributes[$index])) {
-                $exemplars[$index] = $dataPointExemplars;
-            }
+            $this->metricPoints[$index]->exemplars = $exemplarReservoir->collect($this->metricPoints[$index]->attributes);
         }
-        $metric = new Metric($this->attributes, $this->summaries, $timestamp, $exemplars);
-
-        $this->attributes = [];
-        $this->summaries = [];
+        $metric = new Metric($this->metricPoints, $timestamp);
+        $this->metricPoints = [];
         $this->exemplarReservoirs = [];
 
         return $metric;

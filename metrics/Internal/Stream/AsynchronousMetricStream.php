@@ -3,6 +3,7 @@ namespace Nevay\OTelSDK\Metrics\Internal\Stream;
 
 use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\Data\Data;
+use Nevay\OTelSDK\Metrics\Data\DataPoint;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use function array_search;
 use function count;
@@ -14,7 +15,7 @@ use function count;
  */
 final class AsynchronousMetricStream implements MetricStream {
 
-    /** @var Aggregator<TSummary, TData> */
+    /** @var Aggregator<TSummary, TData, DataPoint> */
     private Aggregator $aggregator;
     private int $startTimestamp;
     /** @var Metric<TSummary> */
@@ -24,12 +25,12 @@ final class AsynchronousMetricStream implements MetricStream {
     private array $lastReads = [];
 
     /**
-     * @param Aggregator<TSummary, TData> $aggregation
+     * @param Aggregator<TSummary, TData, DataPoint> $aggregation
      */
     public function __construct(Aggregator $aggregation, int $startTimestamp) {
         $this->aggregator = $aggregation;
         $this->startTimestamp = $startTimestamp;
-        $this->metric = new Metric([], [], $startTimestamp);
+        $this->metric = new Metric([], $startTimestamp);
     }
 
     public function temporality(): Temporality {
@@ -75,31 +76,27 @@ final class AsynchronousMetricStream implements MetricStream {
         } else {
             $temporality = Temporality::Delta;
             $startTimestamp = $lastRead->timestamp;
-
             $this->lastReads[$reader] = $metric;
-            $metric = $this->diff($lastRead, $metric);
+        }
+
+        $dataPoints = [];
+        foreach ($metric->metricPoints as $index => $metricPoint) {
+            $summary = ($last = $lastRead->metricPoints[$index] ?? null)
+                ? $this->aggregator->diff($last->summary, $metricPoint->summary)
+                : $metricPoint->summary;
+
+            $dataPoints[] = $this->aggregator->toDataPoint(
+                $metricPoint->attributes,
+                $summary,
+                $metricPoint->exemplars,
+                $startTimestamp,
+                $metric->timestamp,
+            );
         }
 
         return $this->aggregator->toData(
-            $metric->attributes,
-            $metric->summaries,
-            $metric->exemplars,
-            $startTimestamp,
-            $metric->timestamp,
+            $dataPoints,
             $temporality,
         );
-    }
-
-    private function diff(Metric $lastRead, Metric $metric): Metric {
-        $diff = clone $metric;
-        foreach ($metric->summaries as $k => $summary) {
-            if (!isset($lastRead->summaries[$k])) {
-                continue;
-            }
-
-            $diff->summaries[$k] = $this->aggregator->diff($lastRead->summaries[$k], $summary);
-        }
-
-        return $diff;
     }
 }
