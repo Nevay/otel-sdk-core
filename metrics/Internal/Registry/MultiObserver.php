@@ -21,7 +21,7 @@ final class MultiObserver implements ObserverInterface {
 
     public function observe($amount, iterable $attributes = []): void {
         $context = ContextResolver::emptyContext();
-        $attributes = $this->attributesFactory->builder()->addAll($attributes)->build();
+        $attributes = $this->attributesFactory->build($attributes);
         foreach ($this->writers as $writer) {
             $writer->record($amount, $attributes, $context, $this->timestamp);
         }

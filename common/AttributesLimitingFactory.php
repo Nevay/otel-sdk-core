@@ -65,6 +65,10 @@ final class AttributesLimitingFactory implements AttributesFactory {
         };
     }
 
+    public function build(iterable $attributes): Attributes {
+        return $this->builder()->addAll($attributes)->build();
+    }
+
     public function builder(): AttributesBuilder {
         return new AttributesLimitingBuilder(
             $this->attributeCountLimit,

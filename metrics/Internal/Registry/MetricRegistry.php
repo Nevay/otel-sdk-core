@@ -97,7 +97,7 @@ final class MetricRegistry implements MetricWriter, MetricCollector {
 
     public function record(Instrument $instrument, float|int $value, iterable $attributes = [], ContextInterface|false|null $context = null): void {
         $context = ContextResolver::resolve($context, $this->contextStorage);
-        $attributes = $this->attributesFactory->builder()->addAll($attributes)->build();
+        $attributes = $this->attributesFactory->build($attributes);
         $timestamp = $this->clock->now();
         $instrumentId = spl_object_id($instrument);
         foreach ($this->instrumentToStreams[$instrumentId] ?? [] as $streamId) {
