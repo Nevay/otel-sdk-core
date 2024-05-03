@@ -23,11 +23,15 @@ final class FilteredAttributeProcessor implements AttributeProcessor {
     }
 
     public function uniqueIdentifier(Attributes $attributes, ContextInterface $context): string {
-        $identifier = '';
-        foreach ($this->attributeKeys as $key) {
-            $identifier .= serialize($attributes->get($key));
+        if (!$this->attributeKeys) {
+            return '';
         }
 
-        return $identifier;
+        $values = [];
+        foreach ($this->attributeKeys as $key) {
+            $values[] = $attributes->get($key);
+        }
+
+        return serialize($values);
     }
 }

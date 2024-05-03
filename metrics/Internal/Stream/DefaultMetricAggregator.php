@@ -9,6 +9,7 @@ use Nevay\OTelSDK\Metrics\ExemplarReservoir;
 use Nevay\OTelSDK\Metrics\Internal\AttributeProcessor\AttributeProcessor;
 use Nevay\OTelSDK\Metrics\Internal\Exemplar\ExemplarFilter;
 use OpenTelemetry\Context\ContextInterface;
+use function hash;
 
 /**
  * @template TSummary
@@ -49,6 +50,10 @@ final class DefaultMetricAggregator implements MetricAggregator {
 
     public function record(float|int $value, Attributes $attributes, ContextInterface $context, int $timestamp): void {
         $index = $this->attributeProcessor->uniqueIdentifier($attributes, $context);
+        $index = match ($index) {
+            default => hash('xxh128', $index, true),
+            '' => 0,
+        };
         if (Overflow::check($this->attributes, $index, $this->cardinalityLimit)) {
             $index = Overflow::INDEX;
             $this->attributes[$index] ??= Overflow::attributes();
