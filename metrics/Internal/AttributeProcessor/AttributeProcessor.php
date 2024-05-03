@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Nevay\OTelSDK\Metrics;
+namespace Nevay\OTelSDK\Metrics\Internal\AttributeProcessor;
 
 use Nevay\OTelSDK\Common\Attributes;
 use OpenTelemetry\Context\ContextInterface;

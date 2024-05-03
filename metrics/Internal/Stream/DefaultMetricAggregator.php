@@ -4,9 +4,9 @@ namespace Nevay\OTelSDK\Metrics\Internal\Stream;
 use Closure;
 use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Metrics\Aggregator;
-use Nevay\OTelSDK\Metrics\AttributeProcessor;
 use Nevay\OTelSDK\Metrics\Data\Data;
 use Nevay\OTelSDK\Metrics\ExemplarReservoir;
+use Nevay\OTelSDK\Metrics\Internal\AttributeProcessor\AttributeProcessor;
 use Nevay\OTelSDK\Metrics\Internal\Exemplar\ExemplarFilter;
 use OpenTelemetry\Context\ContextInterface;
 

@@ -3,10 +3,10 @@ namespace Nevay\OTelSDK\Metrics\Internal\View;
 
 use Closure;
 use Nevay\OTelSDK\Metrics\Aggregator;
-use Nevay\OTelSDK\Metrics\AttributeProcessor;
 use Nevay\OTelSDK\Metrics\Data\Descriptor;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use Nevay\OTelSDK\Metrics\ExemplarReservoir;
+use Nevay\OTelSDK\Metrics\Internal\AttributeProcessor\AttributeProcessor;
 use Nevay\OTelSDK\Metrics\Internal\Exemplar\ExemplarFilter;
 use Nevay\OTelSDK\Metrics\Internal\MeterMetricProducer;
 

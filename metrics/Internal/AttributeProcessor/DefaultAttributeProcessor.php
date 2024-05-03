@@ -1,8 +1,7 @@
 <?php declare(strict_types=1);
-namespace Nevay\OTelSDK\Metrics\AttributeProcessor;
+namespace Nevay\OTelSDK\Metrics\Internal\AttributeProcessor;
 
 use Nevay\OTelSDK\Common\Attributes;
-use Nevay\OTelSDK\Metrics\AttributeProcessor;
 use OpenTelemetry\Context\ContextInterface;
 use function serialize;
 

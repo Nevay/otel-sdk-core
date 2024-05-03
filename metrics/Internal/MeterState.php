@@ -7,12 +7,12 @@ use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Metrics\Aggregation\DropAggregator;
 use Nevay\OTelSDK\Metrics\Aggregator;
-use Nevay\OTelSDK\Metrics\AttributeProcessor\DefaultAttributeProcessor;
-use Nevay\OTelSDK\Metrics\AttributeProcessor\FilteredAttributeProcessor;
 use Nevay\OTelSDK\Metrics\Data\Descriptor;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use Nevay\OTelSDK\Metrics\ExemplarReservoir;
 use Nevay\OTelSDK\Metrics\Instrument;
+use Nevay\OTelSDK\Metrics\Internal\AttributeProcessor\DefaultAttributeProcessor;
+use Nevay\OTelSDK\Metrics\Internal\AttributeProcessor\FilteredAttributeProcessor;
 use Nevay\OTelSDK\Metrics\Internal\Exemplar\ExemplarFilter;
 use Nevay\OTelSDK\Metrics\Internal\Instrument\ObservableCallbackDestructor;
 use Nevay\OTelSDK\Metrics\Internal\Registry\MetricRegistry;
@@ -211,20 +211,18 @@ final class MeterState {
         }
 
         foreach ($views as $view) {
-            if ($view->aggregation === false) {
-                continue;
-            }
-
             $name = $view->name ?? $instrument->name;
-            $unit = $view->unit ?? $instrument->unit ?: null;
-            $description = $view->description ?? $instrument->description ?: null;
-            $viewAttributeProcessor = $view->attributeProcessor ?? $attributeProcessor ?: null;
+            $description = $view->description ?? $instrument->description;
+            $viewAttributeProcessor = match ($view->attributeKeys) {
+                default => new FilteredAttributeProcessor($view->attributeKeys),
+                null => $attributeProcessor,
+            };
 
             $descriptor = new Descriptor(
                 $this->resource,
                 $instrumentationScope,
                 $name,
-                $unit,
+                $instrument->unit,
                 $description,
                 $instrument->type,
                 $streamTemporality,
