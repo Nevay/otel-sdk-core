@@ -9,6 +9,9 @@ use OpenTelemetry\API\Metrics\ObserverInterface;
 use WeakMap;
 use function assert;
 
+/**
+ * @internal
+ */
 trait AsynchronousInstrument {
 
     /**

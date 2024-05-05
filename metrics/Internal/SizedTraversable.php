@@ -5,6 +5,9 @@ use Countable;
 use IteratorAggregate;
 use Traversable;
 
+/**
+ * @internal
+ */
 final class SizedTraversable implements IteratorAggregate, Countable {
 
     public function __construct(

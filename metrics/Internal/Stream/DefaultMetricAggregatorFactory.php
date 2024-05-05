@@ -11,6 +11,8 @@ use Nevay\OTelSDK\Metrics\Internal\Exemplar\AlwaysOffFilter;
 /**
  * @template TSummary
  * @implements MetricAggregatorFactory<TSummary>
+ *
+ * @internal
  */
 final class DefaultMetricAggregatorFactory implements MetricAggregatorFactory {
 

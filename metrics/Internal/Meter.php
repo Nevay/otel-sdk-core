@@ -27,6 +27,9 @@ use OpenTelemetry\API\Metrics\UpDownCounterInterface;
 use function array_unshift;
 use function is_callable;
 
+/**
+ * @internal
+ */
 final class Meter implements MeterInterface {
 
     public function __construct(

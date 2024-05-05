@@ -12,6 +12,8 @@ use Nevay\OTelSDK\Metrics\MetricFilter;
  * @template TSummary
  * @template-covariant TData of Data
  * @implements MetricStream<TSummary, TData>
+ *
+ * @internal
  */
 final class FilteredMetricStream implements MetricStream {
 

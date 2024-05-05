@@ -20,6 +20,9 @@ use Revolt\EventLoop;
 use function array_keys;
 use function count;
 
+/**
+ * @internal
+ */
 final class MetricRegistry implements MetricWriter, MetricCollector {
 
     private ?ContextStorageInterface $contextStorage;

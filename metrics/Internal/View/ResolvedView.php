@@ -10,6 +10,9 @@ use Nevay\OTelSDK\Metrics\Internal\AttributeProcessor\AttributeProcessor;
 use Nevay\OTelSDK\Metrics\Internal\Exemplar\ExemplarFilter;
 use Nevay\OTelSDK\Metrics\Internal\MeterMetricProducer;
 
+/**
+ * @internal
+ */
 final class ResolvedView {
 
     /**

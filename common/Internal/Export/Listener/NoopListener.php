@@ -3,6 +3,9 @@ namespace Nevay\OTelSDK\Common\Internal\Export\Listener;
 
 use Nevay\OTelSDK\Common\Internal\Export\ExportListener;
 
+/**
+ * @internal
+ */
 final class NoopListener implements ExportListener {
 
     public function onExport(int $count): void {

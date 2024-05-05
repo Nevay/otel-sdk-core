@@ -37,6 +37,9 @@ use function serialize;
 use function spl_object_hash;
 use function strtolower;
 
+/**
+ * @internal
+ */
 final class MeterState {
 
     private ?int $startTimestamp = null;

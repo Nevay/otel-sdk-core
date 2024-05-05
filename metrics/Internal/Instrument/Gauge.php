@@ -4,7 +4,7 @@ namespace Nevay\OTelSDK\Metrics\Internal\Instrument;
 use OpenTelemetry\API\Metrics\GaugeInterface;
 
 /**
- * @experimental
+ * @internal
  */
 final class Gauge implements GaugeInterface, InstrumentHandle {
     use SynchronousInstrument { write as record; }

@@ -7,6 +7,8 @@ use function count;
 /**
  * @template TData
  * @implements ExportingProcessorDriver<list<TData>, TData>
+ *
+ * @internal
  */
 final class BatchDriver implements ExportingProcessorDriver {
 

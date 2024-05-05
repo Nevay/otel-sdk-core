@@ -25,6 +25,9 @@ use Psr\Log\LoggerInterface;
 use WeakMap;
 use function Amp\async;
 
+/**
+ * @internal
+ */
 final class MeterProvider implements MeterProviderInterface, Provider {
 
     private readonly MeterState $meterState;

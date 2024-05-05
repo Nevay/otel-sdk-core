@@ -12,6 +12,8 @@ use function count;
 
 /**
  * @implements ExportingProcessorDriver<list<Metric>|(Traversable<Metric>&Countable), list<Metric>|(Traversable<Metric>&Countable)>
+ *
+ * @internal
  */
 final class MetricExportDriver implements ExportingProcessorDriver {
 

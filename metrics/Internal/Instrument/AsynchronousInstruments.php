@@ -10,6 +10,9 @@ use WeakMap;
 use function Nevay\OTelSDK\Metrics\Internal\closure;
 use function Nevay\OTelSDK\Metrics\Internal\weaken;
 
+/**
+ * @internal
+ */
 final class AsynchronousInstruments {
 
     /**

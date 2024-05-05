@@ -27,6 +27,8 @@ use function class_exists;
 
 /**
  * @template TData
+ *
+ * @internal
  */
 final class ExportingProcessor {
 

@@ -6,6 +6,9 @@ use Nevay\OTelSDK\Common\ContextResolver;
 use Nevay\OTelSDK\Metrics\Internal\Stream\MetricAggregator;
 use OpenTelemetry\API\Metrics\ObserverInterface;
 
+/**
+ * @internal
+ */
 final class MultiObserver implements ObserverInterface {
 
     private AttributesFactory $attributesFactory;

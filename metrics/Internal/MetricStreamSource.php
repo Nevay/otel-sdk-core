@@ -4,6 +4,9 @@ namespace Nevay\OTelSDK\Metrics\Internal;
 use Nevay\OTelSDK\Metrics\Data\Descriptor;
 use Nevay\OTelSDK\Metrics\Internal\Stream\MetricStream;
 
+/**
+ * @internal
+ */
 final class MetricStreamSource {
 
     public function __construct(

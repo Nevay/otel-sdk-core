@@ -6,6 +6,8 @@ use Nevay\OTelSDK\Metrics\Data\Exemplar;
 
 /**
  * @template TSummary
+ *
+ * @internal
  */
 final class MetricPoint {
 

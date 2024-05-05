@@ -3,6 +3,8 @@ namespace Nevay\OTelSDK\Metrics\Internal\Stream;
 
 /**
  * @template TSummary
+ *
+ * @internal
  */
 final class Metric {
 

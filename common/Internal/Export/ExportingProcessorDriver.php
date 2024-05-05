@@ -4,6 +4,8 @@ namespace Nevay\OTelSDK\Common\Internal\Export;
 /**
  * @template TData
  * @template TExport
+ *
+ * @internal
  */
 interface ExportingProcessorDriver {
 

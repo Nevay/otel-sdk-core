@@ -7,6 +7,8 @@ use Nevay\OTelSDK\Metrics\Data\Temporality;
 /**
  * @template TSummary
  * @template-covariant TData of Data
+ *
+ * @internal
  */
 interface MetricStream {
 

@@ -9,6 +9,9 @@ use Nevay\OTelSDK\Metrics\MetricProducer;
 use Revolt\EventLoop;
 use function count;
 
+/**
+ * @internal
+ */
 final class MultiMetricProducer implements MetricProducer {
 
     /** @var list<MetricProducer> */

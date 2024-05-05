@@ -12,6 +12,8 @@ use function count;
  * @template TSummary
  * @template-covariant TData of Data
  * @implements MetricStream<TSummary, TData>
+ *
+ * @internal
  */
 final class AsynchronousMetricStream implements MetricStream {
 

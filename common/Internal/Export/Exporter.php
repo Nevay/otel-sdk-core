@@ -6,6 +6,8 @@ use Amp\Future;
 
 /**
  * @template TData
+ *
+ * @internal
  */
 interface Exporter {
 

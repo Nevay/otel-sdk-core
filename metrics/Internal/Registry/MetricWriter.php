@@ -5,6 +5,9 @@ use Closure;
 use Nevay\OTelSDK\Metrics\Instrument;
 use OpenTelemetry\Context\ContextInterface;
 
+/**
+ * @internal
+ */
 interface MetricWriter {
 
     public function record(Instrument $instrument, float|int $value, iterable $attributes = [], ContextInterface|false|null $context = null): void;

@@ -15,6 +15,8 @@ use function hash;
 /**
  * @template TSummary
  * @implements MetricAggregator<TSummary>
+ *
+ * @internal
  */
 final class DefaultMetricAggregator implements MetricAggregator {
 

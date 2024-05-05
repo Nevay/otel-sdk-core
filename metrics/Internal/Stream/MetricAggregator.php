@@ -6,6 +6,8 @@ use OpenTelemetry\Context\ContextInterface;
 
 /**
  * @template TSummary
+ *
+ * @internal
  */
 interface MetricAggregator {
 

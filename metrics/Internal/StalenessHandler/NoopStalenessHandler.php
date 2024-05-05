@@ -3,6 +3,9 @@ namespace Nevay\OTelSDK\Metrics\Internal\StalenessHandler;
 
 use Closure;
 
+/**
+ * @internal
+ */
 final class NoopStalenessHandler implements StalenessHandler, ReferenceCounter {
 
     public function acquire(bool $persistent = false): void {

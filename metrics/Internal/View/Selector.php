@@ -9,6 +9,9 @@ use function preg_quote;
 use function sprintf;
 use function strtr;
 
+/**
+ * @internal
+ */
 final class Selector {
 
     private ?InstrumentType $type;

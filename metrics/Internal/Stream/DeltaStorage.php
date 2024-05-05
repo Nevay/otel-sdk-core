@@ -11,6 +11,8 @@ use const INF;
 
 /**
  * @template TSummary
+ *
+ * @internal
  */
 final class DeltaStorage {
 

@@ -5,6 +5,8 @@ use GMP;
 
 /**
  * @template TSummary
+ *
+ * @internal
  */
 final class Delta {
 

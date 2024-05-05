@@ -11,6 +11,9 @@ use function array_keys;
 use function count;
 use const COUNT_RECURSIVE;
 
+/**
+ * @internal
+ */
 final class MeterMetricProducer implements MetricProducer {
 
     private readonly MetricCollector $collector;

@@ -4,6 +4,9 @@ namespace Nevay\OTelSDK\Metrics\Internal\StalenessHandler;
 use Closure;
 use Revolt\EventLoop;
 
+/**
+ * @internal
+ */
 final class DelayedStalenessHandler implements StalenessHandler, ReferenceCounter {
 
     private ?int $count = 0;

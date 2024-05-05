@@ -7,6 +7,9 @@ use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\ReferenceCounter;
 use OpenTelemetry\Context\ContextInterface;
 use function assert;
 
+/**
+ * @internal
+ */
 trait SynchronousInstrument {
 
     public function __construct(

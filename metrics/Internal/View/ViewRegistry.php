@@ -5,6 +5,9 @@ use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Metrics\Instrument;
 use Nevay\OTelSDK\Metrics\View;
 
+/**
+ * @internal
+ */
 interface ViewRegistry {
 
     /**

@@ -7,6 +7,8 @@ use Nevay\OTelSDK\Common\Internal\Export\ExportingProcessorDriver;
 /**
  * @template TData
  * @implements ExportingProcessorDriver<TData, TData>
+ *
+ * @internal
  */
 final class SimpleDriver implements ExportingProcessorDriver {
 

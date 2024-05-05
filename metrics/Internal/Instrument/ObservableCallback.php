@@ -5,6 +5,9 @@ use Nevay\OTelSDK\Metrics\Internal\Registry\MetricWriter;
 use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\ReferenceCounter;
 use OpenTelemetry\API\Metrics\ObservableCallbackInterface;
 
+/**
+ * @internal
+ */
 final class ObservableCallback implements ObservableCallbackInterface {
 
     public function __construct(

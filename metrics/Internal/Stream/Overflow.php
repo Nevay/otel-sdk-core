@@ -3,6 +3,9 @@ namespace Nevay\OTelSDK\Metrics\Internal\Stream;
 
 use Nevay\OTelSDK\Common\Attributes;
 
+/**
+ * @internal
+ */
 final class Overflow {
 
     public final const INDEX = -1;

@@ -5,6 +5,9 @@ use Nevay\OTelSDK\Metrics\Internal\Registry\MetricWriter;
 use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\ReferenceCounter;
 use WeakMap;
 
+/**
+ * @internal
+ */
 final class ObservableCallbackDestructor {
 
     /**

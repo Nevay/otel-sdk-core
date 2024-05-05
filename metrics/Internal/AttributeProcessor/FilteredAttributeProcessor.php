@@ -5,6 +5,9 @@ use Nevay\OTelSDK\Common\Attributes;
 use OpenTelemetry\Context\ContextInterface;
 use function serialize;
 
+/**
+ * @internal
+ */
 final class FilteredAttributeProcessor implements AttributeProcessor {
 
     public function __construct(

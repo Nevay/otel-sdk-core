@@ -19,6 +19,8 @@ use const PHP_INT_SIZE;
  * @template TSummary
  * @template-covariant TData of Data
  * @implements MetricStream<TSummary, TData>
+ *
+ * @internal
  */
 final class SynchronousMetricStream implements MetricStream {
 

@@ -7,12 +7,17 @@ use stdClass;
 use WeakReference;
 use function str_starts_with;
 
+/**
+ * @internal
+ */
 function closure(callable $callable): Closure {
     return $callable(...);
 }
 
 /**
  * @see https://github.com/amphp/amp/blob/f682341c856b1f688026f787bef4f77eaa5c7970/src/functions.php#L140-L191
+ *
+ * @internal
  */
 function weaken(Closure $closure, ?object &$target = null): Closure {
     $reflection = new ReflectionFunction($closure);

@@ -7,6 +7,9 @@ use Nevay\OTelSDK\Metrics\Instrument;
 use Nevay\OTelSDK\Metrics\InstrumentType;
 use Nevay\OTelSDK\Metrics\View;
 
+/**
+ * @internal
+ */
 final class MutableViewRegistry implements ViewRegistry {
 
     /** @var list<Selector> */

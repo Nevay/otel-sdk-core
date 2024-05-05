@@ -5,6 +5,9 @@ use Nevay\OTelSDK\Common\Attributes;
 use OpenTelemetry\Context\ContextInterface;
 use function serialize;
 
+/**
+ * @internal
+ */
 final class DefaultAttributeProcessor implements AttributeProcessor {
 
     public function process(Attributes $attributes, ContextInterface $context): Attributes {
