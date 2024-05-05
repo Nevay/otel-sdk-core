@@ -1,9 +1,10 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Metrics\Aggregation;
 
-use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\Aggregation;
+use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\InstrumentType;
+use Nevay\OTelSDK\Metrics\Internal\Aggregation\LastValueAggregator;
 
 /**
  * The Last Value Aggregation informs the SDK to collect data for the Gauge Metric Point.

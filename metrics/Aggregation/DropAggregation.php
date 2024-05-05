@@ -1,9 +1,10 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Metrics\Aggregation;
 
-use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\Aggregation;
+use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\InstrumentType;
+use Nevay\OTelSDK\Metrics\Internal\Aggregation\DropAggregator;
 
 /**
  * The Drop Aggregation informs the SDK to ignore/drop all Instrument

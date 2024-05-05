@@ -1,13 +1,13 @@
 <?php declare(strict_types=1);
-namespace Nevay\OTelSDK\Metrics\Aggregation;
+namespace Nevay\OTelSDK\Metrics\Internal\Aggregation;
 
 /**
  * @internal
  */
-final class LastValueSummary {
+final class SumSummary {
 
     public function __construct(
         public float|int $value,
-        public int $timestamp,
+        public float|int $valueCompensation,
     ) {}
 }

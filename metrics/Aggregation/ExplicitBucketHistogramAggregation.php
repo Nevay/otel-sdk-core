@@ -1,9 +1,10 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Metrics\Aggregation;
 
-use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\Aggregation;
+use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\InstrumentType;
+use Nevay\OTelSDK\Metrics\Internal\Aggregation\ExplicitBucketHistogramAggregator;
 
 /**
  * The Explicit Bucket Histogram Aggregation informs the SDK to collect data for
@@ -23,7 +24,7 @@ final class ExplicitBucketHistogramAggregation implements Aggregation {
     private const DEFAULT_BOUNDARIES = [0, 5, 10, 25, 50, 75, 100, 250, 500, 1000, 2500, 5000, 7500, 10000];
 
     /**
-     * @param list<float>|null $boundaries array of increasing values
+     * @param list<float|int>|null $boundaries array of increasing values
      *        representing explicit bucket boundary values
      * @param bool $recordMinMax whether to record min and max
      */

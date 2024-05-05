@@ -5,6 +5,7 @@ use InvalidArgumentException;
 use Nevay\OTelSDK\Metrics\Aggregation;
 use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\InstrumentType;
+use Nevay\OTelSDK\Metrics\Internal\Aggregation\Base2ExponentialBucketHistogramAggregator;
 use function sprintf;
 
 /**

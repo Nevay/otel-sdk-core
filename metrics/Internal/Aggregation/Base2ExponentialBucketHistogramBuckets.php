@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Nevay\OTelSDK\Metrics\Aggregation;
+namespace Nevay\OTelSDK\Metrics\Internal\Aggregation;
 
 use Nevay\OTelSDK\Metrics\Data\ExponentialHistogramBuckets;
 use function max;
