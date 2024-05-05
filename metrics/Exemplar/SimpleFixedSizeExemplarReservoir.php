@@ -3,6 +3,7 @@ namespace Nevay\OTelSDK\Metrics\Exemplar;
 
 use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Metrics\ExemplarReservoir;
+use Nevay\OTelSDK\Metrics\Internal\Exemplar\BucketStorage;
 use OpenTelemetry\Context\ContextInterface;
 use Random\Engine\PcgOneseq128XslRr64;
 use Random\RandomException;

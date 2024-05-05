@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Nevay\OTelSDK\Metrics\Exemplar;
+namespace Nevay\OTelSDK\Metrics\Internal\Exemplar;
 
 use Nevay\OTelSDK\Common\Attributes;
 use OpenTelemetry\API\Trace\SpanContextInterface;
