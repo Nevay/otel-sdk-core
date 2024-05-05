@@ -23,7 +23,6 @@ use SplQueue;
 use Throwable;
 use WeakReference;
 use function assert;
-use function class_exists;
 
 /**
  * @template TData
@@ -69,9 +68,7 @@ final class ExportingProcessor {
         $this->signal = $signal;
         $this->queue = new SplQueue();
 
-        $version = class_exists(InstalledVersions::class) && InstalledVersions::isInstalled($package)
-            ? InstalledVersions::getPrettyVersion($package)
-            : null;
+        $version = InstalledVersions::getVersionRanges($package);
         $tracer = $tracerProvider->getTracer($package, $version);
         $meter = $meterProvider->getMeter($package, $version);
 
