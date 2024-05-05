@@ -1,0 +1,43 @@
+{
+    "name": "tbachert/otel-sdk-core",
+    "description": "OpenTelemetry SDK core components",
+    "keywords": ["opentelemetry", "otel", "sdk", "tracing", "metrics", "log"],
+    "license": "Apache-2.0",
+    "require": {
+        "php-64bit": "^8.1",
+        "composer-runtime-api": "^2.0",
+        "amphp/amp": "^3.0",
+        "amphp/pipeline": "^1.0",
+        "amphp/sync": "^2.0",
+        "open-telemetry/api": "~1.0",
+        "open-telemetry/context": "^1.0",
+        "psr/log": "^1 || ^2 || ^3",
+        "revolt/event-loop": "^1.0",
+        "tbachert/spi": "^0.1 || ^0.2"
+    },
+    "suggest": {
+        "ext-gmp": "To support unlimited number of synchronous metric readers, otherwise limited to 63 per stream"
+    },
+    "replace": {
+        "tbachert/otel-sdk-common": "self.version",
+        "tbachert/otel-sdk-trace": "self.version",
+        "tbachert/otel-sdk-metrics": "self.version",
+        "tbachert/otel-sdk-logs": "self.version"
+    },
+    "autoload": {
+        "psr-4": {
+            "Nevay\\OTelSDK\\Common\\": "common/",
+            "Nevay\\OTelSDK\\Trace\\": "trace/",
+            "Nevay\\OTelSDK\\Metrics\\": "metrics/",
+            "Nevay\\OTelSDK\\Logs\\": "logs/"
+        },
+        "files": [
+            "metrics/Internal/functions.php"
+        ]
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "0.1.x-dev"
+        }
+    }
+}
