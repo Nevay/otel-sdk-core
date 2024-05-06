@@ -6,7 +6,6 @@ use InvalidArgumentException;
 use Nevay\SPI\ServiceLoader;
 use function array_key_first;
 use function assert;
-use function class_exists;
 use function count;
 use function sprintf;
 
@@ -36,7 +35,7 @@ final class Resource {
         return $default ??= new Resource(new Attributes([
             'telemetry.sdk.language' => 'php',
             'telemetry.sdk.name' => 'tbachert/otel-sdk',
-            'telemetry.sdk.version' => self::packageVersion('tbachert/otel-sdk') ?? 'unknown',
+            'telemetry.sdk.version' => self::packageVersion('tbachert/otel-sdk-core') ?? 'unknown',
             'service.name' => 'unknown_service:php',
         ]));
     }
@@ -130,10 +129,8 @@ final class Resource {
     }
 
     private static function packageVersion(string $package): ?string {
-        if (class_exists(InstalledVersions::class) && InstalledVersions::isInstalled($package)) {
-            return InstalledVersions::getPrettyVersion($package);
-        }
-
-        return null;
+        return InstalledVersions::isInstalled($package)
+            ? InstalledVersions::getVersion($package)
+            : null;
     }
 }
