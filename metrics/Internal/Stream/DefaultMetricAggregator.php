@@ -55,18 +55,19 @@ final class DefaultMetricAggregator implements MetricAggregator {
             default => hash('xxh128', $index, true),
             '' => 0,
         };
-        if (Overflow::check($this->metricPoints, $index, $this->cardinalityLimit)) {
-            $index = Overflow::INDEX;
-            $this->metricPoints[$index] ??= new MetricPoint(
-                Overflow::attributes(),
+        if (!$metricPoint = $this->metricPoints[$index] ?? null) {
+            if (Overflow::check($this->metricPoints, $index, $this->cardinalityLimit)) {
+                $index = Overflow::INDEX;
+                $this->metricPoints[$index] ??= new MetricPoint(
+                    Overflow::attributes(),
+                    $this->aggregator->initialize(),
+                );
+            }
+            $metricPoint = $this->metricPoints[$index] ??= new MetricPoint(
+                $this->attributeProcessor->process($attributes, $context),
                 $this->aggregator->initialize(),
             );
         }
-
-        $metricPoint = $this->metricPoints[$index] ??= new MetricPoint(
-            $this->attributeProcessor->process($attributes, $context),
-            $this->aggregator->initialize(),
-        );
 
         $this->aggregator->record($metricPoint->summary, $value, $attributes, $context, $timestamp);
         if ($this->exemplarFilter->accepts($value, $attributes, $context, $timestamp)) {
