@@ -26,7 +26,6 @@ final class SumAggregator implements Aggregator {
 
     public function record(mixed $summary, float|int $value, Attributes $attributes, ContextInterface $context, int $timestamp): void {
         self::calculateCompensatedSum($summary, $value);
-
     }
 
     public function merge(mixed $left, mixed $right): SumSummary {
