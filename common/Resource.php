@@ -6,8 +6,11 @@ use InvalidArgumentException;
 use Nevay\SPI\ServiceLoader;
 use function array_key_first;
 use function assert;
+use function bin2hex;
 use function count;
+use function random_bytes;
 use function sprintf;
+use function substr;
 
 /**
  * An immutable representation of the entity producing telemetry.
@@ -37,6 +40,7 @@ final class Resource {
             'telemetry.sdk.name' => 'tbachert/otel-sdk',
             'telemetry.sdk.version' => self::packageVersion('tbachert/otel-sdk-core') ?? 'unknown',
             'service.name' => 'unknown_service:php',
+            'service.instance.id' => self::uuid4(),
         ]));
     }
 
@@ -132,5 +136,35 @@ final class Resource {
         return InstalledVersions::isInstalled($package)
             ? InstalledVersions::getVersion($package)
             : null;
+    }
+
+    private static function uuid4(): string {
+        /*
+        https://datatracker.ietf.org/doc/html/rfc4122#section-4.4
+        https://datatracker.ietf.org/doc/html/rfc4122#section-4.1.2
+
+        4.4.  Algorithms for Creating a UUID from Truly Random or
+              Pseudo-Random Numbers
+           o  Set the two most significant bits (bits 6 and 7) of the
+              clock_seq_hi_and_reserved to zero and one, respectively.
+           o  Set the four most significant bits (bits 12 through 15) of the
+              time_hi_and_version field to the 4-bit version number from
+              Section 4.1.3.
+           o  Set all the other bits to randomly (or pseudo-randomly) chosen
+              values.
+         */
+        $b = random_bytes(16);
+        $b[8] = $b[8] & "\x3f" | "\x80";
+        $b[6] = $b[6] & "\x0f" | "\x40";
+        $h = bin2hex($b);
+
+        return sprintf(
+            '%s-%s-%s-%s-%s',
+            substr($h, 0, 8),
+            substr($h, 8, 4),
+            substr($h, 12, 4),
+            substr($h, 16, 4),
+            substr($h, 20, 12),
+        );
     }
 }
