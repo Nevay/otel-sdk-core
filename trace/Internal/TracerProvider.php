@@ -13,7 +13,6 @@ use Nevay\OTelSDK\Trace\IdGenerator;
 use Nevay\OTelSDK\Trace\Sampler;
 use Nevay\OTelSDK\Trace\SpanProcessor;
 use Nevay\OTelSDK\Trace\TracerConfig;
-use OpenTelemetry\API\Trace\NoopTracer;
 use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\API\Trace\TracerProviderInterface;
 use OpenTelemetry\Context\ContextStorageInterface;
@@ -79,13 +78,9 @@ final class TracerProvider implements TracerProviderInterface, Provider {
 
         $instrumentationScope = new InstrumentationScope($name, $version, $schemaUrl,
             $this->instrumentationScopeAttributesFactory->builder()->addAll($attributes)->build());
+        $tracerConfig = ($this->tracerConfigurator)($instrumentationScope);
 
-        $config = ($this->tracerConfigurator)($instrumentationScope);
-        if ($config->disabled) {
-            return new NoopTracer();
-        }
-
-        return new Tracer($this->tracerState, $instrumentationScope);
+        return new Tracer($this->tracerState, $instrumentationScope, $tracerConfig);
     }
 
     public function shutdown(?Cancellation $cancellation = null): bool {

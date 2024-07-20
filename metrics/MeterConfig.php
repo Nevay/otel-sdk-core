@@ -7,6 +7,6 @@ namespace Nevay\OTelSDK\Metrics;
 final class MeterConfig {
 
     public function __construct(
-        public readonly bool $disabled = false,
+        public bool $disabled = false,
     ) {}
 }

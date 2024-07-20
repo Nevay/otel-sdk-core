@@ -24,6 +24,7 @@ use Nevay\OTelSDK\Metrics\Internal\Stream\DefaultMetricAggregatorFactory;
 use Nevay\OTelSDK\Metrics\Internal\Stream\SynchronousMetricStream;
 use Nevay\OTelSDK\Metrics\Internal\View\ResolvedView;
 use Nevay\OTelSDK\Metrics\Internal\View\ViewRegistry;
+use Nevay\OTelSDK\Metrics\MeterConfig;
 use Nevay\OTelSDK\Metrics\MetricReader;
 use Nevay\OTelSDK\Metrics\View;
 use Psr\Log\LoggerInterface;
@@ -89,7 +90,7 @@ final class MeterState {
     /**
      * @return array{Instrument, ReferenceCounter}
      */
-    public function createSynchronousInstrument(Instrument $instrument, InstrumentationScope $instrumentationScope): array {
+    public function createSynchronousInstrument(Instrument $instrument, InstrumentationScope $instrumentationScope, MeterConfig $meterConfig): array {
         $instrumentationScopeId = self::instrumentationScopeId($instrumentationScope);
         $instrumentId = self::instrumentId($instrument);
 
@@ -125,7 +126,7 @@ final class MeterState {
                 $dedup[$dedupId] = $streamId;
             }
             $stream = $streams[$streamId];
-            $source = new MetricStreamSource($view->descriptor, $stream, $stream->register($view->temporality));
+            $source = new MetricStreamSource($view->descriptor, $stream, $stream->register($view->temporality), $meterConfig);
             $view->metricProducer->registerMetricSource($streamId, $source);
         }
 
@@ -148,7 +149,7 @@ final class MeterState {
     /**
      * @return array{Instrument, ReferenceCounter}
      */
-    public function createAsynchronousInstrument(Instrument $instrument, InstrumentationScope $instrumentationScope): array {
+    public function createAsynchronousInstrument(Instrument $instrument, InstrumentationScope $instrumentationScope, MeterConfig $meterConfig): array {
         $instrumentationScopeId = self::instrumentationScopeId($instrumentationScope);
         $instrumentId = self::instrumentId($instrument);
 
@@ -182,7 +183,7 @@ final class MeterState {
                 $dedup[$dedupId] = $streamId;
             }
             $stream = $streams[$streamId];
-            $source = new MetricStreamSource($view->descriptor, $stream, $stream->register($view->temporality));
+            $source = new MetricStreamSource($view->descriptor, $stream, $stream->register($view->temporality), $meterConfig);
             $view->metricProducer->registerMetricSource($streamId, $source);
         }
 

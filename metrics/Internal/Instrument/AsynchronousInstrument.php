@@ -4,6 +4,7 @@ namespace Nevay\OTelSDK\Metrics\Internal\Instrument;
 use Nevay\OTelSDK\Metrics\Instrument;
 use Nevay\OTelSDK\Metrics\Internal\Registry\MetricWriter;
 use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\ReferenceCounter;
+use Nevay\OTelSDK\Metrics\MeterConfig;
 use OpenTelemetry\API\Metrics\ObservableCallbackInterface;
 use OpenTelemetry\API\Metrics\ObserverInterface;
 use WeakMap;
@@ -22,6 +23,7 @@ trait AsynchronousInstrument {
         private readonly Instrument $instrument,
         private readonly ReferenceCounter $referenceCounter,
         private readonly WeakMap $destructors,
+        private readonly MeterConfig $meterConfig,
     ) {
         assert($this instanceof InstrumentHandle);
 
@@ -37,7 +39,7 @@ trait AsynchronousInstrument {
     }
 
     public function enabled(): bool {
-        return $this->writer->enabled($this->instrument);
+        return !$this->meterConfig->disabled && $this->writer->enabled($this->instrument);
     }
 
     /**

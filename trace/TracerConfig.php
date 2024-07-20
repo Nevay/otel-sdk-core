@@ -7,6 +7,6 @@ namespace Nevay\OTelSDK\Trace;
 final class TracerConfig {
 
     public function __construct(
-        public readonly bool $disabled = false,
+        public bool $disabled = false,
     ) {}
 }

@@ -15,7 +15,6 @@ use OpenTelemetry\API\Logs\EventLoggerProviderInterface;
 use OpenTelemetry\API\Logs\LoggerInterface;
 use OpenTelemetry\API\Logs\LoggerProviderInterface;
 use OpenTelemetry\API\Logs\NoopEventLogger;
-use OpenTelemetry\API\Logs\NoopLogger;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface as PsrLoggerInterface;
 
@@ -65,13 +64,9 @@ final class LoggerProvider implements LoggerProviderInterface, EventLoggerProvid
 
         $instrumentationScope = new InstrumentationScope($name, $version, $schemaUrl,
             $this->instrumentationScopeAttributesFactory->builder()->addAll($attributes)->build());
+        $loggerConfig = ($this->loggerConfigurator)($instrumentationScope);
 
-        $config = ($this->loggerConfigurator)($instrumentationScope);
-        if ($config->disabled) {
-            return new NoopLogger();
-        }
-
-        return new Logger($this->loggerState, $instrumentationScope);
+        return new Logger($this->loggerState, $instrumentationScope, $loggerConfig);
     }
 
     public function getEventLogger(

@@ -7,6 +7,6 @@ namespace Nevay\OTelSDK\Logs;
 final class LoggerConfig {
 
     public function __construct(
-        public readonly bool $disabled = false,
+        public bool $disabled = false,
     ) {}
 }

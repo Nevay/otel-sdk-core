@@ -3,6 +3,7 @@ namespace Nevay\OTelSDK\Logs\Internal;
 
 use Nevay\OTelSDK\Common\ContextResolver;
 use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Logs\LoggerConfig;
 use OpenTelemetry\API\Logs\LoggerInterface;
 use OpenTelemetry\API\Logs\LogRecord;
 use OpenTelemetry\API\Trace\Span;
@@ -15,13 +16,18 @@ final class Logger implements LoggerInterface {
     public function __construct(
         private readonly LoggerState $loggerState,
         private readonly InstrumentationScope $instrumentationScope,
+        private readonly LoggerConfig $loggerConfig,
     ) {}
 
     public function enabled(): bool {
-        return true;
+        return !$this->loggerConfig->disabled;
     }
 
     public function emit(LogRecord $logRecord): void {
+        if ($this->loggerConfig->disabled) {
+            return;
+        }
+
         $context = ContextResolver::resolve(Accessor::getContext($logRecord), $this->loggerState->contextStorage);
 
         $record = new ReadWriteLogRecord(

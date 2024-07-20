@@ -19,7 +19,6 @@ use Nevay\OTelSDK\Metrics\MeterConfig;
 use Nevay\OTelSDK\Metrics\MetricReader;
 use OpenTelemetry\API\Metrics\MeterInterface;
 use OpenTelemetry\API\Metrics\MeterProviderInterface;
-use OpenTelemetry\API\Metrics\Noop\NoopMeter;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface;
 use WeakMap;
@@ -90,13 +89,9 @@ final class MeterProvider implements MeterProviderInterface, Provider {
 
         $instrumentationScope = new InstrumentationScope($name, $version, $schemaUrl,
             $this->instrumentationScopeAttributesFactory->builder()->addAll($attributes)->build());
+        $meterConfig = ($this->meterConfigurator)($instrumentationScope);
 
-        $config = ($this->meterConfigurator)($instrumentationScope);
-        if ($config->disabled) {
-            return new NoopMeter();
-        }
-
-        return new Meter($this->meterState, $instrumentationScope);
+        return new Meter($this->meterState, $instrumentationScope, $meterConfig);
     }
 
     public function shutdown(?Cancellation $cancellation = null): bool {
