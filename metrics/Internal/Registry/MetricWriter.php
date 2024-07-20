@@ -10,6 +10,8 @@ use OpenTelemetry\Context\ContextInterface;
  */
 interface MetricWriter {
 
+    public function enabled(Instrument $instrument): bool;
+
     public function record(Instrument $instrument, float|int $value, iterable $attributes = [], ContextInterface|false|null $context = null): void;
 
     public function registerCallback(Closure $callback, Instrument $instrument, Instrument ...$instruments): int;

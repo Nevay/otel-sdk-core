@@ -17,6 +17,10 @@ final class Logger implements LoggerInterface {
         private readonly InstrumentationScope $instrumentationScope,
     ) {}
 
+    public function enabled(): bool {
+        return true;
+    }
+
     public function emit(LogRecord $logRecord): void {
         $context = ContextResolver::resolve(Accessor::getContext($logRecord), $this->loggerState->contextStorage);
 

@@ -15,6 +15,10 @@ final class Tracer implements TracerInterface {
         private readonly InstrumentationScope $instrumentationScope,
     ) {}
 
+    public function enabled(): bool {
+        return true;
+    }
+
     public function spanBuilder(string $spanName): SpanBuilderInterface {
         return new SpanBuilder($this->tracerState, $this->instrumentationScope, $spanName);
     }

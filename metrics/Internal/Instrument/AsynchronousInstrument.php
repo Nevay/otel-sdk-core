@@ -36,6 +36,10 @@ trait AsynchronousInstrument {
         return $this->instrument;
     }
 
+    public function enabled(): bool {
+        return $this->writer->enabled($this->instrument);
+    }
+
     /**
      * @param callable(ObserverInterface): void $callback
      */

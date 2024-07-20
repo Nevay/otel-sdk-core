@@ -19,6 +19,7 @@ use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
 use function array_keys;
 use function count;
+use function spl_object_id;
 
 /**
  * @internal
@@ -96,6 +97,10 @@ final class MetricRegistry implements MetricWriter, MetricCollector {
         if (!$this->instrumentToStreams[$instrumentId]) {
             unset($this->instrumentToStreams[$instrumentId]);
         }
+    }
+
+    public function enabled(Instrument $instrument): bool {
+        return isset($this->instrumentToStreams[spl_object_id($instrument)]);
     }
 
     public function record(Instrument $instrument, float|int $value, iterable $attributes = [], ContextInterface|false|null $context = null): void {

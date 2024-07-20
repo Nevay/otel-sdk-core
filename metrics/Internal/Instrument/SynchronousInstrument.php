@@ -30,6 +30,10 @@ trait SynchronousInstrument {
         return $this->instrument;
     }
 
+    public function enabled(): bool {
+        return $this->writer->enabled($this->instrument);
+    }
+
     /**
      * @param float|int $amount
      * @param ContextInterface|false|null $context
