@@ -10,7 +10,7 @@
         "open-telemetry/api": "^1.0",
         "psr/log": "^1 || ^2 || ^3",
         "revolt/event-loop": "^1.0",
-        "tbachert/spi": "^0.1 || ^0.2"
+        "tbachert/spi": "^0.1 || ^0.2 || ^1.0"
     },
     "autoload": {
         "psr-4": {

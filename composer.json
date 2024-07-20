@@ -13,7 +13,7 @@
         "open-telemetry/context": "^1.0",
         "psr/log": "^1 || ^2 || ^3",
         "revolt/event-loop": "^1.0",
-        "tbachert/spi": "^0.1 || ^0.2"
+        "tbachert/spi": "^0.1 || ^0.2 || ^1.0"
     },
     "suggest": {
         "ext-gmp": "To support unlimited number of synchronous metric readers, otherwise limited to 63 per stream"
