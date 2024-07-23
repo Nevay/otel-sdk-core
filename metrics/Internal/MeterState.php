@@ -324,11 +324,7 @@ final class MeterState {
     }
 
     private function releaseStreams(Instrument $instrument): void {
-        if (!$streamIds = $this->registry->unregisterStreams($instrument)) {
-            return;
-        }
-
-        foreach ($streamIds as $streamId) {
+        foreach ($this->registry->unregisterStreams($instrument) as $streamId) {
             foreach ($this->metricProducers as $metricProducer) {
                 $metricProducer->unregisterStream($streamId);
             }

@@ -44,7 +44,7 @@ final class InstrumentationScopeCache {
         }
 
         if ($internScope->attributes->toArray() !== $instrumentationScope->attributes->toArray()) {
-            $this->logger->warning('Instrumentation scope with same identity and differing non-identifying fields, using first-seen instrumentation scope', [
+            $this->logger?->warning('Instrumentation scope with same identity and differing non-identifying fields, using first-seen instrumentation scope', [
                 'name' => $instrumentationScope->name,
                 'version' => $instrumentationScope->version,
                 'schemaUrl' => $instrumentationScope->schemaUrl,
