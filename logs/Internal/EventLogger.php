@@ -3,6 +3,7 @@ namespace Nevay\OTelSDK\Logs\Internal;
 
 use Nevay\OTelSDK\Common\ContextResolver;
 use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Logs\LoggerConfig;
 use OpenTelemetry\API\Logs\EventLoggerInterface;
 use OpenTelemetry\API\Logs\Severity;
 use OpenTelemetry\API\Trace\Span;
@@ -16,6 +17,7 @@ final class EventLogger implements EventLoggerInterface {
     public function __construct(
         private readonly LoggerState $loggerState,
         private readonly InstrumentationScope $instrumentationScope,
+        private readonly LoggerConfig $loggerConfig,
     ) {}
 
     public function emit(
@@ -26,6 +28,10 @@ final class EventLogger implements EventLoggerInterface {
         ?Severity $severityNumber = null,
         iterable $attributes = [],
     ): void {
+        if ($this->loggerConfig->disabled) {
+            return;
+        }
+
         $context = ContextResolver::resolve($context, $this->loggerState->contextStorage);
         $observedTimestamp = $this->loggerState->clock->now();
 

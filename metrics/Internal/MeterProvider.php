@@ -7,6 +7,7 @@ use Closure;
 use Nevay\OTelSDK\Common\AttributesFactory;
 use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Common\Internal\InstrumentationScopeCache;
 use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Metrics\Aggregator;
@@ -31,6 +32,8 @@ final class MeterProvider implements MeterProviderInterface, Provider {
 
     private readonly MeterState $meterState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
+    private readonly InstrumentationScopeCache $instrumentationScopeCache;
+    private readonly WeakMap $configCache;
     private readonly Closure $meterConfigurator;
 
     /**
@@ -74,6 +77,8 @@ final class MeterProvider implements MeterProviderInterface, Provider {
             $logger,
         );
         $this->instrumentationScopeAttributesFactory = $instrumentationScopeAttributesFactory;
+        $this->instrumentationScopeCache = new InstrumentationScopeCache($logger);
+        $this->configCache = new WeakMap();
         $this->meterConfigurator = $meterConfigurator;
     }
 
@@ -89,9 +94,16 @@ final class MeterProvider implements MeterProviderInterface, Provider {
 
         $instrumentationScope = new InstrumentationScope($name, $version, $schemaUrl,
             $this->instrumentationScopeAttributesFactory->builder()->addAll($attributes)->build());
-        $meterConfig = ($this->meterConfigurator)($instrumentationScope);
+        $instrumentationScope = $this->instrumentationScopeCache->intern($instrumentationScope);
 
-        return new Meter($this->meterState, $instrumentationScope, $meterConfig);
+        /** @noinspection PhpSecondWriteToReadonlyPropertyInspection */
+        $this->configCache[$instrumentationScope] ??= ($this->meterConfigurator)($instrumentationScope)
+            ->onChange(fn(MeterConfig $meterConfig) => $meterConfig->disabled
+                ? $this->meterState->disableInstrumentationScope($instrumentationScope)
+                : $this->meterState->enableInstrumentationScope($instrumentationScope))
+            ->triggerOnChange();
+
+        return new Meter($this->meterState, $instrumentationScope);
     }
 
     public function shutdown(?Cancellation $cancellation = null): bool {

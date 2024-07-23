@@ -4,7 +4,6 @@ namespace Nevay\OTelSDK\Metrics\Internal\Instrument;
 use Nevay\OTelSDK\Metrics\Instrument;
 use Nevay\OTelSDK\Metrics\Internal\Registry\MetricWriter;
 use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\ReferenceCounter;
-use Nevay\OTelSDK\Metrics\MeterConfig;
 use OpenTelemetry\Context\ContextInterface;
 use function assert;
 
@@ -17,7 +16,6 @@ trait SynchronousInstrument {
         private readonly MetricWriter $writer,
         private readonly Instrument $instrument,
         private readonly ReferenceCounter $referenceCounter,
-        private readonly MeterConfig $meterConfig,
     ) {
         assert($this instanceof InstrumentHandle);
 
@@ -33,7 +31,7 @@ trait SynchronousInstrument {
     }
 
     public function enabled(): bool {
-        return !$this->meterConfig->disabled && $this->writer->enabled($this->instrument);
+        return $this->writer->enabled($this->instrument);
     }
 
     /**
@@ -43,10 +41,6 @@ trait SynchronousInstrument {
      * @noinspection PhpMissingParamTypeInspection
      */
     public function write($amount, iterable $attributes = [], $context = null): void {
-        if ($this->meterConfig->disabled) {
-            return;
-        }
-
         $this->writer->record($this->instrument, $amount, $attributes, $context);
     }
 }

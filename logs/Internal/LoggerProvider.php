@@ -6,6 +6,7 @@ use Closure;
 use Nevay\OTelSDK\Common\AttributesFactory;
 use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Common\Internal\InstrumentationScopeCache;
 use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Logs\LoggerConfig;
@@ -14,9 +15,9 @@ use OpenTelemetry\API\Logs\EventLoggerInterface;
 use OpenTelemetry\API\Logs\EventLoggerProviderInterface;
 use OpenTelemetry\API\Logs\LoggerInterface;
 use OpenTelemetry\API\Logs\LoggerProviderInterface;
-use OpenTelemetry\API\Logs\NoopEventLogger;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface as PsrLoggerInterface;
+use WeakMap;
 
 /**
  * @internal
@@ -25,6 +26,8 @@ final class LoggerProvider implements LoggerProviderInterface, EventLoggerProvid
 
     private readonly LoggerState $loggerState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
+    private readonly InstrumentationScopeCache $instrumentationScopeCache;
+    private readonly WeakMap $configCache;
     private readonly Closure $loggerConfigurator;
 
     /**
@@ -49,6 +52,8 @@ final class LoggerProvider implements LoggerProviderInterface, EventLoggerProvid
             $logger,
         );
         $this->instrumentationScopeAttributesFactory = $instrumentationScopeAttributesFactory;
+        $this->instrumentationScopeCache = new InstrumentationScopeCache($logger);
+        $this->configCache = new WeakMap();
         $this->loggerConfigurator = $loggerConfigurator;
     }
 
@@ -64,7 +69,10 @@ final class LoggerProvider implements LoggerProviderInterface, EventLoggerProvid
 
         $instrumentationScope = new InstrumentationScope($name, $version, $schemaUrl,
             $this->instrumentationScopeAttributesFactory->builder()->addAll($attributes)->build());
-        $loggerConfig = ($this->loggerConfigurator)($instrumentationScope);
+        $instrumentationScope = $this->instrumentationScopeCache->intern($instrumentationScope);
+
+        /** @noinspection PhpSecondWriteToReadonlyPropertyInspection */
+        $loggerConfig = $this->configCache[$instrumentationScope] ??= ($this->loggerConfigurator)($instrumentationScope);
 
         return new Logger($this->loggerState, $instrumentationScope, $loggerConfig);
     }
@@ -81,13 +89,12 @@ final class LoggerProvider implements LoggerProviderInterface, EventLoggerProvid
 
         $instrumentationScope = new InstrumentationScope($name, $version, $schemaUrl,
             $this->instrumentationScopeAttributesFactory->builder()->addAll($attributes)->build());
+        $instrumentationScope = $this->instrumentationScopeCache->intern($instrumentationScope);
 
-        $config = ($this->loggerConfigurator)($instrumentationScope);
-        if ($config->disabled) {
-            return new NoopEventLogger();
-        }
+        /** @noinspection PhpSecondWriteToReadonlyPropertyInspection */
+        $loggerConfig = $this->configCache[$instrumentationScope] ??= ($this->loggerConfigurator)($instrumentationScope);
 
-        return new EventLogger($this->loggerState, $instrumentationScope);
+        return new EventLogger($this->loggerState, $instrumentationScope, $loggerConfig);
     }
 
     public function shutdown(?Cancellation $cancellation = null): bool {

@@ -7,6 +7,7 @@ use Nevay\OTelSDK\Common\AttributesFactory;
 use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\HighResolutionTime;
 use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Common\Internal\InstrumentationScopeCache;
 use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Trace\IdGenerator;
@@ -17,6 +18,7 @@ use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\API\Trace\TracerProviderInterface;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface;
+use WeakMap;
 
 /**
  * @internal
@@ -25,6 +27,8 @@ final class TracerProvider implements TracerProviderInterface, Provider {
 
     private readonly TracerState $tracerState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
+    private readonly InstrumentationScopeCache $instrumentationScopeCache;
+    private readonly WeakMap $configCache;
     private readonly Closure $tracerConfigurator;
 
     /**
@@ -63,6 +67,8 @@ final class TracerProvider implements TracerProviderInterface, Provider {
             $logger,
         );
         $this->instrumentationScopeAttributesFactory = $instrumentationScopeAttributesFactory;
+        $this->instrumentationScopeCache = new InstrumentationScopeCache($logger);
+        $this->configCache = new WeakMap();
         $this->tracerConfigurator = $tracerConfigurator;
     }
 
@@ -78,7 +84,10 @@ final class TracerProvider implements TracerProviderInterface, Provider {
 
         $instrumentationScope = new InstrumentationScope($name, $version, $schemaUrl,
             $this->instrumentationScopeAttributesFactory->builder()->addAll($attributes)->build());
-        $tracerConfig = ($this->tracerConfigurator)($instrumentationScope);
+        $instrumentationScope = $this->instrumentationScopeCache->intern($instrumentationScope);
+
+        /** @noinspection PhpSecondWriteToReadonlyPropertyInspection */
+        $tracerConfig = $this->configCache[$instrumentationScope] ??= ($this->tracerConfigurator)($instrumentationScope);
 
         return new Tracer($this->tracerState, $instrumentationScope, $tracerConfig);
     }

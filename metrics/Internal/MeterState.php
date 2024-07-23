@@ -24,13 +24,11 @@ use Nevay\OTelSDK\Metrics\Internal\Stream\DefaultMetricAggregatorFactory;
 use Nevay\OTelSDK\Metrics\Internal\Stream\SynchronousMetricStream;
 use Nevay\OTelSDK\Metrics\Internal\View\ResolvedView;
 use Nevay\OTelSDK\Metrics\Internal\View\ViewRegistry;
-use Nevay\OTelSDK\Metrics\MeterConfig;
 use Nevay\OTelSDK\Metrics\MetricReader;
 use Nevay\OTelSDK\Metrics\View;
 use Psr\Log\LoggerInterface;
 use Throwable;
 use WeakMap;
-use function array_keys;
 use function assert;
 use function md5;
 use function preg_match;
@@ -45,9 +43,12 @@ final class MeterState {
 
     private ?int $startTimestamp = null;
 
-    /** @var array<string, array<string, array{Instrument, ReferenceCounter}>> */
+    /** @var array<string, true> */
+    private array $disabledInstrumentationScopes = [];
+
+    /** @var array<string, array<string, array{Instrument, ReferenceCounter, InstrumentationScope}>> */
     private array $asynchronous = [];
-    /** @var array<string, array<string, array{Instrument, ReferenceCounter}>> */
+    /** @var array<string, array<string, array{Instrument, ReferenceCounter, InstrumentationScope}>> */
     private array $synchronous = [];
     /** @var array<string, array<string, int>> */
     private array $instrumentIdentities = [];
@@ -72,6 +73,45 @@ final class MeterState {
         public readonly ?LoggerInterface $logger,
     ) {}
 
+    public function enableInstrumentationScope(InstrumentationScope $instrumentationScope): bool {
+        $instrumentationScopeId = self::instrumentationScopeId($instrumentationScope);
+        if (!isset($this->disabledInstrumentationScopes[$instrumentationScopeId])) {
+            return false;
+        }
+
+        $this->logger?->debug('Enabling instruments of instrumentation scope', ['scope' => $instrumentationScope]);
+        unset($this->disabledInstrumentationScopes[$instrumentationScopeId]);
+
+        $startTimestamp = $this->clock->now();
+        foreach ($this->asynchronous[$instrumentationScopeId] ?? [] as [$instrument]) {
+            $this->createAsynchronousStreams($instrument, $instrumentationScope, $startTimestamp);
+        }
+        foreach ($this->synchronous[$instrumentationScopeId] ?? [] as [$instrument]) {
+            $this->createSynchronousStreams($instrument, $instrumentationScope, $startTimestamp);
+        }
+
+        return true;
+    }
+
+    public function disableInstrumentationScope(InstrumentationScope $instrumentationScope): bool {
+        $instrumentationScopeId = self::instrumentationScopeId($instrumentationScope);
+        if (isset($this->disabledInstrumentationScopes[$instrumentationScopeId])) {
+            return false;
+        }
+
+        $this->logger?->debug('Disabling instruments of instrumentation scope', ['scope' => $instrumentationScope]);
+        $this->disabledInstrumentationScopes[$instrumentationScopeId] = true;
+
+        foreach ($this->asynchronous[$instrumentationScopeId] ?? [] as [$instrument]) {
+            $this->releaseStreams($instrument);
+        }
+        foreach ($this->synchronous[$instrumentationScopeId] ?? [] as [$instrument]) {
+            $this->releaseStreams($instrument);
+        }
+
+        return true;
+    }
+
     /**
      * @return array{Instrument, ReferenceCounter}|null
      */
@@ -90,7 +130,7 @@ final class MeterState {
     /**
      * @return array{Instrument, ReferenceCounter}
      */
-    public function createSynchronousInstrument(Instrument $instrument, InstrumentationScope $instrumentationScope, MeterConfig $meterConfig): array {
+    public function createSynchronousInstrument(Instrument $instrument, InstrumentationScope $instrumentationScope): array {
         $instrumentationScopeId = self::instrumentationScopeId($instrumentationScope);
         $instrumentId = self::instrumentId($instrument);
 
@@ -104,14 +144,76 @@ final class MeterState {
         self::ensureInstrumentNameNotConflicting($instrument, $instrumentationScopeId, $instrumentId, $instrumentName);
         self::acquireInstrumentName($instrumentationScopeId, $instrumentId, $instrumentName);
 
+        if (!isset($this->disabledInstrumentationScopes[$instrumentationScopeId])) {
+            $this->startTimestamp ??= $this->clock->now();
+            $this->createSynchronousStreams($instrument, $instrumentationScope, $this->startTimestamp);
+        }
+
         $stalenessHandler = $this->stalenessHandlerFactory->create();
-        $this->startTimestamp ??= $this->clock->now();
+        $stalenessHandler->onStale(fn() => $this->releaseStreams($instrument));
+        $stalenessHandler->onStale(function() use ($instrumentationScopeId, $instrumentId, $instrumentName): void {
+            unset($this->synchronous[$instrumentationScopeId][$instrumentId]);
+            if (!$this->synchronous[$instrumentationScopeId]) {
+                unset($this->synchronous[$instrumentationScopeId]);
+            }
+            $this->releaseInstrumentName($instrumentationScopeId, $instrumentId, $instrumentName);
+            $this->startTimestamp = null;
+        });
+
+        return $this->synchronous[$instrumentationScopeId][$instrumentId] = [
+            $instrument,
+            $stalenessHandler,
+            $instrumentationScope, // keep reference alive
+        ];
+    }
+
+    /**
+     * @return array{Instrument, ReferenceCounter}
+     */
+    public function createAsynchronousInstrument(Instrument $instrument, InstrumentationScope $instrumentationScope): array {
+        $instrumentationScopeId = self::instrumentationScopeId($instrumentationScope);
+        $instrumentId = self::instrumentId($instrument);
+
+        self::ensureInstrumentNameValid($instrument, $instrumentationScopeId, $instrumentId);
+        if ($asynchronousInstrument = $this->asynchronous[$instrumentationScopeId][$instrumentId] ?? null) {
+            self::ensureIdentityInstrumentEquals($instrument, $instrumentationScopeId, $instrumentId, $asynchronousInstrument[0]);
+            return $asynchronousInstrument;
+        }
+
+        $instrumentName = self::instrumentName($instrument);
+        self::ensureInstrumentNameNotConflicting($instrument, $instrumentationScopeId, $instrumentId, $instrumentName);
+        self::acquireInstrumentName($instrumentationScopeId, $instrumentId, $instrumentName);
+
+        if (!isset($this->disabledInstrumentationScopes[$instrumentationScopeId])) {
+            $this->startTimestamp ??= $this->clock->now();
+            $this->createAsynchronousStreams($instrument, $instrumentationScope, $this->startTimestamp);
+        }
+
+        $stalenessHandler = $this->stalenessHandlerFactory->create();
+        $stalenessHandler->onStale(fn() => $this->releaseStreams($instrument));
+        $stalenessHandler->onStale(function() use ($instrumentationScopeId, $instrumentId, $instrumentName): void {
+            unset($this->asynchronous[$instrumentationScopeId][$instrumentId]);
+            if (!$this->asynchronous[$instrumentationScopeId]) {
+                unset($this->asynchronous[$instrumentationScopeId]);
+            }
+            $this->releaseInstrumentName($instrumentationScopeId, $instrumentId, $instrumentName);
+            $this->startTimestamp = null;
+        });
+
+        return $this->asynchronous[$instrumentationScopeId][$instrumentId] = [
+            $instrument,
+            $stalenessHandler,
+            $instrumentationScope, // keep reference alive
+        ];
+    }
+
+    private function createSynchronousStreams(Instrument $instrument, InstrumentationScope $instrumentationScope, int $startTimestamp): void {
         $streams = [];
         $dedup = [];
         foreach ($this->views($instrument, $instrumentationScope, Temporality::Delta) as $view) {
             $dedupId = self::streamDedupId($view);
             if (($streamId = $dedup[$dedupId] ?? null) === null) {
-                $stream = new SynchronousMetricStream($view->aggregator, $this->startTimestamp, $view->cardinalityLimit);
+                $stream = new SynchronousMetricStream($view->aggregator, $startTimestamp, $view->cardinalityLimit);
                 assert($stream->temporality() === $view->descriptor->temporality);
 
                 $streamId = $this->registry->registerSynchronousStream($instrument, $stream, new DefaultMetricAggregator(
@@ -126,51 +228,18 @@ final class MeterState {
                 $dedup[$dedupId] = $streamId;
             }
             $stream = $streams[$streamId];
-            $source = new MetricStreamSource($view->descriptor, $stream, $stream->register($view->temporality), $meterConfig);
+            $source = new MetricStreamSource($view->descriptor, $stream, $stream->register($view->temporality));
             $view->metricProducer->registerMetricSource($streamId, $source);
         }
-
-        $streamIds = array_keys($streams);
-        $stalenessHandler->onStale(function() use ($instrumentationScopeId, $instrumentId, $instrumentName, $streamIds): void {
-            unset($this->synchronous[$instrumentationScopeId][$instrumentId]);
-            if (!$this->synchronous[$instrumentationScopeId]) {
-                unset($this->synchronous[$instrumentationScopeId]);
-            }
-            $this->releaseInstrumentName($instrumentationScopeId, $instrumentId, $instrumentName);
-            $this->releaseStreams($streamIds);
-        });
-
-        return $this->synchronous[$instrumentationScopeId][$instrumentId] = [
-            $instrument,
-            $stalenessHandler,
-        ];
     }
 
-    /**
-     * @return array{Instrument, ReferenceCounter}
-     */
-    public function createAsynchronousInstrument(Instrument $instrument, InstrumentationScope $instrumentationScope, MeterConfig $meterConfig): array {
-        $instrumentationScopeId = self::instrumentationScopeId($instrumentationScope);
-        $instrumentId = self::instrumentId($instrument);
-
-        self::ensureInstrumentNameValid($instrument, $instrumentationScopeId, $instrumentId);
-        if ($asynchronousInstrument = $this->asynchronous[$instrumentationScopeId][$instrumentId] ?? null) {
-            self::ensureIdentityInstrumentEquals($instrument, $instrumentationScopeId, $instrumentId, $asynchronousInstrument[0]);
-            return $asynchronousInstrument;
-        }
-
-        $instrumentName = self::instrumentName($instrument);
-        self::ensureInstrumentNameNotConflicting($instrument, $instrumentationScopeId, $instrumentId, $instrumentName);
-        self::acquireInstrumentName($instrumentationScopeId, $instrumentId, $instrumentName);
-
-        $stalenessHandler = $this->stalenessHandlerFactory->create();
-        $this->startTimestamp ??= $this->clock->now();
+    private function createAsynchronousStreams(Instrument $instrument, InstrumentationScope $instrumentationScope, int $startTimestamp): void {
         $streams = [];
         $dedup = [];
         foreach ($this->views($instrument, $instrumentationScope, Temporality::Cumulative) as $view) {
             $dedupId = self::streamDedupId($view);
             if (($streamId = $dedup[$dedupId] ?? null) === null) {
-                $stream = new AsynchronousMetricStream($view->aggregator, $this->startTimestamp);
+                $stream = new AsynchronousMetricStream($view->aggregator, $startTimestamp);
                 assert($stream->temporality() === $view->descriptor->temporality);
 
                 $streamId = $this->registry->registerAsynchronousStream($instrument, $stream, new DefaultMetricAggregatorFactory(
@@ -183,24 +252,9 @@ final class MeterState {
                 $dedup[$dedupId] = $streamId;
             }
             $stream = $streams[$streamId];
-            $source = new MetricStreamSource($view->descriptor, $stream, $stream->register($view->temporality), $meterConfig);
+            $source = new MetricStreamSource($view->descriptor, $stream, $stream->register($view->temporality));
             $view->metricProducer->registerMetricSource($streamId, $source);
         }
-
-        $streamIds = array_keys($streams);
-        $stalenessHandler->onStale(function() use ($instrumentationScopeId, $instrumentId, $instrumentName, $streamIds): void {
-            unset($this->asynchronous[$instrumentationScopeId][$instrumentId]);
-            if (!$this->asynchronous[$instrumentationScopeId]) {
-                unset($this->asynchronous[$instrumentationScopeId]);
-            }
-            $this->releaseInstrumentName($instrumentationScopeId, $instrumentId, $instrumentName);
-            $this->releaseStreams($streamIds);
-        });
-
-        return $this->asynchronous[$instrumentationScopeId][$instrumentId] = [
-            $instrument,
-            $stalenessHandler,
-        ];
     }
 
     /**
@@ -269,10 +323,12 @@ final class MeterState {
         }
     }
 
-    private function releaseStreams(array $streamIds): void {
-        $this->startTimestamp = null;
+    private function releaseStreams(Instrument $instrument): void {
+        if (!$streamIds = $this->registry->unregisterStreams($instrument)) {
+            return;
+        }
+
         foreach ($streamIds as $streamId) {
-            $this->registry->unregisterStream($streamId);
             foreach ($this->metricProducers as $metricProducer) {
                 $metricProducer->unregisterStream($streamId);
             }
@@ -325,7 +381,7 @@ final class MeterState {
         $this->logger?->warning('Instrument with same identity and differing non-identifying fields, using stream of first-seen instrument', [
             'scope_hash' => md5($instrumentationScopeId),
             'instrument_hash' => md5($instrumentId),
-            'first-seen' => $registered,
+            'first_seen' => $registered,
             'instrument' => $instrument,
         ]);
     }

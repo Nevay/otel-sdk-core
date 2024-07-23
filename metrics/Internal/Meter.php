@@ -14,7 +14,6 @@ use Nevay\OTelSDK\Metrics\Internal\Instrument\ObservableGauge;
 use Nevay\OTelSDK\Metrics\Internal\Instrument\ObservableUpDownCounter;
 use Nevay\OTelSDK\Metrics\Internal\Instrument\UpDownCounter;
 use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\MultiReferenceCounter;
-use Nevay\OTelSDK\Metrics\MeterConfig;
 use OpenTelemetry\API\Metrics\AsynchronousInstrument;
 use OpenTelemetry\API\Metrics\CounterInterface;
 use OpenTelemetry\API\Metrics\GaugeInterface;
@@ -36,7 +35,6 @@ final class Meter implements MeterInterface {
     public function __construct(
         private readonly MeterState $meterState,
         private readonly InstrumentationScope $instrumentationScope,
-        private readonly MeterConfig $meterConfig,
     ) {}
 
     private static function dummyInstrument(): Instrument {
@@ -123,9 +121,9 @@ final class Meter implements MeterInterface {
      */
     private function createSynchronousInstrument(string $class, InstrumentType $type, string $name, ?string $unit, ?string $description, array $advisory): InstrumentHandle {
         [$instrument, $referenceCounter] = $this->meterState->createSynchronousInstrument(new Instrument(
-            $type, $name, $unit, $description, $advisory), $this->instrumentationScope, $this->meterConfig);
+            $type, $name, $unit, $description, $advisory), $this->instrumentationScope);
 
-        return new $class($this->meterState->registry, $instrument, $referenceCounter, $this->meterConfig);
+        return new $class($this->meterState->registry, $instrument, $referenceCounter);
     }
 
     /**
@@ -140,13 +138,13 @@ final class Meter implements MeterInterface {
             $advisory = [];
         }
         [$instrument, $referenceCounter] = $this->meterState->createAsynchronousInstrument(new Instrument(
-            $type, $name, $unit, $description, $advisory), $this->instrumentationScope, $this->meterConfig);
+            $type, $name, $unit, $description, $advisory), $this->instrumentationScope);
 
         foreach ($callbacks as $callback) {
             $this->meterState->registry->registerCallback(closure($callback), $instrument);
             $referenceCounter->acquire(true);
         }
 
-        return new $class($this->meterState->registry, $instrument, $referenceCounter, $this->meterState->destructors, $this->meterConfig);
+        return new $class($this->meterState->registry, $instrument, $referenceCounter, $this->meterState->destructors);
     }
 }

@@ -14,6 +14,5 @@ final class MetricStreamSource {
         public readonly Descriptor $descriptor,
         public readonly MetricStream $stream,
         public readonly int $reader,
-        public readonly MeterConfig $meterConfig,
     ) {}
 }

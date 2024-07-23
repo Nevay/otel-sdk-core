@@ -43,7 +43,9 @@ final class MeterMetricProducer implements MetricProducer {
     }
 
     public function produce(?MetricFilter $metricFilter = null, ?Cancellation $cancellation = null): iterable {
-        $sources = $this->applyMetricFilter($this->sources, $metricFilter);
+        $sources = $metricFilter
+            ? $this->applyMetricFilter($this->sources, $metricFilter)
+            : $this->sources;
         $streamIds = count($sources) === count($this->sources)
             ? $this->streamIds ??= array_keys($this->sources)
             : array_keys($sources);
@@ -71,10 +73,15 @@ final class MeterMetricProducer implements MetricProducer {
      * @param array<int, list<MetricStreamSource>> $sources
      * @return array<int, array<int, MetricStreamSource>>
      */
-    private function applyMetricFilter(array $sources, ?MetricFilter $filter): array {
+    private function applyMetricFilter(array $sources, MetricFilter $filter): array {
         foreach ($sources as $streamId => $streamSources) {
             foreach ($streamSources as $sourceId => $source) {
-                $result = self::testMetric($source, $filter);
+                $result = $filter->testMetric(
+                    $source->descriptor->instrumentationScope,
+                    $source->descriptor->name,
+                    $source->descriptor->instrumentType,
+                    $source->descriptor->unit,
+                );
 
                 if ($result === MetricFilterResult::Accept) {
                     // no-op
@@ -84,7 +91,6 @@ final class MeterMetricProducer implements MetricProducer {
                         $source->descriptor,
                         new FilteredMetricStream($source->descriptor, $source->stream, $filter),
                         $source->reader,
-                        $source->meterConfig,
                     );
                 }
                 if ($result === MetricFilterResult::Drop) {
@@ -98,18 +104,5 @@ final class MeterMetricProducer implements MetricProducer {
         }
 
         return $sources;
-    }
-
-    private static function testMetric(MetricStreamSource $source, ?MetricFilter $filter): MetricFilterResult {
-        if ($source->meterConfig->disabled) {
-            return MetricFilterResult::Drop;
-        }
-
-        return $filter?->testMetric(
-            $source->descriptor->instrumentationScope,
-            $source->descriptor->name,
-            $source->descriptor->instrumentType,
-            $source->descriptor->unit,
-        ) ?? MetricFilterResult::Accept;
     }
 }

@@ -85,18 +85,21 @@ final class MetricRegistry implements MetricWriter, MetricCollector {
         return $streamId;
     }
 
-    public function unregisterStream(int $streamId): void {
-        $instrumentId = $this->streamToInstrument[$streamId];
-        unset(
-            $this->streams[$streamId],
-            $this->synchronousAggregators[$streamId],
-            $this->asynchronousAggregatorFactories[$streamId],
-            $this->instrumentToStreams[$instrumentId][$streamId],
-            $this->streamToInstrument[$streamId],
-        );
-        if (!$this->instrumentToStreams[$instrumentId]) {
-            unset($this->instrumentToStreams[$instrumentId]);
+    public function unregisterStreams(Instrument $instrument): array {
+        $instrumentId = spl_object_id($instrument);
+        $streamIds = $this->instrumentToStreams[$instrumentId] ?? [];
+
+        foreach ($streamIds as $streamId) {
+            unset(
+                $this->streams[$streamId],
+                $this->synchronousAggregators[$streamId],
+                $this->asynchronousAggregatorFactories[$streamId],
+                $this->streamToInstrument[$streamId],
+            );
         }
+        unset($this->instrumentToStreams[$instrumentId]);
+
+        return $streamIds;
     }
 
     public function enabled(Instrument $instrument): bool {
@@ -104,11 +107,14 @@ final class MetricRegistry implements MetricWriter, MetricCollector {
     }
 
     public function record(Instrument $instrument, float|int $value, iterable $attributes = [], ContextInterface|false|null $context = null): void {
+        if (!$streamIds = $this->instrumentToStreams[spl_object_id($instrument)] ?? []) {
+            return;
+        }
+
         $context = ContextResolver::resolve($context, $this->contextStorage);
         $attributes = $this->attributesFactory->build($attributes);
         $timestamp = $this->clock->now();
-        $instrumentId = spl_object_id($instrument);
-        foreach ($this->instrumentToStreams[$instrumentId] ?? [] as $streamId) {
+        foreach ($streamIds as $streamId) {
             if ($aggregator = $this->synchronousAggregators[$streamId] ?? null) {
                 $aggregator->record($value, $attributes, $context, $timestamp);
             }
