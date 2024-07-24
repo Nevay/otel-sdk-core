@@ -4,6 +4,7 @@ namespace Nevay\OTelSDK\Metrics\Internal\View;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Metrics\Instrument;
 use Nevay\OTelSDK\Metrics\InstrumentType;
+use Nevay\OTelSDK\Metrics\View;
 use function preg_match;
 use function preg_quote;
 use function sprintf;
@@ -22,6 +23,7 @@ final class Selector {
     private ?string $meterSchemaUrl;
 
     public function __construct(
+        public readonly View $view,
         ?InstrumentType $type = null,
         ?string $name = null,
         ?string $unit = null,

@@ -14,8 +14,6 @@ final class MutableViewRegistry implements ViewRegistry {
 
     /** @var list<Selector> */
     private array $selectors = [];
-    /** @var list<View> */
-    private array $views = [];
 
     public function register(
         View $view,
@@ -26,17 +24,16 @@ final class MutableViewRegistry implements ViewRegistry {
         ?string $meterVersion = null,
         ?string $meterSchemaUrl = null,
     ): self {
-        $this->selectors[] = new Selector($type, $name, $unit, $meterName, $meterVersion, $meterSchemaUrl);
-        $this->views[] = $view;
+        $this->selectors[] = new Selector($view, $type, $name, $unit, $meterName, $meterVersion, $meterSchemaUrl);
 
         return $this;
     }
 
     public function find(Instrument $instrument, InstrumentationScope $instrumentationScope): ?iterable {
         $views = (function() use ($instrument, $instrumentationScope): Generator {
-            foreach ($this->selectors as $index => $selector) {
+            foreach ($this->selectors as $selector) {
                 if ($selector->accepts($instrument, $instrumentationScope)) {
-                    yield $this->views[$index];
+                    yield $selector->view;
                 }
             }
         })();
