@@ -30,10 +30,12 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 use WeakMap;
 use function assert;
-use function md5;
+use function bin2hex;
+use function hash;
 use function preg_match;
 use function serialize;
 use function spl_object_hash;
+use function spl_object_id;
 use function strtolower;
 
 /**
@@ -42,9 +44,6 @@ use function strtolower;
 final class MeterState {
 
     private ?int $startTimestamp = null;
-
-    /** @var array<string, true> */
-    private array $disabledInstrumentationScopes = [];
 
     /** @var array<string, array<string, array{Instrument, ReferenceCounter, InstrumentationScope}>> */
     private array $asynchronous = [];
@@ -57,6 +56,7 @@ final class MeterState {
      * @param array<MetricReader> $metricReaders
      * @param array<MeterMetricProducer> $metricProducers
      * @param Closure(Aggregator): ExemplarReservoir $exemplarReservoir
+     * @param WeakMap<InstrumentationScope, true> $disabledInstrumentationScopes
      * @param WeakMap<object, ObservableCallbackDestructor> $destructors
      */
     public function __construct(
@@ -69,24 +69,27 @@ final class MeterState {
         private readonly Closure $exemplarReservoir,
         private readonly ViewRegistry $viewRegistry,
         private readonly StalenessHandlerFactory $stalenessHandlerFactory,
+        private readonly WeakMap $disabledInstrumentationScopes,
         public readonly WeakMap $destructors,
         public readonly ?LoggerInterface $logger,
     ) {}
 
     public function enableInstrumentationScope(InstrumentationScope $instrumentationScope): bool {
-        $instrumentationScopeId = self::instrumentationScopeId($instrumentationScope);
-        if (!isset($this->disabledInstrumentationScopes[$instrumentationScopeId])) {
+        if (!$this->disabled($instrumentationScope)) {
             return false;
         }
 
-        $this->logger?->debug('Enabling instruments of instrumentation scope', ['scope' => $instrumentationScope]);
-        unset($this->disabledInstrumentationScopes[$instrumentationScopeId]);
+        $this->logger?->debug('Enabling instruments of instrumentation scope', [
+            'scope' => $instrumentationScope,
+            'scope_hash' => spl_object_id($instrumentationScope),
+        ]);
+        unset($this->disabledInstrumentationScopes[$instrumentationScope]);
 
         $startTimestamp = $this->clock->now();
-        foreach ($this->asynchronous[$instrumentationScopeId] ?? [] as [$instrument]) {
+        foreach ($this->asynchronous[spl_object_id($instrumentationScope)] ?? [] as [$instrument]) {
             $this->createAsynchronousStreams($instrument, $instrumentationScope, $startTimestamp);
         }
-        foreach ($this->synchronous[$instrumentationScopeId] ?? [] as [$instrument]) {
+        foreach ($this->synchronous[spl_object_id($instrumentationScope)] ?? [] as [$instrument]) {
             $this->createSynchronousStreams($instrument, $instrumentationScope, $startTimestamp);
         }
 
@@ -94,29 +97,36 @@ final class MeterState {
     }
 
     public function disableInstrumentationScope(InstrumentationScope $instrumentationScope): bool {
-        $instrumentationScopeId = self::instrumentationScopeId($instrumentationScope);
-        if (isset($this->disabledInstrumentationScopes[$instrumentationScopeId])) {
+        if ($this->disabled($instrumentationScope)) {
             return false;
         }
 
-        $this->logger?->debug('Disabling instruments of instrumentation scope', ['scope' => $instrumentationScope]);
-        $this->disabledInstrumentationScopes[$instrumentationScopeId] = true;
+        $this->logger?->debug('Disabling instruments of instrumentation scope', [
+            'scope' => $instrumentationScope,
+            'scope_hash' => spl_object_id($instrumentationScope),
+        ]);
+        /** @noinspection PhpSecondWriteToReadonlyPropertyInspection */
+        $this->disabledInstrumentationScopes[$instrumentationScope] = true;
 
-        foreach ($this->asynchronous[$instrumentationScopeId] ?? [] as [$instrument]) {
+        foreach ($this->asynchronous[spl_object_id($instrumentationScope)] ?? [] as [$instrument]) {
             $this->releaseStreams($instrument);
         }
-        foreach ($this->synchronous[$instrumentationScopeId] ?? [] as [$instrument]) {
+        foreach ($this->synchronous[spl_object_id($instrumentationScope)] ?? [] as [$instrument]) {
             $this->releaseStreams($instrument);
         }
 
         return true;
     }
 
+    private function disabled(InstrumentationScope $instrumentationScope): bool {
+        return isset($this->disabledInstrumentationScopes[$instrumentationScope]);
+    }
+
     /**
      * @return array{Instrument, ReferenceCounter}|null
      */
     public function getAsynchronousInstrument(Instrument $instrument, InstrumentationScope $instrumentationScope): ?array {
-        $instrumentationScopeId = self::instrumentationScopeId($instrumentationScope);
+        $instrumentationScopeId = spl_object_id($instrumentationScope);
         $instrumentId = self::instrumentId($instrument);
 
         $asynchronousInstrument = $this->asynchronous[$instrumentationScopeId][$instrumentId] ?? null;
@@ -131,7 +141,7 @@ final class MeterState {
      * @return array{Instrument, ReferenceCounter}
      */
     public function createSynchronousInstrument(Instrument $instrument, InstrumentationScope $instrumentationScope): array {
-        $instrumentationScopeId = self::instrumentationScopeId($instrumentationScope);
+        $instrumentationScopeId = spl_object_id($instrumentationScope);
         $instrumentId = self::instrumentId($instrument);
 
         self::ensureInstrumentNameValid($instrument, $instrumentationScopeId, $instrumentId);
@@ -144,7 +154,7 @@ final class MeterState {
         self::ensureInstrumentNameNotConflicting($instrument, $instrumentationScopeId, $instrumentId, $instrumentName);
         self::acquireInstrumentName($instrumentationScopeId, $instrumentId, $instrumentName);
 
-        if (!isset($this->disabledInstrumentationScopes[$instrumentationScopeId])) {
+        if (!$this->disabled($instrumentationScope)) {
             $this->startTimestamp ??= $this->clock->now();
             $this->createSynchronousStreams($instrument, $instrumentationScope, $this->startTimestamp);
         }
@@ -171,7 +181,7 @@ final class MeterState {
      * @return array{Instrument, ReferenceCounter}
      */
     public function createAsynchronousInstrument(Instrument $instrument, InstrumentationScope $instrumentationScope): array {
-        $instrumentationScopeId = self::instrumentationScopeId($instrumentationScope);
+        $instrumentationScopeId = spl_object_id($instrumentationScope);
         $instrumentId = self::instrumentId($instrument);
 
         self::ensureInstrumentNameValid($instrument, $instrumentationScopeId, $instrumentId);
@@ -184,7 +194,7 @@ final class MeterState {
         self::ensureInstrumentNameNotConflicting($instrument, $instrumentationScopeId, $instrumentId, $instrumentName);
         self::acquireInstrumentName($instrumentationScopeId, $instrumentId, $instrumentName);
 
-        if (!isset($this->disabledInstrumentationScopes[$instrumentationScopeId])) {
+        if (!$this->disabled($instrumentationScope)) {
             $this->startTimestamp ??= $this->clock->now();
             $this->createAsynchronousStreams($instrument, $instrumentationScope, $this->startTimestamp);
         }
@@ -331,22 +341,22 @@ final class MeterState {
         }
     }
 
-    private function acquireInstrumentName(string $instrumentationScopeId, string $instrumentId, string $instrumentName): void {
+    private function acquireInstrumentName(int $instrumentationScopeId, string $instrumentId, string $instrumentName): void {
         $this->logger?->debug('Creating metric stream for instrument', [
             'name' => $instrumentName,
-            'scope_hash' => md5($instrumentationScopeId),
-            'instrument_hash' => md5($instrumentId),
+            'scope_hash' => $instrumentationScopeId,
+            'instrument_hash' => bin2hex($instrumentId),
         ]);
 
         $this->instrumentIdentities[$instrumentationScopeId][$instrumentName] ??= 0;
         $this->instrumentIdentities[$instrumentationScopeId][$instrumentName]++;
     }
 
-    private function releaseInstrumentName(string $instrumentationScopeId, string $instrumentId, string $instrumentName): void {
+    private function releaseInstrumentName(int $instrumentationScopeId, string $instrumentId, string $instrumentName): void {
         $this->logger?->debug('Releasing metric stream for instrument', [
             'name' => $instrumentName,
-            'scope_hash' => md5($instrumentationScopeId),
-            'instrument_hash' => md5($instrumentId),
+            'scope_hash' => $instrumentationScopeId,
+            'instrument_hash' => bin2hex($instrumentId),
         ]);
 
         if (!--$this->instrumentIdentities[$instrumentationScopeId][$instrumentName]) {
@@ -357,40 +367,40 @@ final class MeterState {
         }
     }
 
-    private function ensureInstrumentNameValid(Instrument $instrument, string $instrumentationScopeId, string $instrumentId): void {
+    private function ensureInstrumentNameValid(Instrument $instrument, int $instrumentationScopeId, string $instrumentId): void {
         if (preg_match('#^[A-Za-z][A-Za-z0-9_./-]{0,254}$#', $instrument->name)) {
             return;
         }
 
         $this->logger?->warning('Invalid instrument name', [
             'name' => $instrument->name,
-            'scope_hash' => md5($instrumentationScopeId),
-            'instrument_hash' => md5($instrumentId),
+            'scope_hash' => $instrumentationScopeId,
+            'instrument_hash' => bin2hex($instrumentId),
         ]);
     }
 
-    private function ensureIdentityInstrumentEquals(Instrument $instrument, string $instrumentationScopeId, string $instrumentId, Instrument $registered): void {
+    private function ensureIdentityInstrumentEquals(Instrument $instrument, int $instrumentationScopeId, string $instrumentId, Instrument $registered): void {
         if ($instrument->equals($registered)) {
             return;
         }
 
         $this->logger?->warning('Instrument with same identity and differing non-identifying fields, using stream of first-seen instrument', [
-            'scope_hash' => md5($instrumentationScopeId),
-            'instrument_hash' => md5($instrumentId),
+            'scope_hash' => $instrumentationScopeId,
+            'instrument_hash' => bin2hex($instrumentId),
             'first_seen' => $registered,
             'instrument' => $instrument,
         ]);
     }
 
-    private function ensureInstrumentNameNotConflicting(Instrument $instrument, string $instrumentationScopeId, string $instrumentId, string $instrumentName): void {
+    private function ensureInstrumentNameNotConflicting(Instrument $instrument, int $instrumentationScopeId, string $instrumentId, string $instrumentName): void {
         if (!isset($this->instrumentIdentities[$instrumentationScopeId][$instrumentName])) {
             return;
         }
 
         $this->logger?->warning('Instrument with same name but differing identifying fields, using new stream', [
             'name' => $instrumentName,
-            'scope_hash' => md5($instrumentationScopeId),
-            'instrument_hash' => md5($instrumentId),
+            'scope_hash' => $instrumentationScopeId,
+            'instrument_hash' => bin2hex($instrumentId),
             'instrument' => $instrument,
         ]);
     }
@@ -400,21 +410,12 @@ final class MeterState {
     }
 
     private static function instrumentId(Instrument $instrument): string {
-        return serialize([
+        return hash('xxh128', serialize([
             $instrument->type,
             strtolower($instrument->name),
             $instrument->unit,
             $instrument->description,
-        ]);
-    }
-
-    private static function instrumentationScopeId(InstrumentationScope $instrumentationScope): string {
-        static $cache = new WeakMap();
-        return $cache[$instrumentationScope] ??= serialize([
-            $instrumentationScope->name,
-            $instrumentationScope->version,
-            $instrumentationScope->schemaUrl,
-        ]);
+        ]), true);
     }
 
     private static function streamDedupId(ResolvedView $view): string {

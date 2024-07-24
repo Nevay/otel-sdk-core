@@ -74,6 +74,7 @@ final class MeterProvider implements MeterProviderInterface, Provider {
             $viewRegistry,
             $stalenessHandlerFactory,
             new WeakMap(),
+            new WeakMap(),
             $logger,
         );
         $this->instrumentationScopeAttributesFactory = $instrumentationScopeAttributesFactory;
