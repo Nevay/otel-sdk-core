@@ -24,6 +24,7 @@ use Nevay\OTelSDK\Metrics\Internal\Stream\DefaultMetricAggregatorFactory;
 use Nevay\OTelSDK\Metrics\Internal\Stream\SynchronousMetricStream;
 use Nevay\OTelSDK\Metrics\Internal\View\ResolvedView;
 use Nevay\OTelSDK\Metrics\Internal\View\ViewRegistry;
+use Nevay\OTelSDK\Metrics\MeterConfig;
 use Nevay\OTelSDK\Metrics\MetricReader;
 use Nevay\OTelSDK\Metrics\View;
 use Psr\Log\LoggerInterface;
@@ -45,9 +46,9 @@ final class MeterState {
 
     private ?int $startTimestamp = null;
 
-    /** @var array<string, array<string, array{Instrument, ReferenceCounter, InstrumentationScope}>> */
+    /** @var array<string, array<string, array{Instrument, ReferenceCounter, InstrumentationScope, InstrumentState}>> */
     private array $asynchronous = [];
-    /** @var array<string, array<string, array{Instrument, ReferenceCounter, InstrumentationScope}>> */
+    /** @var array<string, array<string, array{Instrument, ReferenceCounter, InstrumentationScope, InstrumentState}>> */
     private array $synchronous = [];
     /** @var array<string, array<string, int>> */
     private array $instrumentIdentities = [];
@@ -56,7 +57,6 @@ final class MeterState {
      * @param array<MetricReader> $metricReaders
      * @param array<MeterMetricProducer> $metricProducers
      * @param Closure(Aggregator): ExemplarReservoir $exemplarReservoir
-     * @param WeakMap<InstrumentationScope, true> $disabledInstrumentationScopes
      * @param WeakMap<object, ObservableCallbackDestructor> $destructors
      */
     public function __construct(
@@ -69,57 +69,32 @@ final class MeterState {
         private readonly Closure $exemplarReservoir,
         private readonly ViewRegistry $viewRegistry,
         private readonly StalenessHandlerFactory $stalenessHandlerFactory,
-        private readonly WeakMap $disabledInstrumentationScopes,
         public readonly WeakMap $destructors,
         public readonly ?LoggerInterface $logger,
     ) {}
 
-    public function enableInstrumentationScope(InstrumentationScope $instrumentationScope): bool {
-        if (!$this->disabled($instrumentationScope)) {
-            return false;
-        }
-
-        $this->logger?->debug('Enabling instruments of instrumentation scope', [
-            'scope' => $instrumentationScope,
-            'scope_hash' => spl_object_id($instrumentationScope),
-        ]);
-        unset($this->disabledInstrumentationScopes[$instrumentationScope]);
-
+    public function updateConfig(MeterConfig $meterConfig, InstrumentationScope $instrumentationScope): void {
         $startTimestamp = $this->clock->now();
-        foreach ($this->asynchronous[spl_object_id($instrumentationScope)] ?? [] as [$instrument]) {
-            $this->createAsynchronousStreams($instrument, $instrumentationScope, $startTimestamp);
+        foreach ($this->asynchronous[spl_object_id($instrumentationScope)] ?? [] as [0 => $instrument, 3 => $state]) {
+            if ($state->dormant && !$meterConfig->disabled) {
+                $this->createAsynchronousStreams($instrument, $instrumentationScope, $startTimestamp);
+                $state->dormant = false;
+            }
+            if (!$state->dormant && $meterConfig->disabled) {
+                $this->releaseStreams($instrument);
+                $state->dormant = true;
+            }
         }
-        foreach ($this->synchronous[spl_object_id($instrumentationScope)] ?? [] as [$instrument]) {
-            $this->createSynchronousStreams($instrument, $instrumentationScope, $startTimestamp);
+        foreach ($this->synchronous[spl_object_id($instrumentationScope)] ?? [] as [0 => $instrument, 3 => $state]) {
+            if ($state->dormant && !$meterConfig->disabled) {
+                $this->createSynchronousStreams($instrument, $instrumentationScope, $startTimestamp);
+                $state->dormant = false;
+            }
+            if (!$state->dormant && $meterConfig->disabled) {
+                $this->releaseStreams($instrument);
+                $state->dormant = true;
+            }
         }
-
-        return true;
-    }
-
-    public function disableInstrumentationScope(InstrumentationScope $instrumentationScope): bool {
-        if ($this->disabled($instrumentationScope)) {
-            return false;
-        }
-
-        $this->logger?->debug('Disabling instruments of instrumentation scope', [
-            'scope' => $instrumentationScope,
-            'scope_hash' => spl_object_id($instrumentationScope),
-        ]);
-        /** @noinspection PhpSecondWriteToReadonlyPropertyInspection */
-        $this->disabledInstrumentationScopes[$instrumentationScope] = true;
-
-        foreach ($this->asynchronous[spl_object_id($instrumentationScope)] ?? [] as [$instrument]) {
-            $this->releaseStreams($instrument);
-        }
-        foreach ($this->synchronous[spl_object_id($instrumentationScope)] ?? [] as [$instrument]) {
-            $this->releaseStreams($instrument);
-        }
-
-        return true;
-    }
-
-    private function disabled(InstrumentationScope $instrumentationScope): bool {
-        return isset($this->disabledInstrumentationScopes[$instrumentationScope]);
     }
 
     /**
@@ -140,7 +115,7 @@ final class MeterState {
     /**
      * @return array{Instrument, ReferenceCounter}
      */
-    public function createSynchronousInstrument(Instrument $instrument, InstrumentationScope $instrumentationScope): array {
+    public function createSynchronousInstrument(Instrument $instrument, InstrumentationScope $instrumentationScope, MeterConfig $meterConfig): array {
         $instrumentationScopeId = spl_object_id($instrumentationScope);
         $instrumentId = self::instrumentId($instrument);
 
@@ -154,7 +129,7 @@ final class MeterState {
         self::ensureInstrumentNameNotConflicting($instrument, $instrumentationScopeId, $instrumentId, $instrumentName);
         self::acquireInstrumentName($instrumentationScopeId, $instrumentId, $instrumentName);
 
-        if (!$this->disabled($instrumentationScope)) {
+        if (!$meterConfig->disabled) {
             $this->startTimestamp ??= $this->clock->now();
             $this->createSynchronousStreams($instrument, $instrumentationScope, $this->startTimestamp);
         }
@@ -174,13 +149,14 @@ final class MeterState {
             $instrument,
             $stalenessHandler,
             $instrumentationScope, // keep reference alive
+            new InstrumentState($meterConfig->disabled),
         ];
     }
 
     /**
      * @return array{Instrument, ReferenceCounter}
      */
-    public function createAsynchronousInstrument(Instrument $instrument, InstrumentationScope $instrumentationScope): array {
+    public function createAsynchronousInstrument(Instrument $instrument, InstrumentationScope $instrumentationScope, MeterConfig $meterConfig): array {
         $instrumentationScopeId = spl_object_id($instrumentationScope);
         $instrumentId = self::instrumentId($instrument);
 
@@ -194,7 +170,7 @@ final class MeterState {
         self::ensureInstrumentNameNotConflicting($instrument, $instrumentationScopeId, $instrumentId, $instrumentName);
         self::acquireInstrumentName($instrumentationScopeId, $instrumentId, $instrumentName);
 
-        if (!$this->disabled($instrumentationScope)) {
+        if (!$meterConfig->disabled) {
             $this->startTimestamp ??= $this->clock->now();
             $this->createAsynchronousStreams($instrument, $instrumentationScope, $this->startTimestamp);
         }
@@ -214,6 +190,7 @@ final class MeterState {
             $instrument,
             $stalenessHandler,
             $instrumentationScope, // keep reference alive
+            new InstrumentState($meterConfig->disabled),
         ];
     }
 

@@ -3,7 +3,10 @@ namespace Nevay\OTelSDK\Trace;
 
 use Closure;
 use Nevay\OTelSDK\Common\AttributesLimitingFactory;
+use Nevay\OTelSDK\Common\Configurable;
+use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Common\SystemClock;
@@ -27,8 +30,8 @@ final class TracerProviderBuilder {
 
     private ?IdGenerator $idGenerator = null;
     private ?Sampler $sampler = null;
-
-    private ?Closure $tracerConfigurator = null;
+    /** @var ConfiguratorStack<TracerConfig> */
+    private readonly ConfiguratorStack $tracerConfigurator;
 
     private ?int $attributeCountLimit = null;
     private ?int $attributeValueLengthLimit = null;
@@ -41,6 +44,13 @@ final class TracerProviderBuilder {
     private ?int $eventCountLimit = null;
     private ?int $linkCountLimit = null;
     private bool $retainGeneralIdentityAttributes = false;
+
+    public function __construct() {
+        $this->tracerConfigurator = new ConfiguratorStack(
+            static fn() => new TracerConfig(),
+            static fn(TracerConfig $tracerConfig) => $tracerConfig->__construct(),
+        );
+    }
 
     public function addResource(Resource $resource): self {
         $this->resources[] = $resource;
@@ -67,12 +77,12 @@ final class TracerProviderBuilder {
     }
 
     /**
-     * @param Closure(InstrumentationScope): TracerConfig $tracerConfigurator
+     * @param Configurator<TracerConfig>|Closure(TracerConfig, InstrumentationScope): void $configurator
      *
      * @experimental
      */
-    public function setTracerConfigurator(Closure $tracerConfigurator): self {
-        $this->tracerConfigurator = $tracerConfigurator;
+    public function addTracerConfigurator(Configurator|Closure $configurator): self {
+        $this->tracerConfigurator->push($configurator);
 
         return $this;
     }
@@ -123,7 +133,10 @@ final class TracerProviderBuilder {
         return $this;
     }
 
-    public function build(?LoggerInterface $logger = null): TracerProviderInterface&Provider {
+    /**
+     * @return TracerProviderInterface&Provider&Configurable<TracerConfig>
+     */
+    public function build(?LoggerInterface $logger = null): TracerProviderInterface&Provider&Configurable {
         $idGenerator = $this->idGenerator ?? new RandomIdGenerator();
         $sampler = $this->sampler ?? new ParentBasedSampler(new AlwaysOnSampler());
 
@@ -150,8 +163,8 @@ final class TracerProviderBuilder {
             $spanProcessors[] = new LogDiscardedSpanProcessor($logger);
         }
 
-        $tracerConfigurator = $this->tracerConfigurator
-            ?? static fn(InstrumentationScope $instrumentationScope): TracerConfig => new TracerConfig();
+        $tracerConfigurator = clone $this->tracerConfigurator;
+        $tracerConfigurator->push(new Configurator\NoopConfigurator());
 
         return new TracerProvider(
             null,

@@ -3,7 +3,10 @@ namespace Nevay\OTelSDK\Logs;
 
 use Closure;
 use Nevay\OTelSDK\Common\AttributesLimitingFactory;
+use Nevay\OTelSDK\Common\Configurable;
+use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Common\SystemClock;
@@ -21,13 +24,20 @@ final class LoggerProviderBuilder {
     private array $resources = [];
     /** @var list<LogRecordProcessor> */
     private array $logRecordProcessors = [];
-
-    private ?Closure $loggerConfigurator = null;
+    /** @var ConfiguratorStack<LoggerConfig> */
+    private readonly ConfiguratorStack $loggerConfigurator;
 
     private ?int $attributeCountLimit = null;
     private ?int $attributeValueLengthLimit = null;
     private ?int $logRecordAttributeCountLimit = null;
     private ?int $logRecordAttributeValueLengthLimit = null;
+
+    public function __construct() {
+        $this->loggerConfigurator = new ConfiguratorStack(
+            static fn() => new LoggerConfig(),
+            static fn(LoggerConfig $loggerConfig) => $loggerConfig->__construct(),
+        );
+    }
 
     public function addResource(Resource $resource): self {
         $this->resources[] = $resource;
@@ -42,12 +52,12 @@ final class LoggerProviderBuilder {
     }
 
     /**
-     * @param Closure(InstrumentationScope): LoggerConfig $loggerConfigurator
+     * @param Configurator<LoggerConfig>|Closure(LoggerConfig, InstrumentationScope): void $configurator
      *
      * @experimental
      */
-    public function setLoggerConfigurator(Closure $loggerConfigurator): self {
-        $this->loggerConfigurator = $loggerConfigurator;
+    public function addLoggerConfigurator(Configurator|Closure $configurator): self {
+        $this->loggerConfigurator->push($configurator);
 
         return $this;
     }
@@ -66,7 +76,10 @@ final class LoggerProviderBuilder {
         return $this;
     }
 
-    public function build(LoggerInterface $logger = null): LoggerProviderInterface&EventLoggerProviderInterface&Provider {
+    /**
+     * @return LoggerProviderInterface&EventLoggerProviderInterface&Provider&Configurable<LoggerConfig>
+     */
+    public function build(LoggerInterface $logger = null): LoggerProviderInterface&EventLoggerProviderInterface&Provider&Configurable {
         $logRecordAttributesFactory = AttributesLimitingFactory::create(
             $this->logRecordAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
             $this->logRecordAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
@@ -77,8 +90,8 @@ final class LoggerProviderBuilder {
             $logRecordProcessors[] = new LogDiscardedLogRecordProcessor($logger);
         }
 
-        $loggerConfigurator = $this->loggerConfigurator
-            ?? static fn(InstrumentationScope $instrumentationScope): LoggerConfig => new LoggerConfig();
+        $loggerConfigurator = clone $this->loggerConfigurator;
+        $loggerConfigurator->push(new Configurator\NoopConfigurator());
 
         return new LoggerProvider(
             null,

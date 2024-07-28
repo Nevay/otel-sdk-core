@@ -5,7 +5,10 @@ use Amp\Cancellation;
 use Closure;
 use Nevay\OTelSDK\Common\AttributesFactory;
 use Nevay\OTelSDK\Common\Clock;
+use Nevay\OTelSDK\Common\Configurable;
+use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Internal\InstrumentationScopeCache;
 use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
@@ -17,27 +20,25 @@ use OpenTelemetry\API\Logs\LoggerInterface;
 use OpenTelemetry\API\Logs\LoggerProviderInterface;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface as PsrLoggerInterface;
-use WeakMap;
 
 /**
  * @internal
  */
-final class LoggerProvider implements LoggerProviderInterface, EventLoggerProviderInterface, Provider {
+final class LoggerProvider implements LoggerProviderInterface, EventLoggerProviderInterface, Provider, Configurable {
 
     private readonly LoggerState $loggerState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
     private readonly InstrumentationScopeCache $instrumentationScopeCache;
-    private readonly WeakMap $configCache;
-    private readonly Closure $loggerConfigurator;
+    private readonly ConfiguratorStack $loggerConfigurator;
 
     /**
-     * @param Closure(InstrumentationScope): LoggerConfig $loggerConfigurator
+     * @param ConfiguratorStack<LoggerConfig> $loggerConfigurator
      */
     public function __construct(
         ?ContextStorageInterface $contextStorage,
         Resource $resource,
         AttributesFactory $instrumentationScopeAttributesFactory,
-        Closure $loggerConfigurator,
+        ConfiguratorStack $loggerConfigurator,
         Clock $clock,
         LogRecordProcessor $logRecordProcessor,
         AttributesFactory $logRecordAttributesFactory,
@@ -53,8 +54,13 @@ final class LoggerProvider implements LoggerProviderInterface, EventLoggerProvid
         );
         $this->instrumentationScopeAttributesFactory = $instrumentationScopeAttributesFactory;
         $this->instrumentationScopeCache = new InstrumentationScopeCache($logger);
-        $this->configCache = new WeakMap();
         $this->loggerConfigurator = $loggerConfigurator;
+        $this->loggerConfigurator->onChange(static fn(LoggerConfig $loggerConfig, InstrumentationScope $instrumentationScope)
+            => $logger?->debug('Updating logger configuration', ['scope' => $instrumentationScope, 'config' => $loggerConfig]));
+    }
+
+    public function updateConfigurator(Configurator|Closure $configurator): void {
+        $this->loggerConfigurator->updateConfigurator($configurator);
     }
 
     public function getLogger(
@@ -71,8 +77,8 @@ final class LoggerProvider implements LoggerProviderInterface, EventLoggerProvid
             $this->instrumentationScopeAttributesFactory->builder()->addAll($attributes)->build());
         $instrumentationScope = $this->instrumentationScopeCache->intern($instrumentationScope);
 
-        /** @noinspection PhpSecondWriteToReadonlyPropertyInspection */
-        $loggerConfig = $this->configCache[$instrumentationScope] ??= ($this->loggerConfigurator)($instrumentationScope);
+        $loggerConfig = $this->loggerConfigurator->resolveConfig($instrumentationScope);
+        $this->loggerState->logger?->debug('Creating logger', ['scope' => $instrumentationScope, 'config' => $loggerConfig]);
 
         return new Logger($this->loggerState, $instrumentationScope, $loggerConfig);
     }
@@ -91,8 +97,8 @@ final class LoggerProvider implements LoggerProviderInterface, EventLoggerProvid
             $this->instrumentationScopeAttributesFactory->builder()->addAll($attributes)->build());
         $instrumentationScope = $this->instrumentationScopeCache->intern($instrumentationScope);
 
-        /** @noinspection PhpSecondWriteToReadonlyPropertyInspection */
-        $loggerConfig = $this->configCache[$instrumentationScope] ??= ($this->loggerConfigurator)($instrumentationScope);
+        $loggerConfig = $this->loggerConfigurator->resolveConfig($instrumentationScope);
+        $this->loggerState->logger?->debug('Creating event logger', ['scope' => $instrumentationScope, 'config' => $loggerConfig]);
 
         return new EventLogger($this->loggerState, $instrumentationScope, $loggerConfig);
     }

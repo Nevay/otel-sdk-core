@@ -5,8 +5,11 @@ use Amp\Cancellation;
 use Closure;
 use Nevay\OTelSDK\Common\AttributesFactory;
 use Nevay\OTelSDK\Common\Clock;
+use Nevay\OTelSDK\Common\Configurable;
+use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\HighResolutionTime;
 use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Internal\InstrumentationScopeCache;
 use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
@@ -18,27 +21,25 @@ use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\API\Trace\TracerProviderInterface;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface;
-use WeakMap;
 
 /**
  * @internal
  */
-final class TracerProvider implements TracerProviderInterface, Provider {
+final class TracerProvider implements TracerProviderInterface, Provider, Configurable {
 
     private readonly TracerState $tracerState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
     private readonly InstrumentationScopeCache $instrumentationScopeCache;
-    private readonly WeakMap $configCache;
-    private readonly Closure $tracerConfigurator;
+    private readonly ConfiguratorStack $tracerConfigurator;
 
     /**
-     * @param Closure(InstrumentationScope): TracerConfig $tracerConfigurator
+     * @param ConfiguratorStack<TracerConfig> $tracerConfigurator
      */
     public function __construct(
         ?ContextStorageInterface $contextStorage,
         Resource $resource,
         AttributesFactory $instrumentationScopeAttributesFactory,
-        Closure $tracerConfigurator,
+        ConfiguratorStack $tracerConfigurator,
         Clock $clock,
         HighResolutionTime $highResolutionTime,
         IdGenerator $idGenerator,
@@ -68,8 +69,13 @@ final class TracerProvider implements TracerProviderInterface, Provider {
         );
         $this->instrumentationScopeAttributesFactory = $instrumentationScopeAttributesFactory;
         $this->instrumentationScopeCache = new InstrumentationScopeCache($logger);
-        $this->configCache = new WeakMap();
         $this->tracerConfigurator = $tracerConfigurator;
+        $this->tracerConfigurator->onChange(static fn(TracerConfig $tracerConfig, InstrumentationScope $instrumentationScope)
+            => $logger?->debug('Updating tracer configuration', ['scope' => $instrumentationScope, 'config' => $tracerConfig]));
+    }
+
+    public function updateConfigurator(Configurator|Closure $configurator): void {
+        $this->tracerConfigurator->updateConfigurator($configurator);
     }
 
     public function getTracer(
@@ -86,8 +92,8 @@ final class TracerProvider implements TracerProviderInterface, Provider {
             $this->instrumentationScopeAttributesFactory->builder()->addAll($attributes)->build());
         $instrumentationScope = $this->instrumentationScopeCache->intern($instrumentationScope);
 
-        /** @noinspection PhpSecondWriteToReadonlyPropertyInspection */
-        $tracerConfig = $this->configCache[$instrumentationScope] ??= ($this->tracerConfigurator)($instrumentationScope);
+        $tracerConfig = $this->tracerConfigurator->resolveConfig($instrumentationScope);
+        $this->tracerState->logger?->debug('Creating tracer', ['scope' => $instrumentationScope, 'config' => $tracerConfig]);
 
         return new Tracer($this->tracerState, $instrumentationScope, $tracerConfig);
     }

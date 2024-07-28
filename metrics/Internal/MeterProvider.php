@@ -6,7 +6,10 @@ use Amp\Future;
 use Closure;
 use Nevay\OTelSDK\Common\AttributesFactory;
 use Nevay\OTelSDK\Common\Clock;
+use Nevay\OTelSDK\Common\Configurable;
+use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Internal\InstrumentationScopeCache;
 use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
@@ -28,16 +31,15 @@ use function Amp\async;
 /**
  * @internal
  */
-final class MeterProvider implements MeterProviderInterface, Provider {
+final class MeterProvider implements MeterProviderInterface, Provider, Configurable {
 
     private readonly MeterState $meterState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
     private readonly InstrumentationScopeCache $instrumentationScopeCache;
-    private readonly WeakMap $configCache;
-    private readonly Closure $meterConfigurator;
+    private readonly ConfiguratorStack $meterConfigurator;
 
     /**
-     * @param Closure(InstrumentationScope): MeterConfig $meterConfigurator
+     * @param ConfiguratorStack<MeterConfig> $meterConfigurator
      * @param Closure(Aggregator): ExemplarReservoir $exemplarReservoir
      * @param list<MetricReader> $metricReaders
      */
@@ -45,7 +47,7 @@ final class MeterProvider implements MeterProviderInterface, Provider {
         ?ContextStorageInterface $contextStorage,
         Resource $resource,
         AttributesFactory $instrumentationScopeAttributesFactory,
-        Closure $meterConfigurator,
+        ConfiguratorStack $meterConfigurator,
         Clock $clock,
         AttributesFactory $metricAttributesFactory,
         array $metricReaders,
@@ -74,13 +76,18 @@ final class MeterProvider implements MeterProviderInterface, Provider {
             $viewRegistry,
             $stalenessHandlerFactory,
             new WeakMap(),
-            new WeakMap(),
             $logger,
         );
         $this->instrumentationScopeAttributesFactory = $instrumentationScopeAttributesFactory;
         $this->instrumentationScopeCache = new InstrumentationScopeCache($logger);
-        $this->configCache = new WeakMap();
         $this->meterConfigurator = $meterConfigurator;
+        $this->meterConfigurator->onChange(static fn(MeterConfig $meterConfig, InstrumentationScope $instrumentationScope)
+            => $logger?->debug('Updating meter configuration', ['scope' => $instrumentationScope, 'config' => $meterConfig]));
+        $this->meterConfigurator->onChange($this->meterState->updateConfig(...));
+    }
+
+    public function updateConfigurator(Configurator|Closure $configurator): void {
+        $this->meterConfigurator->updateConfigurator($configurator);
     }
 
     public function getMeter(
@@ -97,14 +104,10 @@ final class MeterProvider implements MeterProviderInterface, Provider {
             $this->instrumentationScopeAttributesFactory->builder()->addAll($attributes)->build());
         $instrumentationScope = $this->instrumentationScopeCache->intern($instrumentationScope);
 
-        /** @noinspection PhpSecondWriteToReadonlyPropertyInspection */
-        $this->configCache[$instrumentationScope] ??= ($this->meterConfigurator)($instrumentationScope)
-            ->onChange(fn(MeterConfig $meterConfig) => $meterConfig->disabled
-                ? $this->meterState->disableInstrumentationScope($instrumentationScope)
-                : $this->meterState->enableInstrumentationScope($instrumentationScope))
-            ->triggerOnChange();
+        $meterConfig = $this->meterConfigurator->resolveConfig($instrumentationScope);
+        $this->meterState->logger?->debug('Creating meter', ['scope' => $instrumentationScope, 'config' => $meterConfig]);
 
-        return new Meter($this->meterState, $instrumentationScope);
+        return new Meter($this->meterState, $instrumentationScope, $meterConfig);
     }
 
     public function shutdown(?Cancellation $cancellation = null): bool {

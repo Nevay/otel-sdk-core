@@ -2,7 +2,10 @@
 namespace Nevay\OTelSDK\Metrics;
 
 use Closure;
+use Nevay\OTelSDK\Common\Configurable;
+use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Common\SystemClock;
@@ -28,14 +31,18 @@ final class MeterProviderBuilder {
     private ExemplarFilter $exemplarFilter = ExemplarFilter::TraceBased;
     private Closure $exemplarReservoir;
     private readonly MutableViewRegistry $viewRegistry;
-
-    private ?Closure $meterConfigurator = null;
+    /** @var ConfiguratorStack<MeterConfig> */
+    private readonly ConfiguratorStack $meterConfigurator;
 
     public function __construct() {
         $this->exemplarReservoir = static fn(Aggregator $aggregator) => $aggregator instanceof ExplicitBucketHistogramAggregator && $aggregator->boundaries
             ? new AlignedHistogramBucketExemplarReservoir($aggregator->boundaries)
             : new SimpleFixedSizeExemplarReservoir(1);
         $this->viewRegistry = new MutableViewRegistry();
+        $this->meterConfigurator = new ConfiguratorStack(
+            static fn() => new MeterConfig(),
+            static fn(MeterConfig $meterConfig) => $meterConfig->__construct(),
+        );
     }
 
     public function addResource(Resource $resource): self {
@@ -96,19 +103,22 @@ final class MeterProviderBuilder {
     }
 
     /**
-     * @param Closure(InstrumentationScope): MeterConfig $meterConfigurator
+     * @param Configurator<MeterConfig>|Closure(MeterConfig, InstrumentationScope): void $configurator
      *
      * @experimental
      */
-    public function setMeterConfigurator(Closure $meterConfigurator): self {
-        $this->meterConfigurator = $meterConfigurator;
+    public function addMeterConfigurator(Configurator|Closure $configurator): self {
+        $this->meterConfigurator->push($configurator);
 
         return $this;
     }
 
-    public function build(?LoggerInterface $logger = null): MeterProviderInterface&Provider {
-        $meterConfigurator = $this->meterConfigurator
-            ?? static fn(InstrumentationScope $instrumentationScope): MeterConfig => new MeterConfig();
+    /**
+     * @return MeterProviderInterface&Provider&Configurable<MeterConfig>
+     */
+    public function build(?LoggerInterface $logger = null): MeterProviderInterface&Provider&Configurable {
+        $meterConfigurator = clone $this->meterConfigurator;
+        $meterConfigurator->push(new Configurator\NoopConfigurator());
 
         return new MeterProvider(
             null,
