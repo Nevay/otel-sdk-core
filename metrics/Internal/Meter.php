@@ -27,6 +27,8 @@ use OpenTelemetry\API\Metrics\ObservableUpDownCounterInterface;
 use OpenTelemetry\API\Metrics\UpDownCounterInterface;
 use function array_unshift;
 use function is_callable;
+use function trigger_error;
+use const E_USER_DEPRECATED;
 
 /**
  * @internal
@@ -53,20 +55,14 @@ final class Meter implements MeterInterface {
                 $handles[] = self::dummyInstrument();
                 continue;
             }
-
-            $asynchronousInstrument = $this->meterState
-                ->getAsynchronousInstrument($instrument->getHandle(), $this->instrumentationScope);
-
-            if (!$asynchronousInstrument) {
+            if (!$r = $this->meterState->getInstrument($instrument->getHandle(), $this->instrumentationScope)) {
                 $this->meterState->logger?->warning('Ignoring invalid instrument provided to batchObserve, instrument not created by this meter', ['instrument' => $instrument]);
                 $handles[] = self::dummyInstrument();
                 continue;
             }
 
-            [
-                $handles[],
-                $referenceCounters[],
-            ] = $asynchronousInstrument;
+            $handles[] = $r->instrument;
+            $referenceCounters[] = $r->referenceCounter;
         }
 
         return AsynchronousInstruments::observe(
@@ -79,74 +75,59 @@ final class Meter implements MeterInterface {
     }
 
     public function createCounter(string $name, ?string $unit = null, ?string $description = null, array $advisory = []): CounterInterface {
-        return $this->createSynchronousInstrument(Counter::class,
-            InstrumentType::Counter, $name, $unit, $description, $advisory);
+        $r = $this->createInstrument(InstrumentType::Counter, $name, $unit, $description, $advisory);
+        return new Counter($this->meterState->registry, $r->instrument, $r->referenceCounter);
     }
 
-    public function createObservableCounter(string $name, ?string $unit = null, ?string $description = null, $advisory = [], callable ...$callbacks): ObservableCounterInterface {
-        return $this->createAsynchronousInstrument(ObservableCounter::class,
-            InstrumentType::AsynchronousCounter, $name, $unit, $description, $advisory, $callbacks);
+    public function createObservableCounter(string $name, ?string $unit = null, ?string $description = null, array|callable $advisory = [], callable ...$callbacks): ObservableCounterInterface {
+        $r = $this->createInstrument(InstrumentType::AsynchronousCounter, $name, $unit, $description, self::bcAdvisoryCallback($advisory, $callbacks), $callbacks);
+        return new ObservableCounter($this->meterState->registry, $r->instrument, $r->referenceCounter, $this->meterState->destructors);
     }
 
     public function createHistogram(string $name, ?string $unit = null, ?string $description = null, array $advisory = []): HistogramInterface {
-        return $this->createSynchronousInstrument(Histogram::class,
-            InstrumentType::Histogram, $name, $unit, $description, $advisory);
+        $r = $this->createInstrument(InstrumentType::Histogram, $name, $unit, $description, $advisory);
+        return new Histogram($this->meterState->registry, $r->instrument, $r->referenceCounter);
     }
 
-    /**
-     * @experimental
-     */
     public function createGauge(string $name, ?string $unit = null, ?string $description = null, array $advisory = []): GaugeInterface {
-        return $this->createSynchronousInstrument(Gauge::class,
-            InstrumentType::Gauge, $name, $unit, $description, $advisory);
+        $r = $this->createInstrument(InstrumentType::Gauge, $name, $unit, $description, $advisory);
+        return new Gauge($this->meterState->registry, $r->instrument, $r->referenceCounter);
     }
 
-    public function createObservableGauge(string $name, ?string $unit = null, ?string $description = null, $advisory = [], callable ...$callbacks): ObservableGaugeInterface {
-        return $this->createAsynchronousInstrument(ObservableGauge::class,
-            InstrumentType::AsynchronousGauge, $name, $unit, $description, $advisory, $callbacks);
+    public function createObservableGauge(string $name, ?string $unit = null, ?string $description = null, array|callable $advisory = [], callable ...$callbacks): ObservableGaugeInterface {
+        $r = $this->createInstrument(InstrumentType::AsynchronousGauge, $name, $unit, $description, self::bcAdvisoryCallback($advisory, $callbacks), $callbacks);
+        return new ObservableGauge($this->meterState->registry, $r->instrument, $r->referenceCounter, $this->meterState->destructors);
     }
 
     public function createUpDownCounter(string $name, ?string $unit = null, ?string $description = null, array $advisory = []): UpDownCounterInterface {
-        return $this->createSynchronousInstrument(UpDownCounter::class,
-            InstrumentType::UpDownCounter, $name, $unit, $description, $advisory);
+        $r = $this->createInstrument(InstrumentType::UpDownCounter, $name, $unit, $description, $advisory);
+        return new UpDownCounter($this->meterState->registry, $r->instrument, $r->referenceCounter);
     }
 
-    public function createObservableUpDownCounter(string $name, ?string $unit = null, ?string $description = null, $advisory = [], callable ...$callbacks): ObservableUpDownCounterInterface {
-        return $this->createAsynchronousInstrument(ObservableUpDownCounter::class,
-            InstrumentType::AsynchronousUpDownCounter, $name, $unit, $description, $advisory, $callbacks);
+    public function createObservableUpDownCounter(string $name, ?string $unit = null, ?string $description = null, array|callable $advisory = [], callable ...$callbacks): ObservableUpDownCounterInterface {
+        $r = $this->createInstrument(InstrumentType::AsynchronousUpDownCounter, $name, $unit, $description, self::bcAdvisoryCallback($advisory, $callbacks), $callbacks);
+        return new ObservableUpDownCounter($this->meterState->registry, $r->instrument, $r->referenceCounter, $this->meterState->destructors);
     }
 
-    /**
-     * @template T of InstrumentHandle
-     * @param class-string<T> $class
-     * @return T
-     */
-    private function createSynchronousInstrument(string $class, InstrumentType $type, string $name, ?string $unit, ?string $description, array $advisory): InstrumentHandle {
-        [$instrument, $referenceCounter] = $this->meterState->createSynchronousInstrument(new Instrument(
-            $type, $name, $unit, $description, $advisory), $this->instrumentationScope, $this->meterConfig);
-
-        return new $class($this->meterState->registry, $instrument, $referenceCounter);
-    }
-
-    /**
-     * @template T of InstrumentHandle
-     * @param class-string<T> $class
-     * @param array<callable> $callbacks
-     * @return T
-     */
-    private function createAsynchronousInstrument(string $class, InstrumentType $type, string $name, ?string $unit, ?string $description, array|callable $advisory, array $callbacks): InstrumentHandle {
-        if (is_callable($advisory)) {
-            array_unshift($callbacks, $advisory);
-            $advisory = [];
-        }
-        [$instrument, $referenceCounter] = $this->meterState->createAsynchronousInstrument(new Instrument(
-            $type, $name, $unit, $description, $advisory), $this->instrumentationScope, $this->meterConfig);
+    private function createInstrument(InstrumentType $type, string $name, ?string $unit, ?string $description, array $advisory, array $callbacks = []): RegisteredInstrument {
+        $r = $this->meterState->createInstrument(new Instrument($type, $name, $unit, $description, $advisory), $this->instrumentationScope, $this->meterConfig);
 
         foreach ($callbacks as $callback) {
-            $this->meterState->registry->registerCallback(closure($callback), $instrument);
-            $referenceCounter->acquire(true);
+            $this->meterState->registry->registerCallback(closure($callback), $r->instrument);
+            $r->referenceCounter->acquire(true);
         }
 
-        return new $class($this->meterState->registry, $instrument, $referenceCounter, $this->meterState->destructors);
+        return $r;
+    }
+
+    private static function bcAdvisoryCallback(array|callable $advisory, array &$callbacks): array {
+        if (!is_callable($advisory)) {
+            return $advisory;
+        }
+
+        @trigger_error('Since open-telemetry/api 1.0.1: Passing an instrument callback instead of an advisory argument is deprecated, either add an empty advisory arguments or use a named argument for the callback', E_USER_DEPRECATED);
+        array_unshift($callbacks, $advisory);
+
+        return [];
     }
 }

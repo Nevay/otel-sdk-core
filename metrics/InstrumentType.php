@@ -6,9 +6,6 @@ enum InstrumentType {
     case Counter;
     case UpDownCounter;
     case Histogram;
-    /**
-     * @experimental
-     */
     case Gauge;
 
     case AsynchronousCounter;
