@@ -2,7 +2,6 @@
 namespace Nevay\OTelSDK\Trace\Internal;
 
 use Nevay\OTelSDK\Common\Attributes;
-use Nevay\OTelSDK\Common\AttributesBuilder;
 use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\ClockAware;
 use Nevay\OTelSDK\Common\InstrumentationScope;
@@ -16,6 +15,7 @@ use Nevay\OTelSDK\Trace\Span\Status;
 use OpenTelemetry\API\Trace\SpanContextInterface;
 use OpenTelemetry\API\Trace\SpanInterface;
 use Throwable;
+use function assert;
 use function count;
 
 /**
@@ -23,57 +23,15 @@ use function count;
  */
 final class Span extends \OpenTelemetry\API\Trace\Span implements ReadWriteSpan, ClockAware {
 
-    private readonly TracerState $tracerState;
-    private readonly InstrumentationScope $instrumentationScope;
-    private readonly Clock $clock;
-
-    private string $name;
-    private readonly SpanContextInterface $spanContext;
-    private readonly Kind $spanKind;
-    private readonly ?SpanContextInterface $parentContext;
-    private AttributesBuilder $attributesBuilder;
-    /** @var list<Link> */
-    private array $links;
-    private int $droppedLinksCount;
-    /** @var list<Event> */
-    private array $events = [];
-    private int $droppedEventsCount = 0;
-    private Status $status = Status::Unset;
-    private ?string $statusDescription = null;
-    private readonly int $startTimestamp;
-    private ?int $endTimestamp = null;
-
-    /**
-     * @param list<Link> $links
-     */
     public function __construct(
-        TracerState $tracerState,
-        InstrumentationScope $instrumentationScope,
-        Clock $clock,
-        string $name,
-        SpanContextInterface $spanContext,
-        Kind $spanKind,
-        ?SpanContextInterface $parentContext,
-        array $links,
-        int $droppedLinksCount,
-        AttributesBuilder $attributes,
-        int $startTimestamp,
-    ) {
-        $this->tracerState = $tracerState;
-        $this->instrumentationScope = $instrumentationScope;
-        $this->clock = $clock;
-        $this->name = $name;
-        $this->spanContext = $spanContext;
-        $this->spanKind = $spanKind;
-        $this->parentContext = $parentContext;
-        $this->links = $links;
-        $this->droppedLinksCount = $droppedLinksCount;
-        $this->attributesBuilder = $attributes;
-        $this->startTimestamp = $startTimestamp;
-    }
+        private readonly TracerState $tracerState,
+        private readonly Clock $clock,
+        private readonly SpanData $spanData,
+        private bool $recording = true,
+    ) {}
 
     public function __clone() {
-        $this->attributesBuilder = clone $this->attributesBuilder;
+        $this->recording = false;
     }
 
     public function getClock(): Clock {
@@ -81,98 +39,95 @@ final class Span extends \OpenTelemetry\API\Trace\Span implements ReadWriteSpan,
     }
 
     public function getInstrumentationScope(): InstrumentationScope {
-        return $this->instrumentationScope;
+        return $this->spanData->instrumentationScope;
     }
 
     public function getResource(): Resource {
-        return $this->tracerState->resource;
+        return $this->spanData->resource;
     }
 
     public function getName(): string {
-        return $this->name;
+        return $this->spanData->name;
     }
 
     public function getContext(): SpanContextInterface {
-        return $this->spanContext;
+        return $this->spanData->spanContext;
     }
 
     public function getSpanKind(): Kind {
-        return $this->spanKind;
+        return $this->spanData->spanKind;
     }
 
     public function getParentContext(): ?SpanContextInterface {
-        return $this->parentContext;
+        return $this->spanData->parentContext;
     }
 
     public function getAttributes(): Attributes {
-        return $this->attributesBuilder->build();
+        return $this->spanData->attributesBuilder->build();
     }
 
     public function getLinks(): iterable {
-        return $this->links;
+        return $this->spanData->links;
     }
 
     public function getDroppedLinksCount(): int {
-        return $this->droppedLinksCount;
+        return $this->spanData->droppedLinksCount;
     }
 
     public function getEvents(): iterable {
-        return $this->events;
+        return $this->spanData->events;
     }
 
     public function getDroppedEventsCount(): int {
-        return $this->droppedEventsCount;
+        return $this->spanData->droppedEventsCount;
     }
 
     public function getStatus(): Status {
-        return $this->status;
+        return $this->spanData->status;
     }
 
     public function getStatusDescription(): ?string {
-        return $this->statusDescription;
+        return $this->spanData->statusDescription;
     }
 
     public function getStartTimestamp(): int {
-        return $this->startTimestamp;
+        return $this->spanData->startTimestamp;
     }
 
     public function getEndTimestamp(): int {
-        return $this->endTimestamp ?? $this->clock->now();
+        return $this->spanData->endTimestamp ?? $this->clock->now();
     }
 
     public function isRecording(): bool {
-        return $this->endTimestamp === null;
+        return $this->recording;
     }
 
     public function setAttribute(string $key, mixed $value): SpanInterface {
-        if (!$this->isRecording()) {
+        if (!$this->recording) {
             return $this;
         }
 
-        $this->attributesBuilder->add($key, $value);
+        $this->spanData->attributesBuilder->add($key, $value);
 
         return $this;
     }
 
     public function setAttributes(iterable $attributes): SpanInterface {
-        if (!$this->isRecording()) {
+        if (!$this->recording) {
             return $this;
         }
 
-        $this->attributesBuilder->addAll($attributes);
+        $this->spanData->attributesBuilder->addAll($attributes);
 
         return $this;
     }
 
-    /**
-     * @experimental
-     */
     public function addLink(SpanContextInterface $context, iterable $attributes = []): SpanInterface {
-        if (!$this->isRecording()) {
+        if (!$this->recording) {
             return $this;
         }
-        if ($this->tracerState->linkCountLimit === count($this->links)) {
-            $this->droppedLinksCount++;
+        if ($this->tracerState->linkCountLimit === count($this->spanData->links)) {
+            $this->spanData->droppedLinksCount++;
             return $this;
         }
 
@@ -181,17 +136,17 @@ final class Span extends \OpenTelemetry\API\Trace\Span implements ReadWriteSpan,
             ->addAll($attributes)
             ->build();
 
-        $this->links[] = new Link($context, $linkAttributes);
+        $this->spanData->links[] = new Link($context, $linkAttributes);
 
         return $this;
     }
 
     public function addEvent(string $name, iterable $attributes = [], ?int $timestamp = null): SpanInterface {
-        if (!$this->isRecording()) {
+        if (!$this->recording) {
             return $this;
         }
-        if ($this->tracerState->eventCountLimit === count($this->events)) {
-            $this->droppedEventsCount++;
+        if ($this->tracerState->eventCountLimit === count($this->spanData->events)) {
+            $this->spanData->droppedEventsCount++;
             return $this;
         }
 
@@ -201,17 +156,17 @@ final class Span extends \OpenTelemetry\API\Trace\Span implements ReadWriteSpan,
             ->addAll($attributes)
             ->build();
 
-        $this->events[] = new Event($name, $eventAttributes, $timestamp);
+        $this->spanData->events[] = new Event($name, $eventAttributes, $timestamp);
 
         return $this;
     }
 
     public function recordException(Throwable $exception, iterable $attributes = [], ?int $timestamp = null): SpanInterface {
-        if (!$this->isRecording()) {
+        if (!$this->recording) {
             return $this;
         }
-        if ($this->tracerState->eventCountLimit === count($this->events)) {
-            $this->droppedEventsCount++;
+        if ($this->tracerState->eventCountLimit === count($this->spanData->events)) {
+            $this->spanData->droppedEventsCount++;
             return $this;
         }
 
@@ -224,34 +179,34 @@ final class Span extends \OpenTelemetry\API\Trace\Span implements ReadWriteSpan,
             ->addAll($attributes)
             ->build();
 
-        $this->events[] = new Event('exception', $eventAttributes, $timestamp);
+        $this->spanData->events[] = new Event('exception', $eventAttributes, $timestamp);
 
         return $this;
     }
 
     public function updateName(string $name): SpanInterface {
-        if (!$this->isRecording()) {
+        if (!$this->recording) {
             return $this;
         }
 
-        $this->name = $name;
+        $this->spanData->name = $name;
 
         return $this;
     }
 
     public function setStatus(string $code, ?string $description = null): SpanInterface {
-        if (!$this->isRecording()) {
+        if (!$this->recording) {
             return $this;
         }
 
         $status = Status::fromApi($code);
 
-        if ($status->compareTo($this->status) < 0) {
+        if ($status->compareTo($this->spanData->status) < 0) {
             return $this;
         }
 
-        $this->status = $status;
-        $this->statusDescription = $status->allowsDescription()
+        $this->spanData->status = $status;
+        $this->spanData->statusDescription = $status->allowsDescription()
             ? $description
             : null;
 
@@ -259,11 +214,24 @@ final class Span extends \OpenTelemetry\API\Trace\Span implements ReadWriteSpan,
     }
 
     public function end(?int $endEpochNanos = null): void {
-        if (!$this->isRecording()) {
+        if ($this->spanData->endTimestamp !== null) {
             return;
         }
 
-        $this->endTimestamp = $endEpochNanos ?? $this->clock->now();
-        $this->tracerState->spanProcessor->onEnd($this);
+        assert($this->recording);
+        $this->recording = false;
+        $this->spanData->endTimestamp = $endEpochNanos ?? $this->clock->now();
+
+        /*
+         * The SDK MUST guarantee that the span can no longer be modified by any
+         * other thread before invoking OnEnding of the first SpanProcessor.
+         * From that point on, modifications are only allowed synchronously from
+         * within the invoked OnEnding callbacks.
+         */
+        $span = new Span($this->tracerState, $this->clock, $this->spanData);
+        $this->tracerState->spanProcessor->onEnding($span);
+        $span->recording = false;
+
+        $this->tracerState->spanProcessor->onEnd($this->spanData);
     }
 }

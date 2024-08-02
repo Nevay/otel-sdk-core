@@ -149,16 +149,19 @@ final class SpanBuilder implements SpanBuilderInterface {
 
         $span = new Span(
             $this->tracerState,
-            $this->instrumentationScope,
             $clock,
-            $name,
-            $spanContext,
-            $spanKind,
-            $parentSpanContext,
-            $links,
-            $droppedLinksCount,
-            $attributesBuilder,
-            $startTimestamp,
+            new SpanData(
+                $this->tracerState->resource,
+                $this->instrumentationScope,
+                $name,
+                $spanContext,
+                $spanKind,
+                $parentSpanContext,
+                $links,
+                $droppedLinksCount,
+                $attributesBuilder,
+                $startTimestamp,
+            ),
         );
 
         $this->tracerState->spanProcessor->onStart($span, $parent);

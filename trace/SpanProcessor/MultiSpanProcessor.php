@@ -34,6 +34,12 @@ final class MultiSpanProcessor implements SpanProcessor {
         }
     }
 
+    public function onEnding(ReadWriteSpan $span): void {
+        foreach ($this->spanProcessors as $spanProcessor) {
+            $spanProcessor->onEnding($span);
+        }
+    }
+
     public function onEnd(ReadableSpan $span): void {
         foreach ($this->spanProcessors as $spanProcessor) {
             $spanProcessor->onEnd($span);

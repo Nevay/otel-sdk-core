@@ -21,6 +21,10 @@ final class LogDiscardedSpanProcessor implements SpanProcessor {
         // no-op
     }
 
+    public function onEnding(ReadWriteSpan $span): void {
+        // no-op
+    }
+
     public function onEnd(ReadableSpan $span): void {
         if (!$this->hasDroppedData($span)) {
             return;

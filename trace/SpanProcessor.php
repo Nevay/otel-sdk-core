@@ -31,6 +31,21 @@ interface SpanProcessor {
     public function onStart(ReadWriteSpan $span, ContextInterface $parentContext): void;
 
     /**
+     * Called when a span is ending.
+     *
+     * This method is called synchronously within the
+     * {@link SpanInterface::end()} API, therefore it should not block or throw
+     * exceptions.
+     *
+     * @param ReadWriteSpan $span ending span
+     *
+     * @experimental
+     *
+     * @see https://opentelemetry.io/docs/specs/otel/trace/sdk/#onending
+     */
+    public function onEnding(ReadWriteSpan $span): void;
+
+    /**
      * Called when a span is ended.
      *
      * This method is called synchronously within the

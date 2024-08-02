@@ -13,6 +13,10 @@ final class NoopSpanProcessor implements SpanProcessor {
         // no-op
     }
 
+    public function onEnding(ReadWriteSpan $span): void {
+        // no-op
+    }
+
     public function onEnd(ReadableSpan $span): void {
         // no-op
     }
