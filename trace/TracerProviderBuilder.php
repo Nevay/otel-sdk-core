@@ -20,6 +20,7 @@ use Nevay\OTelSDK\Trace\Sampler\ParentBasedSampler;
 use Nevay\OTelSDK\Trace\SpanProcessor\MultiSpanProcessor;
 use OpenTelemetry\API\Trace\TracerProviderInterface;
 use Psr\Log\LoggerInterface;
+use function str_starts_with;
 
 final class TracerProviderBuilder {
 
@@ -144,7 +145,7 @@ final class TracerProviderBuilder {
             $this->spanAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
             $this->spanAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
             !$this->retainGeneralIdentityAttributes
-                ? AttributesLimitingFactory::rejectKeyFilter('enduser')
+                ? static fn(string $key): bool => !str_starts_with($key, 'enduser.')
                 : null,
         );
         $eventAttributesFactory = AttributesLimitingFactory::create(
