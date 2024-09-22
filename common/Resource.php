@@ -47,15 +47,25 @@ final class Resource {
     /**
      * Detects resource information using all registered resource detectors.
      *
+     * @param list<string>|string|null $include list of attribute key patterns to include
+     * @param list<string>|string|null $exclude list of attribute key patterns to exclude
      * @return Resource detected resource
      *
      * @see ResourceDetector
      * @see ServiceLoader::register()
      */
-    public static function detect(): Resource {
+    public static function detect(array|string|null $include = null, array|string|null $exclude = null): Resource {
+        $attributesFactory = AttributesLimitingFactory::create(
+            attributeKeyFilter: Attributes::filterKeys($include, $exclude),
+        );
+
         $resources = [];
         foreach (ServiceLoader::load(ResourceDetector::class) as $detector) {
-            $resources[] = $detector->getResource();
+            $resource = $detector->getResource();
+            $resources[] = new Resource(
+                $attributesFactory->build($resource->attributes),
+                $resource->schemaUrl,
+            );
         }
         $resources[] = Resource::default();
 
