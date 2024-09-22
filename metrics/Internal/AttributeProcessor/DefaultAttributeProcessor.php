@@ -13,8 +13,4 @@ final class DefaultAttributeProcessor implements AttributeProcessor {
     public function process(Attributes $attributes, ContextInterface $context): Attributes {
         return $attributes;
     }
-
-    public function uniqueIdentifier(Attributes $attributes, ContextInterface $context): string {
-        return $attributes->count() ? serialize($attributes->toArray()) : '';
-    }
 }

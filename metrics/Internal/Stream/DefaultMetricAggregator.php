@@ -11,6 +11,7 @@ use Nevay\OTelSDK\Metrics\Internal\AttributeProcessor\AttributeProcessor;
 use Nevay\OTelSDK\Metrics\Internal\Exemplar\ExemplarFilter;
 use OpenTelemetry\Context\ContextInterface;
 use function hash;
+use function serialize;
 
 /**
  * @template TSummary
@@ -50,9 +51,9 @@ final class DefaultMetricAggregator implements MetricAggregator {
     }
 
     public function record(float|int $value, Attributes $attributes, ContextInterface $context, int $timestamp): void {
-        $index = $this->attributeProcessor->uniqueIdentifier($attributes, $context);
-        $index = match ($index) {
-            default => hash('xxh128', $index, true),
+        $processedAttributes = $this->attributeProcessor->process($attributes, $context);
+        $index = match ($processedAttributes->count()) {
+            default => hash('xxh128', serialize($processedAttributes->toArray()), true),
             '' => 0,
         };
         if (!$metricPoint = $this->metricPoints[$index] ?? null) {
@@ -64,7 +65,7 @@ final class DefaultMetricAggregator implements MetricAggregator {
                 );
             }
             $metricPoint = $this->metricPoints[$index] ??= new MetricPoint(
-                $this->attributeProcessor->process($attributes, $context),
+                $processedAttributes,
                 $this->aggregator->initialize(),
             );
         }

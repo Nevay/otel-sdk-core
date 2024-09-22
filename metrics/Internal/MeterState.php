@@ -2,6 +2,7 @@
 namespace Nevay\OTelSDK\Metrics\Internal;
 
 use Closure;
+use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Resource;
@@ -207,7 +208,7 @@ final class MeterState {
 
         $attributeProcessor = new DefaultAttributeProcessor();
         if (($attributeKeys = $instrument->advisory['Attributes'] ?? null) !== null) {
-            $attributeProcessor = new FilteredAttributeProcessor($attributeKeys);
+            $attributeProcessor = new FilteredAttributeProcessor(Attributes::filterKeys(include: $attributeKeys));
         }
 
         foreach ($views as $view) {
