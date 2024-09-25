@@ -27,6 +27,20 @@ final class WildcardPatternMatcher {
         private readonly array $marks,
     ) {}
 
+    public function matches(string $value): bool {
+        if ($this->matchAll || isset($this->static[$value])) {
+            return true;
+        }
+
+        foreach ($this->patterns as $pattern) {
+            if (preg_match($pattern, $value)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * @return iterable<T>
      */

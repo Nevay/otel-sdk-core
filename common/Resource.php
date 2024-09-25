@@ -47,14 +47,14 @@ final class Resource {
     /**
      * Detects resource information using all registered resource detectors.
      *
-     * @param list<string>|string|null $include list of attribute key patterns to include
-     * @param list<string>|string|null $exclude list of attribute key patterns to exclude
+     * @param list<string>|string $include list of attribute key patterns to include
+     * @param list<string>|string $exclude list of attribute key patterns to exclude
      * @return Resource detected resource
      *
      * @see ResourceDetector
      * @see ServiceLoader::register()
      */
-    public static function detect(array|string|null $include = null, array|string|null $exclude = null): Resource {
+    public static function detect(array|string $include = '*', array|string $exclude = []): Resource {
         $attributesFactory = AttributesLimitingFactory::create(
             attributeKeyFilter: Attributes::filterKeys($include, $exclude),
         );

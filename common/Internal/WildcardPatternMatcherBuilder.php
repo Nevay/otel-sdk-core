@@ -165,9 +165,7 @@ final class WildcardPatternMatcherBuilder {
         if ($node->values) {
             $mark = strlen($pattern);
             $pattern .= sprintf('(*:%d)', $mark);
-            foreach ($node->values as $value) {
-                $marks[$mark][] = $value;
-            }
+            $marks[$mark] = $node->values;
         }
         if ($node->children) {
             $pattern .= ')';

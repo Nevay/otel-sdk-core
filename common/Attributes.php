@@ -37,33 +37,25 @@ final class Attributes implements IteratorAggregate, Countable {
      * - `?` matches any single character
      * - `*` matches any number of any characters including none
      *
-     * @param list<string>|string|null $include list of attribute key patterns to include
-     * @param list<string>|string|null $exclude list of attribute key patterns to exclude
-     * @return Closure(string): bool|null filter callback
+     * @param list<string>|string $include list of attribute key patterns to include
+     * @param list<string>|string $exclude list of attribute key patterns to exclude
+     * @return Closure(string): bool filter callback
      */
-    public static function filterKeys(array|string|null $include = null, array|string|null $exclude = null): ?Closure {
-        if ($include === null && $exclude === null) {
-            return null;
-        }
+    public static function filterKeys(array|string $include = '*', array|string $exclude = []): Closure {
+        $includesBuilder = new WildcardPatternMatcherBuilder();
+        $excludesBuilder = new WildcardPatternMatcherBuilder();
 
-        $patternMatcherBuilder = new WildcardPatternMatcherBuilder();
         foreach ((array) $include as $key) {
-            $patternMatcherBuilder->add($key, 1);
+            $includesBuilder->add($key, true);
         }
         foreach ((array) $exclude as $key) {
-            $patternMatcherBuilder->add($key, -1);
+            $excludesBuilder->add($key, true);
         }
-        $patternMatcher = $patternMatcherBuilder->build();
-        $threshold = $include === null ? 0 : 1;
 
-        return static function(string $key) use ($patternMatcher, $threshold): bool {
-            $r = 0;
-            foreach ($patternMatcher->match($key) as $state) {
-                $r |= $state;
-            }
+        $includes = $includesBuilder->build();
+        $excludes = $excludesBuilder->build();
 
-            return $r >= $threshold;
-        };
+        return static fn(string $key): bool => $includes->matches($key) && !$excludes->matches($key);
     }
 
     /**

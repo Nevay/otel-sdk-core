@@ -3,6 +3,7 @@ namespace Nevay\OTelSDK\Metrics;
 
 use Closure;
 use Nevay\OTelSDK\Common\Attributes;
+use function is_array;
 
 final class View {
 
@@ -38,7 +39,7 @@ final class View {
         ?Closure $exemplarReservoir = null,
         ?int $cardinalityLimit = null,
     ) {
-        if (!$attributeKeys instanceof Closure) {
+        if (is_array($attributeKeys)) {
             $attributeKeys = Attributes::filterKeys(include: $attributeKeys);
         }
 
