@@ -36,7 +36,7 @@ trait AsynchronousInstrument {
         return $this->instrument;
     }
 
-    public function enabled(): bool {
+    public function isEnabled(): bool {
         return $this->writer->enabled($this->instrument);
     }
 

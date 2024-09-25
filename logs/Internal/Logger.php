@@ -19,7 +19,7 @@ final class Logger implements LoggerInterface {
         private readonly LoggerConfig $loggerConfig,
     ) {}
 
-    public function enabled(): bool {
+    public function isEnabled(): bool {
         return !$this->loggerConfig->disabled;
     }
 

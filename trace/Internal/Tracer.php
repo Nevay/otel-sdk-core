@@ -18,7 +18,7 @@ final class Tracer implements TracerInterface {
         private readonly TracerConfig $tracerConfig,
     ) {}
 
-    public function enabled(): bool {
+    public function isEnabled(): bool {
         return !$this->tracerConfig->disabled;
     }
 
