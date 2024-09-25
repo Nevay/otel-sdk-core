@@ -18,7 +18,7 @@ use Nevay\OTelSDK\Metrics\Internal\Exemplar\AlwaysOnFilter;
 use Nevay\OTelSDK\Metrics\Internal\Exemplar\TraceBasedFilter;
 use Nevay\OTelSDK\Metrics\Internal\MeterProvider;
 use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\DelayedStalenessHandlerFactory;
-use Nevay\OTelSDK\Metrics\Internal\View\MutableViewRegistry;
+use Nevay\OTelSDK\Metrics\Internal\View\ViewRegistryBuilder;
 use OpenTelemetry\API\Metrics\MeterProviderInterface;
 use Psr\Log\LoggerInterface;
 
@@ -30,7 +30,7 @@ final class MeterProviderBuilder {
     private array $metricReaders = [];
     private ExemplarFilter $exemplarFilter = ExemplarFilter::TraceBased;
     private Closure $exemplarReservoir;
-    private readonly MutableViewRegistry $viewRegistry;
+    private readonly ViewRegistryBuilder $viewRegistryBuilder;
     /** @var ConfiguratorStack<MeterConfig> */
     private readonly ConfiguratorStack $meterConfigurator;
 
@@ -38,7 +38,7 @@ final class MeterProviderBuilder {
         $this->exemplarReservoir = static fn(Aggregator $aggregator) => $aggregator instanceof ExplicitBucketHistogramAggregator && $aggregator->boundaries
             ? new AlignedHistogramBucketExemplarReservoir($aggregator->boundaries)
             : new SimpleFixedSizeExemplarReservoir(1);
-        $this->viewRegistry = new MutableViewRegistry();
+        $this->viewRegistryBuilder = new ViewRegistryBuilder();
         $this->meterConfigurator = new ConfiguratorStack(
             static fn() => new MeterConfig(),
             static fn(MeterConfig $meterConfig) => $meterConfig->__construct(),
@@ -97,7 +97,7 @@ final class MeterProviderBuilder {
         ?string $meterVersion = null,
         ?string $meterSchemaUrl = null,
     ): self {
-        $this->viewRegistry->register($view, $type, $name, $unit, $meterName, $meterVersion, $meterSchemaUrl);
+        $this->viewRegistryBuilder->register($view, $type, $name, $unit, $meterName, $meterVersion, $meterSchemaUrl);
 
         return $this;
     }
@@ -134,7 +134,7 @@ final class MeterProviderBuilder {
                 ExemplarFilter::TraceBased => new TraceBasedFilter(),
             },
             $this->exemplarReservoir,
-            clone $this->viewRegistry,
+            $this->viewRegistryBuilder->build(),
             new DelayedStalenessHandlerFactory(24 * 60 * 60),
             $logger,
         );

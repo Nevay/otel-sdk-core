@@ -11,7 +11,7 @@ use Nevay\OTelSDK\Metrics\View;
 interface ViewRegistry {
 
     /**
-     * @return iterable<View>|null
+     * @return iterable<View>
      */
-    public function find(Instrument $instrument, InstrumentationScope $instrumentationScope): ?iterable;
+    public function find(Instrument $instrument, InstrumentationScope $instrumentationScope): iterable;
 }

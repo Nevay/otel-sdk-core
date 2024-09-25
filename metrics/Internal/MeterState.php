@@ -27,7 +27,6 @@ use Nevay\OTelSDK\Metrics\Internal\View\ResolvedView;
 use Nevay\OTelSDK\Metrics\Internal\View\ViewRegistry;
 use Nevay\OTelSDK\Metrics\MeterConfig;
 use Nevay\OTelSDK\Metrics\MetricReader;
-use Nevay\OTelSDK\Metrics\View;
 use Psr\Log\LoggerInterface;
 use Throwable;
 use WeakMap;
@@ -204,14 +203,12 @@ final class MeterState {
      * @return iterable<ResolvedView>
      */
     private function views(Instrument $instrument, InstrumentationScope $instrumentationScope, Temporality $streamTemporality): iterable {
-        $views = $this->viewRegistry->find($instrument, $instrumentationScope) ?? [new View()];
-
         $attributeProcessor = new DefaultAttributeProcessor();
         if (($attributeKeys = $instrument->advisory['Attributes'] ?? null) !== null) {
             $attributeProcessor = new FilteredAttributeProcessor(Attributes::filterKeys(include: $attributeKeys));
         }
 
-        foreach ($views as $view) {
+        foreach ($this->viewRegistry->find($instrument, $instrumentationScope) as $view) {
             $name = $view->name ?? $instrument->name;
             $description = $view->description ?? $instrument->description;
             $viewAttributeProcessor = match ($view->attributeKeys) {

@@ -1,17 +1,14 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Metrics\Internal\View;
 
-use Generator;
-use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\WildcardPatternMatcherBuilder;
-use Nevay\OTelSDK\Metrics\Instrument;
 use Nevay\OTelSDK\Metrics\InstrumentType;
 use Nevay\OTelSDK\Metrics\View;
 
 /**
  * @internal
  */
-final class MutableViewRegistry implements ViewRegistry {
+final class ViewRegistryBuilder {
 
     /** @var WildcardPatternMatcherBuilder<Selector> */
     private readonly WildcardPatternMatcherBuilder $patternMatcherBuilder;
@@ -34,16 +31,7 @@ final class MutableViewRegistry implements ViewRegistry {
         return $this;
     }
 
-    public function find(Instrument $instrument, InstrumentationScope $instrumentationScope): ?iterable {
-        $patternMatcher = $this->patternMatcherBuilder->build();
-        $views = (static function() use ($instrument, $instrumentationScope, $patternMatcher): Generator {
-            foreach ($patternMatcher->match($instrument->name) as $selector) {
-                if ($selector->accepts($instrument, $instrumentationScope)) {
-                    yield $selector->view;
-                }
-            }
-        })();
-
-        return $views->valid() ? $views : null;
+    public function build(): ViewRegistry {
+        return new CompiledViewRegistry($this->patternMatcherBuilder->build());
     }
 }
