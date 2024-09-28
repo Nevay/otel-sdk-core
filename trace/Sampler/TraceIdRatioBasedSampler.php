@@ -9,8 +9,6 @@ use Nevay\OTelSDK\Trace\SamplingResult;
 use Nevay\OTelSDK\Trace\Span\Kind;
 use OpenTelemetry\Context\ContextInterface;
 use function assert;
-use function max;
-use function min;
 use function pack;
 use function sprintf;
 use function substr;
@@ -24,14 +22,20 @@ final class TraceIdRatioBasedSampler implements Sampler {
 
     /**
      * @param float $ratio sample ratio, must be between 0 and 1 (inclusive)
+     * @param int<1, 14> $precision threshold precision in hexadecimal digits
+     *
+     * @noinspection PhpConditionAlreadyCheckedInspection
      */
-    public function __construct(float $ratio) {
+    public function __construct(float $ratio, int $precision = 4) {
         if (!($ratio >= 0 && $ratio <= 1)) {
             throw new InvalidArgumentException(sprintf('Ratio (%s) must be be between 0 and 1 (inclusive)', $ratio));
         }
+        if ($precision < 1 || $precision > 14) {
+            throw new InvalidArgumentException(sprintf('Precision (%d) must be between 1 and 14 (inclusive)', $precision));
+        }
 
         $this->ratio = $ratio;
-        $this->threshold = substr(pack('J', self::computeTValue($ratio, minPrecision: 14, bitPrecision: 12)), 1);
+        $this->threshold = substr(pack('J', self::computeTValue($ratio, $precision, 4)), 1);
     }
 
     public function shouldSample(
@@ -55,12 +59,12 @@ final class TraceIdRatioBasedSampler implements Sampler {
      * Computes the 56-bit rejection threshold (T-value) for a given probability.
      *
      * The T-value is computed as `2**56*(1-$probability)` with a precision of
-     * `2**-(4*Max(⌈(-log2($probability)+$bitPrecision)/4⌉,$minPrecision))`.
+     * `2**-($wordSize*⌈-log2($probability)/$wordSize+$precision-1⌉)`.
      *
      * Values below `2**-56` will return `0`.
      *
      * ```
-     * 1/3 w/ $minPrecision=3
+     * 1/3 w/ precision=3, wordSize=4
      * => 1 - 1/3
      * => 2/3
      * => 2730.666../4096
@@ -74,14 +78,14 @@ final class TraceIdRatioBasedSampler implements Sampler {
      * ```
      *
      * @param float $probability sampling probability, must be between 0 and 1
-     * @param int $minPrecision minimum precision in hexadecimal digits
-     * @param int $bitPrecision precision increase in bits
+     * @param positive-int $precision precision in words
+     * @param positive-int $wordSize word size, must be a power of two
      * @return int 56bit T-value
      */
-    private static function computeTValue(float $probability, int $minPrecision = 0, int $bitPrecision = 0): int {
+    private static function computeTValue(float $probability, int $precision, int $wordSize = 1): int {
         assert($probability >= 0 && $probability <= 1);
-        assert($minPrecision >= 0);
-        assert($bitPrecision >= 0);
+        assert($precision >= 1);
+        assert($wordSize >= 1 && ($wordSize & $wordSize - 1) === 0);
 
         $b = unpack('J', pack('E', $probability))[1];
         $e = $b >> 52 & (1 << 11) - 1;
@@ -90,12 +94,8 @@ final class TraceIdRatioBasedSampler implements Sampler {
         // 56+1bit for rounding
         $s = $e - 1023 - 52 + 57;
         $t = (1 << 57) - ($s < 0 ? $f >> -$s : $f << $s);
+        $m = -1 << 56 >> (-($e - 1023 + 1) + $precision * $wordSize & -$wordSize);
 
-        // minimum precision in hexadecimal digits
-        $p = -($e - 1023) + 3 + $bitPrecision >> 2;
-        $p = min(14, max($minPrecision, $p));
-        $m = 1 << (14 - $p << 2);
-
-        return $t + $m >> 1 & -$m;
+        return $t - $m >> 1 & $m;
     }
 }
