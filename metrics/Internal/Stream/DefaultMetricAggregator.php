@@ -11,7 +11,9 @@ use Nevay\OTelSDK\Metrics\Internal\AttributeProcessor\AttributeProcessor;
 use Nevay\OTelSDK\Metrics\Internal\Exemplar\ExemplarFilter;
 use OpenTelemetry\Context\ContextInterface;
 use function hash;
+use function ksort;
 use function serialize;
+use const SORT_STRING;
 
 /**
  * @template TSummary
@@ -52,10 +54,11 @@ final class DefaultMetricAggregator implements MetricAggregator {
 
     public function record(float|int $value, Attributes $attributes, ContextInterface $context, int $timestamp): void {
         $processedAttributes = $this->attributeProcessor->process($attributes, $context);
-        $index = match ($processedAttributes->count()) {
-            default => hash('xxh128', serialize($processedAttributes->toArray()), true),
-            '' => 0,
-        };
+        $index = 0;
+        if ($raw = $processedAttributes->toArray()) {
+            ksort($raw, SORT_STRING);
+            $index = hash('xxh128', serialize($raw), true);
+        }
         if (!$metricPoint = $this->metricPoints[$index] ?? null) {
             if (Overflow::check($this->metricPoints, $index, $this->cardinalityLimit)) {
                 $index = Overflow::INDEX;
