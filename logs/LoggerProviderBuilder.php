@@ -3,8 +3,10 @@ namespace Nevay\OTelSDK\Logs;
 
 use Closure;
 use Nevay\OTelSDK\Common\AttributesLimitingFactory;
+use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\Configurable;
 use Nevay\OTelSDK\Common\Configurator;
+use Nevay\OTelSDK\Common\HighResolutionTime;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Provider;
@@ -26,6 +28,8 @@ final class LoggerProviderBuilder {
     private array $logRecordProcessors = [];
     /** @var ConfiguratorStack<LoggerConfig> */
     private readonly ConfiguratorStack $loggerConfigurator;
+
+    private ?Clock $clock = null;
 
     private ?int $attributeCountLimit = null;
     private ?int $attributeValueLengthLimit = null;
@@ -77,6 +81,15 @@ final class LoggerProviderBuilder {
     }
 
     /**
+     * @experimental
+     */
+    public function setClock(Clock&HighResolutionTime $clock): self {
+        $this->clock = $clock;
+
+        return $this;
+    }
+
+    /**
      * @return LoggerProviderInterface&EventLoggerProviderInterface&Provider&Configurable<LoggerConfig>
      */
     public function build(LoggerInterface $logger = null): LoggerProviderInterface&EventLoggerProviderInterface&Provider&Configurable {
@@ -93,12 +106,14 @@ final class LoggerProviderBuilder {
         $loggerConfigurator = clone $this->loggerConfigurator;
         $loggerConfigurator->push(new Configurator\NoopConfigurator());
 
+        $clock = $this->clock ?? SystemClock::create();
+
         return new LoggerProvider(
             null,
             Resource::mergeAll(...$this->resources),
             UnlimitedAttributesFactory::create(),
             $loggerConfigurator,
-            SystemClock::create(),
+            $clock,
             MultiLogRecordProcessor::composite(...$logRecordProcessors),
             $logRecordAttributesFactory,
             $logger,

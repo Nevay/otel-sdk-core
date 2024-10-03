@@ -3,8 +3,10 @@ namespace Nevay\OTelSDK\Trace;
 
 use Closure;
 use Nevay\OTelSDK\Common\AttributesLimitingFactory;
+use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\Configurable;
 use Nevay\OTelSDK\Common\Configurator;
+use Nevay\OTelSDK\Common\HighResolutionTime;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Provider;
@@ -33,6 +35,9 @@ final class TracerProviderBuilder {
     private ?Sampler $sampler = null;
     /** @var ConfiguratorStack<TracerConfig> */
     private readonly ConfiguratorStack $tracerConfigurator;
+
+    private ?Clock $clock = null;
+    private ?HighResolutionTime $highResolutionTime = null;
 
     private ?int $attributeCountLimit = null;
     private ?int $attributeValueLengthLimit = null;
@@ -135,6 +140,16 @@ final class TracerProviderBuilder {
     }
 
     /**
+     * @experimental
+     */
+    public function setClock(Clock&HighResolutionTime $clock): self {
+        $this->clock = $clock;
+        $this->highResolutionTime = $clock;
+
+        return $this;
+    }
+
+    /**
      * @return TracerProviderInterface&Provider&Configurable<TracerConfig>
      */
     public function build(?LoggerInterface $logger = null): TracerProviderInterface&Provider&Configurable {
@@ -167,13 +182,16 @@ final class TracerProviderBuilder {
         $tracerConfigurator = clone $this->tracerConfigurator;
         $tracerConfigurator->push(new Configurator\NoopConfigurator());
 
+        $clock = $this->clock ?? SystemClock::create();
+        $highResolutionTime = $this->highResolutionTime ?? SystemHighResolutionTime::create();
+
         return new TracerProvider(
             null,
             Resource::mergeAll(...$this->resources),
             UnlimitedAttributesFactory::create(),
             $tracerConfigurator,
-            SystemClock::create(),
-            SystemHighResolutionTime::create(),
+            $clock,
+            $highResolutionTime,
             $idGenerator,
             $sampler,
             MultiSpanProcessor::composite(...$spanProcessors),

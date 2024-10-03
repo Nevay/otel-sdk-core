@@ -2,8 +2,10 @@
 namespace Nevay\OTelSDK\Metrics;
 
 use Closure;
+use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\Configurable;
 use Nevay\OTelSDK\Common\Configurator;
+use Nevay\OTelSDK\Common\HighResolutionTime;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Provider;
@@ -33,6 +35,8 @@ final class MeterProviderBuilder {
     private readonly ViewRegistryBuilder $viewRegistryBuilder;
     /** @var ConfiguratorStack<MeterConfig> */
     private readonly ConfiguratorStack $meterConfigurator;
+
+    private ?Clock $clock = null;
 
     public function __construct() {
         $this->exemplarReservoir = static fn(Aggregator $aggregator) => $aggregator instanceof ExplicitBucketHistogramAggregator && $aggregator->boundaries
@@ -114,18 +118,29 @@ final class MeterProviderBuilder {
     }
 
     /**
+     * @experimental
+     */
+    public function setClock(Clock&HighResolutionTime $clock): self {
+        $this->clock = $clock;
+
+        return $this;
+    }
+
+    /**
      * @return MeterProviderInterface&Provider&Configurable<MeterConfig>
      */
     public function build(?LoggerInterface $logger = null): MeterProviderInterface&Provider&Configurable {
         $meterConfigurator = clone $this->meterConfigurator;
         $meterConfigurator->push(new Configurator\NoopConfigurator());
 
+        $clock = $this->clock ?? SystemClock::create();
+
         return new MeterProvider(
             null,
             Resource::mergeAll(...$this->resources),
             UnlimitedAttributesFactory::create(),
             $meterConfigurator,
-            SystemClock::create(),
+            $clock,
             UnlimitedAttributesFactory::create(),
             $this->metricReaders,
             match ($this->exemplarFilter) {
