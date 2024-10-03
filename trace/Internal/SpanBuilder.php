@@ -8,6 +8,7 @@ use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\MonotonicClock;
 use Nevay\OTelSDK\Trace\Span\Kind;
 use Nevay\OTelSDK\Trace\Span\Link;
+use Nevay\OTelSDK\Trace\TracerConfig;
 use OpenTelemetry\API\Trace\SpanBuilderInterface;
 use OpenTelemetry\API\Trace\SpanContextInterface;
 use OpenTelemetry\API\Trace\SpanContextValidator;
@@ -23,6 +24,7 @@ final class SpanBuilder implements SpanBuilderInterface {
 
     private readonly TracerState $tracerState;
     private readonly InstrumentationScope $instrumentationScope;
+    private readonly TracerConfig $tracerConfig;
 
     private readonly string $name;
     private ContextInterface|false|null $parent = null;
@@ -36,10 +38,12 @@ final class SpanBuilder implements SpanBuilderInterface {
     public function __construct(
         TracerState $tracerState,
         InstrumentationScope $instrumentationScope,
+        TracerConfig $tracerConfig,
         string $name,
     ) {
         $this->tracerState = $tracerState;
         $this->instrumentationScope = $instrumentationScope;
+        $this->tracerConfig = $tracerConfig;
         $this->name = $name;
 
         $this->attributesBuilder = $tracerState->spanAttributesFactory->builder();
@@ -98,6 +102,12 @@ final class SpanBuilder implements SpanBuilderInterface {
     public function startSpan(): SpanInterface {
         $parent = ContextResolver::resolve($this->parent, $this->tracerState->contextStorage);
         $parentSpan = Span::fromContext($parent);
+
+        if ($this->tracerConfig->disabled) {
+            return $parentSpan->isRecording()
+                ? Span::wrap($parentSpan->getContext())
+                : $parentSpan;
+        }
 
         $parentSpanContext = $parentSpan->getContext()->isValid()
             ? $parentSpan->getContext()
