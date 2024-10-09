@@ -53,7 +53,7 @@ final class LoggerProvider implements LoggerProviderInterface, EventLoggerProvid
             $logger,
         );
         $this->instrumentationScopeAttributesFactory = $instrumentationScopeAttributesFactory;
-        $this->instrumentationScopeCache = new InstrumentationScopeCache($logger);
+        $this->instrumentationScopeCache = new InstrumentationScopeCache();
         $this->loggerConfigurator = $loggerConfigurator;
         $this->loggerConfigurator->onChange(static fn(LoggerConfig $loggerConfig, InstrumentationScope $instrumentationScope)
             => $logger?->debug('Updating logger configuration', ['scope' => $instrumentationScope, 'config' => $loggerConfig]));

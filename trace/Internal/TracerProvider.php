@@ -68,7 +68,7 @@ final class TracerProvider implements TracerProviderInterface, Provider, Configu
             $logger,
         );
         $this->instrumentationScopeAttributesFactory = $instrumentationScopeAttributesFactory;
-        $this->instrumentationScopeCache = new InstrumentationScopeCache($logger);
+        $this->instrumentationScopeCache = new InstrumentationScopeCache();
         $this->tracerConfigurator = $tracerConfigurator;
         $this->tracerConfigurator->onChange(static fn(TracerConfig $tracerConfig, InstrumentationScope $instrumentationScope)
             => $logger?->debug('Updating tracer configuration', ['scope' => $instrumentationScope, 'config' => $tracerConfig]));

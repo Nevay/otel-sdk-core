@@ -79,7 +79,7 @@ final class MeterProvider implements MeterProviderInterface, Provider, Configura
             $logger,
         );
         $this->instrumentationScopeAttributesFactory = $instrumentationScopeAttributesFactory;
-        $this->instrumentationScopeCache = new InstrumentationScopeCache($logger);
+        $this->instrumentationScopeCache = new InstrumentationScopeCache();
         $this->meterConfigurator = $meterConfigurator;
         $this->meterConfigurator->onChange(static fn(MeterConfig $meterConfig, InstrumentationScope $instrumentationScope)
             => $logger?->debug('Updating meter configuration', ['scope' => $instrumentationScope, 'config' => $meterConfig]));
