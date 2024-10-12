@@ -6,6 +6,7 @@ use Nevay\OTelSDK\Common\InstrumentationScope;
 use WeakMap;
 use WeakReference;
 use function array_diff_assoc;
+use function register_shutdown_function;
 use function spl_object_id;
 
 /**
@@ -22,16 +23,26 @@ final class InstrumentationScopeCache {
     private readonly WeakMap $destructors;
     private readonly Closure $destructorFunction;
 
+    private static ?bool $isShutdown = null;
+
     public function __construct() {
         $this->destructors = new WeakMap();
 
         $instrumentationScopes = &$this->instrumentationScopes;
         $this->destructorFunction = static function(string $index, int $id) use (&$instrumentationScopes): void {
+            if (self::$isShutdown) {
+                return;
+            }
             unset($instrumentationScopes[$index][$id]);
             if (!$instrumentationScopes[$index]) {
                 unset($instrumentationScopes[$index]);
             }
         };
+
+        if (self::$isShutdown === null) {
+            self::$isShutdown = false;
+            register_shutdown_function(static fn() => self::$isShutdown = true);
+        }
     }
 
     public function intern(InstrumentationScope $instrumentationScope): InstrumentationScope {
