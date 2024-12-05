@@ -5,27 +5,25 @@ use Amp\Cancellation;
 use Closure;
 use Nevay\OTelSDK\Common\AttributesFactory;
 use Nevay\OTelSDK\Common\Clock;
-use Nevay\OTelSDK\Common\Configurable;
 use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\HighResolutionTime;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Internal\InstrumentationScopeCache;
-use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Trace\IdGenerator;
 use Nevay\OTelSDK\Trace\Sampler;
 use Nevay\OTelSDK\Trace\SpanProcessor;
 use Nevay\OTelSDK\Trace\TracerConfig;
+use Nevay\OTelSDK\Trace\TracerProviderInterface;
 use OpenTelemetry\API\Trace\TracerInterface;
-use OpenTelemetry\API\Trace\TracerProviderInterface;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface;
 
 /**
  * @internal
  */
-final class TracerProvider implements TracerProviderInterface, Provider, Configurable {
+final class TracerProvider implements TracerProviderInterface {
 
     private readonly TracerState $tracerState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;

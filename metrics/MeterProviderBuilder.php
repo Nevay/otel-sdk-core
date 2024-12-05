@@ -3,12 +3,10 @@ namespace Nevay\OTelSDK\Metrics;
 
 use Closure;
 use Nevay\OTelSDK\Common\Clock;
-use Nevay\OTelSDK\Common\Configurable;
 use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\HighResolutionTime;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
-use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Common\SystemClock;
 use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
@@ -21,7 +19,6 @@ use Nevay\OTelSDK\Metrics\Internal\Exemplar\TraceBasedFilter;
 use Nevay\OTelSDK\Metrics\Internal\MeterProvider;
 use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\DelayedStalenessHandlerFactory;
 use Nevay\OTelSDK\Metrics\Internal\View\ViewRegistryBuilder;
-use OpenTelemetry\API\Metrics\MeterProviderInterface;
 use Psr\Log\LoggerInterface;
 
 final class MeterProviderBuilder {
@@ -126,10 +123,7 @@ final class MeterProviderBuilder {
         return $this;
     }
 
-    /**
-     * @return MeterProviderInterface&Provider&Configurable<MeterConfig>
-     */
-    public function build(?LoggerInterface $logger = null): MeterProviderInterface&Provider&Configurable {
+    public function build(?LoggerInterface $logger = null): MeterProviderInterface {
         $meterConfigurator = clone $this->meterConfigurator;
         $meterConfigurator->push(new Configurator\NoopConfigurator());
 

@@ -5,26 +5,24 @@ use Amp\Cancellation;
 use Closure;
 use Nevay\OTelSDK\Common\AttributesFactory;
 use Nevay\OTelSDK\Common\Clock;
-use Nevay\OTelSDK\Common\Configurable;
 use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Internal\InstrumentationScopeCache;
-use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Logs\LoggerConfig;
+use Nevay\OTelSDK\Logs\LoggerProviderInterface;
 use Nevay\OTelSDK\Logs\LogRecordProcessor;
 use OpenTelemetry\API\Logs\EventLoggerInterface;
 use OpenTelemetry\API\Logs\EventLoggerProviderInterface;
 use OpenTelemetry\API\Logs\LoggerInterface;
-use OpenTelemetry\API\Logs\LoggerProviderInterface;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface as PsrLoggerInterface;
 
 /**
  * @internal
  */
-final class LoggerProvider implements LoggerProviderInterface, EventLoggerProviderInterface, Provider, Configurable {
+final class LoggerProvider implements LoggerProviderInterface, EventLoggerProviderInterface {
 
     private readonly LoggerState $loggerState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;

@@ -4,12 +4,10 @@ namespace Nevay\OTelSDK\Trace;
 use Closure;
 use Nevay\OTelSDK\Common\AttributesLimitingFactory;
 use Nevay\OTelSDK\Common\Clock;
-use Nevay\OTelSDK\Common\Configurable;
 use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\HighResolutionTime;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
-use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Common\SystemClock;
 use Nevay\OTelSDK\Common\SystemHighResolutionTime;
@@ -20,7 +18,6 @@ use Nevay\OTelSDK\Trace\Internal\TracerProvider;
 use Nevay\OTelSDK\Trace\Sampler\AlwaysOnSampler;
 use Nevay\OTelSDK\Trace\Sampler\ParentBasedSampler;
 use Nevay\OTelSDK\Trace\SpanProcessor\MultiSpanProcessor;
-use OpenTelemetry\API\Trace\TracerProviderInterface;
 use Psr\Log\LoggerInterface;
 use function str_starts_with;
 
@@ -149,10 +146,7 @@ final class TracerProviderBuilder {
         return $this;
     }
 
-    /**
-     * @return TracerProviderInterface&Provider&Configurable<TracerConfig>
-     */
-    public function build(?LoggerInterface $logger = null): TracerProviderInterface&Provider&Configurable {
+    public function build(?LoggerInterface $logger = null): TracerProviderInterface {
         $idGenerator = $this->idGenerator ?? new RandomIdGenerator();
         $sampler = $this->sampler ?? new ParentBasedSampler(new AlwaysOnSampler());
 

@@ -4,12 +4,10 @@ namespace Nevay\OTelSDK\Logs;
 use Closure;
 use Nevay\OTelSDK\Common\AttributesLimitingFactory;
 use Nevay\OTelSDK\Common\Clock;
-use Nevay\OTelSDK\Common\Configurable;
 use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\HighResolutionTime;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
-use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Common\SystemClock;
 use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
@@ -17,7 +15,6 @@ use Nevay\OTelSDK\Logs\Internal\LogDiscardedLogRecordProcessor;
 use Nevay\OTelSDK\Logs\Internal\LoggerProvider;
 use Nevay\OTelSDK\Logs\LogRecordProcessor\MultiLogRecordProcessor;
 use OpenTelemetry\API\Logs\EventLoggerProviderInterface;
-use OpenTelemetry\API\Logs\LoggerProviderInterface;
 use Psr\Log\LoggerInterface;
 
 final class LoggerProviderBuilder {
@@ -89,10 +86,7 @@ final class LoggerProviderBuilder {
         return $this;
     }
 
-    /**
-     * @return LoggerProviderInterface&EventLoggerProviderInterface&Provider&Configurable<LoggerConfig>
-     */
-    public function build(LoggerInterface $logger = null): LoggerProviderInterface&EventLoggerProviderInterface&Provider&Configurable {
+    public function build(LoggerInterface $logger = null): LoggerProviderInterface&EventLoggerProviderInterface {
         $logRecordAttributesFactory = AttributesLimitingFactory::create(
             $this->logRecordAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
             $this->logRecordAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,

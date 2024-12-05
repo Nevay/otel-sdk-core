@@ -6,12 +6,10 @@ use Amp\Future;
 use Closure;
 use Nevay\OTelSDK\Common\AttributesFactory;
 use Nevay\OTelSDK\Common\Clock;
-use Nevay\OTelSDK\Common\Configurable;
 use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Internal\InstrumentationScopeCache;
-use Nevay\OTelSDK\Common\Provider;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\ExemplarReservoir;
@@ -20,9 +18,9 @@ use Nevay\OTelSDK\Metrics\Internal\Registry\MetricRegistry;
 use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\StalenessHandlerFactory;
 use Nevay\OTelSDK\Metrics\Internal\View\ViewRegistry;
 use Nevay\OTelSDK\Metrics\MeterConfig;
+use Nevay\OTelSDK\Metrics\MeterProviderInterface;
 use Nevay\OTelSDK\Metrics\MetricReader;
 use OpenTelemetry\API\Metrics\MeterInterface;
-use OpenTelemetry\API\Metrics\MeterProviderInterface;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface;
 use WeakMap;
@@ -31,7 +29,7 @@ use function Amp\async;
 /**
  * @internal
  */
-final class MeterProvider implements MeterProviderInterface, Provider, Configurable {
+final class MeterProvider implements MeterProviderInterface {
 
     private readonly MeterState $meterState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
