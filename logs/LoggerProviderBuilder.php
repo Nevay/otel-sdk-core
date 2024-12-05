@@ -14,7 +14,6 @@ use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
 use Nevay\OTelSDK\Logs\Internal\LogDiscardedLogRecordProcessor;
 use Nevay\OTelSDK\Logs\Internal\LoggerProvider;
 use Nevay\OTelSDK\Logs\LogRecordProcessor\MultiLogRecordProcessor;
-use OpenTelemetry\API\Logs\EventLoggerProviderInterface;
 use Psr\Log\LoggerInterface;
 
 final class LoggerProviderBuilder {
@@ -86,7 +85,7 @@ final class LoggerProviderBuilder {
         return $this;
     }
 
-    public function build(LoggerInterface $logger = null): LoggerProviderInterface&EventLoggerProviderInterface {
+    public function build(LoggerInterface $logger = null): LoggerProviderInterface {
         $logRecordAttributesFactory = AttributesLimitingFactory::create(
             $this->logRecordAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
             $this->logRecordAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,

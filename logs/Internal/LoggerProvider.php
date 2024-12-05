@@ -13,8 +13,6 @@ use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Logs\LoggerConfig;
 use Nevay\OTelSDK\Logs\LoggerProviderInterface;
 use Nevay\OTelSDK\Logs\LogRecordProcessor;
-use OpenTelemetry\API\Logs\EventLoggerInterface;
-use OpenTelemetry\API\Logs\EventLoggerProviderInterface;
 use OpenTelemetry\API\Logs\LoggerInterface;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface as PsrLoggerInterface;
@@ -22,7 +20,7 @@ use Psr\Log\LoggerInterface as PsrLoggerInterface;
 /**
  * @internal
  */
-final class LoggerProvider implements LoggerProviderInterface, EventLoggerProviderInterface {
+final class LoggerProvider implements LoggerProviderInterface {
 
     private readonly LoggerState $loggerState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
@@ -79,26 +77,6 @@ final class LoggerProvider implements LoggerProviderInterface, EventLoggerProvid
         $this->loggerState->logger?->debug('Creating logger', ['scope' => $instrumentationScope, 'config' => $loggerConfig]);
 
         return new Logger($this->loggerState, $instrumentationScope, $loggerConfig);
-    }
-
-    public function getEventLogger(
-        string $name,
-        ?string $version = null,
-        ?string $schemaUrl = null,
-        iterable $attributes = [],
-    ): EventLoggerInterface {
-        if ($name === '') {
-            $this->loggerState->logger?->warning('Invalid event logger name', ['name' => $name]);
-        }
-
-        $instrumentationScope = new InstrumentationScope($name, $version, $schemaUrl,
-            $this->instrumentationScopeAttributesFactory->builder()->addAll($attributes)->build());
-        $instrumentationScope = $this->instrumentationScopeCache->intern($instrumentationScope);
-
-        $loggerConfig = $this->loggerConfigurator->resolveConfig($instrumentationScope);
-        $this->loggerState->logger?->debug('Creating event logger', ['scope' => $instrumentationScope, 'config' => $loggerConfig]);
-
-        return new EventLogger($this->loggerState, $instrumentationScope, $loggerConfig);
     }
 
     public function shutdown(?Cancellation $cancellation = null): bool {
