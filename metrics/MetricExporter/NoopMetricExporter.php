@@ -1,28 +1,19 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Metrics\MetricExporter;
 
-use Amp\Cancellation;
-use Amp\Future;
+use Nevay\OTelSDK\Common\Internal\Export\Exporter\NoopExporter;
 use Nevay\OTelSDK\Metrics\Aggregation;
 use Nevay\OTelSDK\Metrics\Aggregation\DropAggregation;
 use Nevay\OTelSDK\Metrics\Data\Descriptor;
+use Nevay\OTelSDK\Metrics\Data\Metric;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use Nevay\OTelSDK\Metrics\InstrumentType;
 use Nevay\OTelSDK\Metrics\MetricExporter;
 
-final class NoopMetricExporter implements MetricExporter {
-
-    public function export(iterable $batch, ?Cancellation $cancellation = null): Future {
-        return Future::complete(true);
-    }
-
-    public function shutdown(?Cancellation $cancellation = null): bool {
-        return true;
-    }
-
-    public function forceFlush(?Cancellation $cancellation = null): bool {
-        return true;
-    }
+/**
+ * @implements NoopExporter<Metric>
+ */
+final class NoopMetricExporter extends NoopExporter implements MetricExporter {
 
     public function resolveTemporality(Descriptor $descriptor): ?Temporality {
         return null;
