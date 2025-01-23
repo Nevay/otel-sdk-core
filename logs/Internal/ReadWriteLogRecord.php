@@ -22,6 +22,7 @@ final class ReadWriteLogRecord implements \Nevay\OTelSDK\Logs\ReadWriteLogRecord
         private ?string $severityText = null,
         private ?int $severityNumber = null,
         private mixed $body = null,
+        private ?string $eventName = null,
     ) {}
 
     public function __clone() {
@@ -62,6 +63,10 @@ final class ReadWriteLogRecord implements \Nevay\OTelSDK\Logs\ReadWriteLogRecord
 
     public function getAttributes(): Attributes {
         return $this->attributesBuilder->build();
+    }
+
+    public function getEventName(): ?string {
+        return $this->eventName;
     }
 
     public function setTimestamp(?int $timestamp): self {
@@ -108,6 +113,12 @@ final class ReadWriteLogRecord implements \Nevay\OTelSDK\Logs\ReadWriteLogRecord
 
     public function setAttributes(iterable $attributes): self {
         $this->attributesBuilder->addAll($attributes);
+
+        return $this;
+    }
+
+    public function setEventName(?string $eventName): self {
+        $this->eventName = $eventName;
 
         return $this;
     }

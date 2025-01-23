@@ -36,4 +36,8 @@ final class Accessor extends LogRecord {
     public static function getAttributes(LogRecord $logRecord): iterable {
         return $logRecord->attributes;
     }
+
+    public static function getEventName(LogRecord $logRecord): ?string {
+        return $logRecord->eventName ?? null;
+    }
 }

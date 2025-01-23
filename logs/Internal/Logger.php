@@ -42,6 +42,7 @@ final class Logger implements LoggerInterface {
             ->setSeverityNumber(Accessor::getSeverityNumber($logRecord))
             ->setAttributes(Accessor::getAttributes($logRecord))
             ->setBody(Accessor::getBody($logRecord))
+            ->setEventName(Accessor::getEventName($logRecord))
         ;
         if ($record->getObservedTimestamp() === null) {
             $record->setObservedTimestamp($this->loggerState->clock->now());

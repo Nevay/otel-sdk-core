@@ -20,4 +20,6 @@ interface ReadWriteLogRecord extends ReadableLogRecord {
     public function setAttribute(string $key, mixed $value): self;
 
     public function setAttributes(iterable $attributes): self;
+
+    public function setEventName(?string $eventName): self;
 }

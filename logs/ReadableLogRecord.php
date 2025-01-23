@@ -25,4 +25,6 @@ interface ReadableLogRecord {
     public function getBody(): mixed;
 
     public function getAttributes(): Attributes;
+
+    public function getEventName(): ?string;
 }
