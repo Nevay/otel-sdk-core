@@ -6,17 +6,9 @@ use Amp\CancelledException;
 use Amp\DeferredFuture;
 use Amp\Future;
 use Amp\TimeoutCancellation;
-use Composer\InstalledVersions;
-use Error;
-use Nevay\OTelSDK\Common\Internal\Export\Exception\PermanentExportException;
-use Nevay\OTelSDK\Common\Internal\Export\Exception\ResourceExhaustedExportException;
-use Nevay\OTelSDK\Common\Internal\Export\Exception\TransientExportException;
 use OpenTelemetry\API\Metrics\CounterInterface;
-use OpenTelemetry\API\Metrics\MeterProviderInterface;
 use OpenTelemetry\API\Trace\TracerInterface;
-use OpenTelemetry\API\Trace\TracerProviderInterface;
 use Psr\Log\LoggerInterface;
-use Psr\Log\LogLevel;
 use Revolt\EventLoop;
 use Revolt\EventLoop\Suspension;
 use SplQueue;
@@ -36,7 +28,8 @@ final class ExportingProcessor {
     private readonly ExportListener $listener;
     private readonly float $exportTimeout;
     private readonly string $workerCallbackId;
-    private readonly string $signal;
+    private readonly string $type;
+    private readonly string $name;
 
     private int $processedBatchId = 0;
 
@@ -46,7 +39,7 @@ final class ExportingProcessor {
     private array $flush = [];
     private ?Suspension $worker = null;
 
-    private readonly CounterInterface $producerItems;
+    private readonly CounterInterface $processedItems;
 
     private bool $closed = false;
 
@@ -55,32 +48,24 @@ final class ExportingProcessor {
         ExportingProcessorDriver $driver,
         ExportListener $listener,
         int $exportTimeoutMillis,
-        TracerProviderInterface $tracerProvider,
-        MeterProviderInterface $meterProvider,
+        TracerInterface $tracer,
+        CounterInterface $processedItems,
         LoggerInterface $logger,
-        string $signal,
-        string $package,
+        string $type,
+        string $name,
     ) {
         $this->exporter = $exporter;
         $this->driver = $driver;
         $this->listener = $listener;
         $this->exportTimeout = $exportTimeoutMillis / 1000;
-        $this->signal = $signal;
+        $this->type = $type;
+        $this->name = $name;
         $this->queue = new SplQueue();
-
-        $version = InstalledVersions::getVersionRanges($package);
-        $tracer = $tracerProvider->getTracer($package, $version);
-        $meter = $meterProvider->getMeter($package, $version);
 
         $reference = WeakReference::create($this);
         $this->workerCallbackId = EventLoop::defer(static fn() => self::worker($reference, $tracer, $logger));
 
-        $this->producerItems = $meter->createCounter(
-            'otelsdk_produced_items',
-            '{item}',
-            'The number of items discarded, dropped, or exported by a SDK pipeline segment.',
-            advisory: ['Attributes' => ['otel.success', 'otel.signal', 'otel.outcome']],
-        );
+        $this->processedItems = $processedItems;
     }
 
     public function __destruct() {
@@ -98,8 +83,8 @@ final class ExportingProcessor {
         $this->queue->enqueue($data);
     }
 
-    public function drop(bool $success, int $count = 1): void {
-        $this->producerItems->add($count, ['otel.success' => $success, 'otel.signal' => $this->signal, 'otel.outcome' => 'dropped']);
+    public function drop(string $errorType, int $count = 1): void {
+        $this->processedItems->add($count, ['error.type' => $errorType, 'otel.sdk.component.name' => $this->name, 'otel.sdk.component.type' => $this->type]);
     }
 
     public function shutdown(?Cancellation $cancellation = null): bool {
@@ -112,7 +97,7 @@ final class ExportingProcessor {
         try {
             $this->flush()?->await($cancellation);
         } catch (CancelledException $e) {
-            $this->drop(success: false, count: $this->drain($e));
+            $this->drop(errorType: 'shutdown', count: $this->drain($e));
 
             throw $e;
         } finally {
@@ -190,20 +175,20 @@ final class ExportingProcessor {
             return;
         }
 
-        $signal = $p->signal;
-        $producerItems = $p->producerItems;
         $listener = $p->listener;
 
         $span = $tracer
-            ->spanBuilder('OTel SDK Export')
-            ->setAttribute('otel.items', $count)
-            ->setAttribute('otel.signal', $signal)
+            ->spanBuilder($p->type)
+            ->setAttribute('otel.sdk.component.name', $p->name)
+            ->setAttribute('otel.sdk.component.type', $p->type)
             ->setAttribute('code.function', __FUNCTION__)
             ->setAttribute('code.namespace', __CLASS__)
             ->setAttribute('code.filepath', __FILE__)
             ->setAttribute('code.lineno', __LINE__)
             ->startSpan();
-        $context = $span->activate();
+        $scope = $span->activate();
+        $p->processedItems->add($count, ['otel.sdk.component.name' => $p->name, 'otel.sdk.component.type' => $p->type]);
+
         $listener->onExport($count);
 
         try {
@@ -214,7 +199,7 @@ final class ExportingProcessor {
         } catch (Throwable $e) {
             $future = Future::error($e);
         } finally {
-            $context->detach();
+            $scope->detach();
         }
 
         $future
@@ -223,20 +208,17 @@ final class ExportingProcessor {
 
         $future
             ->map(static fn(bool $success) => $span
-                ->setAttribute('otel.status', 'Ok')
                 ->setAttribute('otel.success', $success)
             )
             ->catch(static fn(Throwable $e) => $span
-                ->setAttribute('otel.status', 'Error')
+                ->setAttribute('error.type', $e::class)
                 ->setAttribute('otel.success', false)
                 ->recordException($e)
             )
             ->finally($span->end(...));
-        $future
-            ->map(static fn(bool $success) => $producerItems->add($count, ['otel.success' => $success, 'otel.signal' => $signal, 'otel.outcome' => $success ? 'accepted' : 'rejected']))
-            ->catch(static fn(Throwable $e) => $producerItems->add($count, ['otel.success' => false, 'otel.signal' => $signal, 'otel.outcome' => self::exceptionToOtelOutcome($e)]));
-        $future
-            ->catch(static fn(Throwable $e) => $logger->log(self::exceptionToLogLevel($e), 'Exporter threw an exception', ['exception' => $e, 'otel.signal' => $signal]));
+
+        $future->catch(static fn(Throwable $e) => $logger
+            ->warning('Exporter threw an exception', ['exception' => $e]));
     }
 
     private static function worker(WeakReference $r, TracerInterface $tracer, LoggerInterface $logger): void {
@@ -266,29 +248,5 @@ final class ExportingProcessor {
             $pWorker = $worker;
             $worker->suspend();
         } while ($p = $r->get());
-    }
-
-    private static function exceptionToLogLevel(Throwable $e): string {
-        try {
-            throw $e;
-        } catch (Error) {
-            return LogLevel::ERROR;
-        } catch (Throwable) {
-            return LogLevel::WARNING;
-        }
-    }
-
-    private static function exceptionToOtelOutcome(Throwable $e): string {
-        try {
-            throw $e;
-        } catch (CancelledException) {
-            return 'timeout';
-        } catch (ResourceExhaustedExportException) {
-            return 'exhausted';
-        } catch (TransientExportException) {
-            return 'retryable';
-        } catch (PermanentExportException | Throwable) {
-            return 'rejected';
-        }
     }
 }

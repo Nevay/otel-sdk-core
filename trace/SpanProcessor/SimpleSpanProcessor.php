@@ -2,6 +2,7 @@
 namespace Nevay\OTelSDK\Trace\SpanProcessor;
 
 use Amp\Cancellation;
+use Composer\InstalledVersions;
 use InvalidArgumentException;
 use Nevay\OTelSDK\Common\Internal\Export\Driver\SimpleDriver;
 use Nevay\OTelSDK\Common\Internal\Export\ExportingProcessor;
@@ -12,6 +13,7 @@ use Nevay\OTelSDK\Trace\SpanExporter;
 use Nevay\OTelSDK\Trace\SpanProcessor;
 use OpenTelemetry\API\Metrics\MeterProviderInterface;
 use OpenTelemetry\API\Metrics\Noop\NoopMeterProvider;
+use OpenTelemetry\API\Metrics\ObserverInterface;
 use OpenTelemetry\API\Trace\NoopTracerProvider;
 use OpenTelemetry\API\Trace\TracerProviderInterface;
 use OpenTelemetry\Context\ContextInterface;
@@ -29,6 +31,8 @@ final class SimpleSpanProcessor implements SpanProcessor {
     private readonly ExportingProcessor $processor;
     private readonly QueueSizeListener $listener;
     private readonly int $maxQueueSize;
+
+    private static int $instanceCounter = -1;
 
     private bool $closed = false;
 
@@ -52,6 +56,7 @@ final class SimpleSpanProcessor implements SpanProcessor {
         TracerProviderInterface $tracerProvider = new NoopTracerProvider(),
         MeterProviderInterface $meterProvider = new NoopMeterProvider(),
         LoggerInterface $logger = new NullLogger(),
+        ?string $name = null,
     ) {
         if ($maxQueueSize < 0) {
             throw new InvalidArgumentException(sprintf('Maximum queue size (%d) must be greater than or equal to zero', $maxQueueSize));
@@ -62,16 +67,48 @@ final class SimpleSpanProcessor implements SpanProcessor {
 
         $this->maxQueueSize = $maxQueueSize;
 
+        $type = 'simple_span_processor';
+        $name ??= $type . '/' . ++self::$instanceCounter;
+
+        $version = InstalledVersions::getVersionRanges('tbachert/otel-sdk-trace');
+        $tracer = $tracerProvider->getTracer('com.tobiasbachert.otel.sdk.trace', $version);
+        $meter = $meterProvider->getMeter('com.tobiasbachert.otel.sdk.trace', $version);
+
+        $queueSize = $meter->createObservableUpDownCounter(
+            'otel.sdk.span.processor.queue_size',
+            '{span}',
+            'The number of spans in the queue of a given instance of an SDK span processor',
+        );
+        $queueCapacity = $meter->createObservableGauge(
+            'otel.sdk.span.processor.queue_capacity',
+            '{span}',
+            'The maximum number of spans the queue of a given instance of an SDK span processor can hold',
+        );
+        $processed = $meter->createCounter(
+            'otel.sdk.span.processor.spans_processed',
+            '{span}',
+            'The number of spans for which the processing has finished, either successful or failed',
+        );
+
+        $queueSize->observe(fn(ObserverInterface $observer) => $observer->observe(
+            $this->listener->queueSize,
+            ['otel.sdk.component.name' => $name, 'otel.sdk.component.type' => $type],
+        ));
+        $queueCapacity->observe(fn(ObserverInterface $observer) => $observer->observe(
+            $this->maxQueueSize,
+            ['otel.sdk.component.name' => $name, 'otel.sdk.component.type' => $type],
+        ));
+
         $this->processor = new ExportingProcessor(
             $spanExporter,
             new SimpleDriver(),
             $this->listener = new QueueSizeListener(),
             $exportTimeoutMillis,
-            $tracerProvider,
-            $meterProvider,
+            $tracer,
+            $processed,
             $logger,
-            'traces',
-            'tbachert/otel-sdk-trace',
+            $type,
+            $name,
         );
     }
 
@@ -92,12 +129,11 @@ final class SimpleSpanProcessor implements SpanProcessor {
             return;
         }
         if (!$span->getContext()->isSampled()) {
-            $this->processor->drop(success: true);
             return;
         }
 
         if ($this->listener->queueSize === $this->maxQueueSize) {
-            $this->processor->drop(success: false);
+            $this->processor->drop('queue_full');
             return;
         }
 

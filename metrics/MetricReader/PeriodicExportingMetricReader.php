@@ -2,6 +2,7 @@
 namespace Nevay\OTelSDK\Metrics\MetricReader;
 
 use Amp\Cancellation;
+use Composer\InstalledVersions;
 use InvalidArgumentException;
 use Nevay\OTelSDK\Common\Internal\Export\ExportingProcessor;
 use Nevay\OTelSDK\Common\Internal\Export\Listener\NoopListener;
@@ -35,6 +36,8 @@ final class PeriodicExportingMetricReader implements MetricReader {
     private readonly MultiMetricProducer $metricProducer;
     private readonly string $exportIntervalCallbackId;
 
+    private static int $instanceCounter = -1;
+
     private bool $closed = false;
 
     /**
@@ -65,6 +68,7 @@ final class PeriodicExportingMetricReader implements MetricReader {
         TracerProviderInterface $tracerProvider = new NoopTracerProvider(),
         MeterProviderInterface $meterProvider = new NoopMeterProvider(),
         LoggerInterface $logger = new NullLogger(),
+        ?string $name = null,
     ) {
         if ($exportIntervalMillis < 0) {
             throw new InvalidArgumentException(sprintf('Export interval (%d) must be greater than or equal to zero', $exportIntervalMillis));
@@ -79,16 +83,29 @@ final class PeriodicExportingMetricReader implements MetricReader {
         $this->metricExporter = $metricExporter;
         $this->metricProducer = new MultiMetricProducer($metricProducers);
 
+        $type = 'periodic_exporting_reader';
+        $name ??= $type . '/' . ++self::$instanceCounter;
+
+        $version = InstalledVersions::getVersionRanges('tbachert/otel-sdk-metrics');
+        $tracer = $tracerProvider->getTracer('com.tobiasbachert.otel.sdk.metrics', $version);
+        $meter = $meterProvider->getMeter('com.tobiasbachert.otel.sdk.metrics', $version);
+
+        $processed = $meter->createCounter(
+            'otel.sdk.metric.processor.metrics_processed',
+            '{metrics}',
+            'The number of metrics for which the processing has finished, either successful or failed',
+        );
+
         $this->processor = $processor = new ExportingProcessor(
             $metricExporter,
             new MetricExportDriver($this->metricProducer, $metricFilter, $collectTimeoutMillis),
             new NoopListener(),
             $exportTimeoutMillis,
-            $tracerProvider,
-            $meterProvider,
+            $tracer,
+            $processed,
             $logger,
-            'metrics',
-            'tbachert/otel-sdk-metrics',
+            $type,
+            $name
         );
         $this->exportIntervalCallbackId = EventLoop::unreference(EventLoop::repeat(
             $exportIntervalMillis / 1000,

@@ -2,6 +2,7 @@
 namespace Nevay\OTelSDK\Metrics\MetricReader;
 
 use Amp\Cancellation;
+use Composer\InstalledVersions;
 use InvalidArgumentException;
 use Nevay\OTelSDK\Common\Internal\Export\ExportingProcessor;
 use Nevay\OTelSDK\Common\Internal\Export\Listener\NoopListener;
@@ -30,6 +31,8 @@ final class PullMetricReader implements MetricReader {
     private readonly ExportingProcessor $processor;
     private readonly MultiMetricProducer $metricProducer;
 
+    private static int $instanceCounter = -1;
+
     private bool $closed = false;
 
     /**
@@ -57,6 +60,7 @@ final class PullMetricReader implements MetricReader {
         TracerProviderInterface $tracerProvider = new NoopTracerProvider(),
         MeterProviderInterface $meterProvider = new NoopMeterProvider(),
         LoggerInterface $logger = new NullLogger(),
+        ?string $name = null,
     ) {
         if ($exportTimeoutMillis < 0) {
             throw new InvalidArgumentException(sprintf('Export timeout (%d) must be greater than or equal to zero', $exportTimeoutMillis));
@@ -68,16 +72,29 @@ final class PullMetricReader implements MetricReader {
         $this->metricExporter = $metricExporter;
         $this->metricProducer = new MultiMetricProducer($metricProducers);
 
+        $type = 'pull_reader';
+        $name ??= $type . '/' . ++self::$instanceCounter;
+
+        $version = InstalledVersions::getVersionRanges('tbachert/otel-sdk-metrics');
+        $tracer = $tracerProvider->getTracer('com.tobiasbachert.otel.sdk.metrics', $version);
+        $meter = $meterProvider->getMeter('com.tobiasbachert.otel.sdk.metrics', $version);
+
+        $processed = $meter->createCounter(
+            'otel.sdk.metric.processor.metrics_processed',
+            '{metrics}',
+            'The number of metrics for which the processing has finished, either successful or failed',
+        );
+
         $this->processor = new ExportingProcessor(
             $metricExporter,
             new MetricExportDriver($this->metricProducer, $metricFilter, $collectTimeoutMillis),
             new NoopListener(),
             $exportTimeoutMillis,
-            $tracerProvider,
-            $meterProvider,
+            $tracer,
+            $processed,
             $logger,
-            'metrics',
-            'tbachert/otel-sdk-metrics',
+            $type,
+            $name,
         );
 
         if ($metricExporter instanceof MetricReaderAware) {
