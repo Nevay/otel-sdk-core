@@ -3,7 +3,6 @@ namespace Nevay\OTelSDK\Metrics\Internal;
 
 use Nevay\OTelSDK\Metrics\Data\Descriptor;
 use Nevay\OTelSDK\Metrics\Internal\Stream\MetricStream;
-use Nevay\OTelSDK\Metrics\MeterConfig;
 
 /**
  * @internal

@@ -3,7 +3,6 @@ namespace Nevay\OTelSDK\Metrics\Internal\AttributeProcessor;
 
 use Nevay\OTelSDK\Common\Attributes;
 use OpenTelemetry\Context\ContextInterface;
-use function serialize;
 
 /**
  * @internal
