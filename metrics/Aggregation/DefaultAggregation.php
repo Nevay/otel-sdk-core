@@ -27,10 +27,10 @@ final class DefaultAggregation implements Aggregation {
      * @param InstrumentType $instrumentType instrument type to override
      * @param Aggregation $aggregation aggregation to use for the given
      *        instrument type
-     * @return Aggregation a new aggregation that uses the given aggregation
-     *         for the given instrument type
+     * @return DefaultAggregation a new aggregation that uses the given
+     *         aggregation for the given instrument type
      */
-    public function with(InstrumentType $instrumentType, Aggregation $aggregation): Aggregation {
+    public function with(InstrumentType $instrumentType, Aggregation $aggregation): DefaultAggregation {
         if (!$aggregation->aggregator($instrumentType)) {
             throw new InvalidArgumentException(sprintf('Aggregation "%s" does not support instrument type "%s"', $aggregation::class, $instrumentType->name));
         }
