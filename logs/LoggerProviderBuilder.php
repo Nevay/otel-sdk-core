@@ -85,7 +85,7 @@ final class LoggerProviderBuilder {
         return $this;
     }
 
-    public function build(LoggerInterface $logger = null): LoggerProviderInterface {
+    public function build(?LoggerInterface $logger = null): LoggerProviderInterface {
         $logRecordAttributesFactory = AttributesLimitingFactory::create(
             $this->logRecordAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
             $this->logRecordAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
