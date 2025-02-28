@@ -113,7 +113,7 @@ final class Meter implements MeterInterface {
         $r = $this->meterState->createInstrument(new Instrument($type, $name, $unit, $description, $advisory), $this->instrumentationScope, $this->meterConfig);
 
         foreach ($callbacks as $callback) {
-            $this->meterState->registry->registerCallback(closure($callback), $r->instrument);
+            $this->meterState->registry->registerCallback(AsynchronousInstruments::closure($callback), $r->instrument);
             $r->referenceCounter->acquire(true);
         }
 

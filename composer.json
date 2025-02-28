@@ -30,10 +30,7 @@
             "Nevay\\OTelSDK\\Trace\\": "trace/",
             "Nevay\\OTelSDK\\Metrics\\": "metrics/",
             "Nevay\\OTelSDK\\Logs\\": "logs/"
-        },
-        "files": [
-            "metrics/Internal/functions.php"
-        ]
+        }
     },
     "extra": {
         "branch-alias": {
