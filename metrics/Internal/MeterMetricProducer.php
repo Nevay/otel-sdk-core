@@ -7,10 +7,8 @@ use Nevay\OTelSDK\Metrics\Internal\Registry\MetricCollector;
 use Nevay\OTelSDK\Metrics\MetricFilter;
 use Nevay\OTelSDK\Metrics\MetricFilterResult;
 use Nevay\OTelSDK\Metrics\MetricProducer;
-use Traversable;
 use function array_keys;
 use function count;
-use const COUNT_RECURSIVE;
 
 /**
  * @internal
@@ -55,10 +53,12 @@ final class MeterMetricProducer implements MetricProducer {
 
         foreach ($sources as $streamSources) {
             foreach ($streamSources as $source) {
-                yield new Metric(
-                    $source->descriptor,
-                    $source->stream->collect($source->reader),
-                );
+                $data = $source->stream->collect($source->reader);
+                if (!$data->dataPoints) {
+                    continue;
+                }
+
+                yield new Metric($source->descriptor, $data);
             }
         }
     }
