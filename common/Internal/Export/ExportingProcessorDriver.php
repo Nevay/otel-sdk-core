@@ -20,9 +20,9 @@ interface ExportingProcessorDriver {
 
     /**
      * @param TData $data
-     * @return int
+     * @return int|null
      */
-    public function count(mixed $data): int;
+    public function count(mixed $data): ?int;
 
     /**
      * @param TData $data

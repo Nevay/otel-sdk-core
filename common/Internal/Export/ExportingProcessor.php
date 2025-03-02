@@ -170,7 +170,7 @@ final class ExportingProcessor {
     private static function export(self $p, TracerInterface $tracer, LoggerInterface $logger): void {
         assert(!$p->queue->isEmpty());
 
-        if (!$count = $p->driver->count($p->queue->bottom())) {
+        if (($count = $p->driver->count($p->queue->bottom())) === 0) {
             $p->queue->dequeue();
             return;
         }
