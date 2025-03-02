@@ -49,24 +49,18 @@ final class MeterMetricProducer implements MetricProducer {
         $streamIds = count($sources) === count($this->sources)
             ? $this->streamIds ??= array_keys($this->sources)
             : array_keys($sources);
-        $collector = $this->collector;
 
-        return new SizedTraversable(
-            (static function() use ($collector, $sources, $streamIds, $cancellation): Traversable {
-                $collector->collectAndPush($streamIds, $cancellation);
-                unset($streamIds, $cancellation);
+        $this->collector->collectAndPush($streamIds, $cancellation);
+        unset($streamIds, $metricFilter, $cancellation);
 
-                foreach ($sources as $streamSources) {
-                    foreach ($streamSources as $source) {
-                        yield new Metric(
-                            $source->descriptor,
-                            $source->stream->collect($source->reader),
-                        );
-                    }
-                }
-            })(),
-            count($sources, COUNT_RECURSIVE) - count($sources),
-        );
+        foreach ($sources as $streamSources) {
+            foreach ($streamSources as $source) {
+                yield new Metric(
+                    $source->descriptor,
+                    $source->stream->collect($source->reader),
+                );
+            }
+        }
     }
 
     /**

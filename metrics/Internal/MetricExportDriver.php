@@ -2,16 +2,13 @@
 namespace Nevay\OTelSDK\Metrics\Internal;
 
 use Amp\TimeoutCancellation;
-use Countable;
 use Nevay\OTelSDK\Common\Internal\Export\ExportingProcessorDriver;
 use Nevay\OTelSDK\Metrics\Data\Metric;
 use Nevay\OTelSDK\Metrics\MetricFilter;
 use Nevay\OTelSDK\Metrics\MetricProducer;
-use Traversable;
-use function count;
 
 /**
- * @implements ExportingProcessorDriver<list<Metric>|(Traversable<Metric>&Countable), list<Metric>|(Traversable<Metric>&Countable)>
+ * @implements ExportingProcessorDriver<iterable<Metric>, iterable<Metric>>
  *
  * @internal
  */
@@ -23,7 +20,7 @@ final class MetricExportDriver implements ExportingProcessorDriver {
         private readonly int $collectTimeoutMillis,
     ) {}
 
-    public function getPending(): Traversable&Countable {
+    public function getPending(): iterable {
         return $this->metricProducer->produce($this->metricFilter, new TimeoutCancellation($this->collectTimeoutMillis / 1000));
     }
 
@@ -35,8 +32,8 @@ final class MetricExportDriver implements ExportingProcessorDriver {
         return false;
     }
 
-    public function count(mixed $data): int {
-        return count($data);
+    public function count(mixed $data): null {
+        return null;
     }
 
     public function finalize(mixed $data): iterable {

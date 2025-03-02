@@ -7,6 +7,7 @@ use Amp\Pipeline\Queue;
 use Nevay\OTelSDK\Metrics\MetricFilter;
 use Nevay\OTelSDK\Metrics\MetricProducer;
 use Revolt\EventLoop;
+use Throwable;
 use function count;
 
 /**
@@ -27,17 +28,27 @@ final class MultiMetricProducer implements MetricProducer {
     }
 
     public function produce(?MetricFilter $metricFilter = null, ?Cancellation $cancellation = null): iterable {
+        if (!$this->metricProducers) {
+            return [];
+        }
+
         $queue = new Queue();
-        $count = 0;
         $pending = count($this->metricProducers);
-        $handler = static function(iterable $metrics, Queue $queue) use (&$pending): void {
+        $handler = static function(MetricProducer $metricProducer, ?MetricFilter $metricFilter, ?Cancellation $cancellation, Queue $queue) use (&$pending): void {
+            if ($queue->isDisposed()) {
+                return;
+            }
+
             try {
-                if (!$queue->isDisposed()) {
-                    foreach ($metrics as $metric) {
-                        $queue->push($metric);
-                    }
+                $metrics = $metricProducer->produce($metricFilter, $cancellation);
+                unset($metricProducer, $metricFilter, $cancellation);
+
+                foreach ($metrics as $metric) {
+                    $queue->push($metric);
                 }
             } catch (DisposedException) {
+            } catch (Throwable $e) {
+                $queue->error($e);
             } finally {
                 if (!--$pending) {
                     $queue->complete();
@@ -45,14 +56,9 @@ final class MultiMetricProducer implements MetricProducer {
             }
         };
         foreach ($this->metricProducers as $metricProducer) {
-            $metrics = $metricProducer->produce($metricFilter, $cancellation);
-            $count += count($metrics);
-            EventLoop::queue($handler, $metrics, $queue);
-        }
-        if (!$pending) {
-            $queue->complete();
+            EventLoop::queue($handler, $metricProducer, $metricFilter, $cancellation, $queue);
         }
 
-        return new SizedTraversable($queue->iterate(), $count);
+        return $queue->iterate();
     }
 }
