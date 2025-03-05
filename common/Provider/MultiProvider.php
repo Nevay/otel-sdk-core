@@ -24,14 +24,18 @@ final class MultiProvider implements Provider {
             $futures[] = async($shutdown, $provider, $cancellation);
         }
 
-        $success = true;
-        foreach (Future::iterate($futures) as $future) {
-            if (!$future->await()) {
-                $success = false;
+        [$errors, $results] = Future\awaitAll($futures);
+
+        foreach ($errors as $error) {
+            throw $error;
+        }
+        foreach ($results as $success) {
+            if (!$success) {
+                return false;
             }
         }
 
-        return $success;
+        return true;
     }
 
     public function forceFlush(?Cancellation $cancellation = null): bool {
@@ -43,13 +47,17 @@ final class MultiProvider implements Provider {
             $futures[] = async($forceFlush, $provider, $cancellation);
         }
 
-        $success = true;
-        foreach (Future::iterate($futures) as $future) {
-            if (!$future->await()) {
-                $success = false;
+        [$errors, $results] = Future\awaitAll($futures);
+
+        foreach ($errors as $error) {
+            throw $error;
+        }
+        foreach ($results as $success) {
+            if (!$success) {
+                return false;
             }
         }
 
-        return $success;
+        return true;
     }
 }
