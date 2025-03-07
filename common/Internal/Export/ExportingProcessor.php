@@ -39,7 +39,7 @@ final class ExportingProcessor {
     private array $flush = [];
     private ?Suspension $worker = null;
 
-    private readonly CounterInterface $processedItems;
+    private readonly ?CounterInterface $processedItems;
 
     private bool $closed = false;
 
@@ -49,7 +49,7 @@ final class ExportingProcessor {
         ExportListener $listener,
         int $exportTimeoutMillis,
         TracerInterface $tracer,
-        CounterInterface $processedItems,
+        ?CounterInterface $processedItems,
         LoggerInterface $logger,
         string $type,
         string $name,
@@ -84,7 +84,7 @@ final class ExportingProcessor {
     }
 
     public function drop(string $errorType, int $count = 1): void {
-        $this->processedItems->add($count, ['error.type' => $errorType, 'otel.sdk.component.name' => $this->name, 'otel.sdk.component.type' => $this->type]);
+        $this->processedItems?->add($count, ['error.type' => $errorType, 'otel.sdk.component.name' => $this->name, 'otel.sdk.component.type' => $this->type]);
     }
 
     public function shutdown(?Cancellation $cancellation = null): bool {
@@ -187,7 +187,8 @@ final class ExportingProcessor {
             ->setAttribute('code.lineno', __LINE__)
             ->startSpan();
         $scope = $span->activate();
-        $p->processedItems->add($count, ['otel.sdk.component.name' => $p->name, 'otel.sdk.component.type' => $p->type]);
+
+        $p->processedItems?->add($count, ['otel.sdk.component.name' => $p->name, 'otel.sdk.component.type' => $p->type]);
 
         $listener->onExport($count);
 

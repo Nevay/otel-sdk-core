@@ -146,10 +146,28 @@ final class TracerProviderBuilder {
         return $this;
     }
 
-    public function build(?LoggerInterface $logger = null): TracerProviderInterface {
+    /**
+     * @internal
+     */
+    public function copyStateInto(TracerProvider $tracerProvider): void {
         $idGenerator = $this->idGenerator ?? new RandomIdGenerator();
         $sampler = $this->sampler ?? new ParentBasedSampler(new AlwaysOnSampler());
+        $spanProcessors = $this->spanProcessors;
+        if ($tracerProvider->tracerState->logger) {
+            $spanProcessors[] = new LogDiscardedSpanProcessor($tracerProvider->tracerState->logger);
+        }
 
+        $tracerProvider->tracerState->idGenerator = $idGenerator;
+        $tracerProvider->tracerState->sampler = $sampler;
+        $tracerProvider->tracerState->spanProcessor = MultiSpanProcessor::composite(...$spanProcessors);
+
+        $tracerProvider->updateConfigurator(new Configurator\NoopConfigurator());
+    }
+
+    /**
+     * @internal
+     */
+    public function buildBase(?LoggerInterface $logger = null): TracerProvider {
         $spanAttributesFactory = AttributesLimitingFactory::create(
             $this->spanAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
             $this->spanAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
@@ -168,13 +186,8 @@ final class TracerProviderBuilder {
         $eventCountLimit = $this->eventCountLimit ?? 128;
         $linkCountLimit = $this->linkCountLimit ?? 128;
 
-        $spanProcessors = $this->spanProcessors;
-        if ($logger) {
-            $spanProcessors[] = new LogDiscardedSpanProcessor($logger);
-        }
-
         $tracerConfigurator = clone $this->tracerConfigurator;
-        $tracerConfigurator->push(new Configurator\NoopConfigurator());
+        $tracerConfigurator->push(static fn(TracerConfig $tracerConfig) => $tracerConfig->disabled = true);
 
         $clock = $this->clock ?? SystemClock::create();
         $highResolutionTime = $this->highResolutionTime ?? SystemHighResolutionTime::create();
@@ -186,9 +199,6 @@ final class TracerProviderBuilder {
             $tracerConfigurator,
             $clock,
             $highResolutionTime,
-            $idGenerator,
-            $sampler,
-            MultiSpanProcessor::composite(...$spanProcessors),
             $spanAttributesFactory,
             $eventAttributesFactory,
             $linkAttributesFactory,
@@ -196,5 +206,12 @@ final class TracerProviderBuilder {
             $linkCountLimit,
             $logger,
         );
+    }
+
+    public function build(?LoggerInterface $logger = null): TracerProviderInterface {
+        $tracerProvider = $this->buildBase($logger);
+        $this->copyStateInto($tracerProvider);
+
+        return $tracerProvider;
     }
 }

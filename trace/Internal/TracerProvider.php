@@ -25,7 +25,7 @@ use Psr\Log\LoggerInterface;
  */
 final class TracerProvider implements TracerProviderInterface {
 
-    private readonly TracerState $tracerState;
+    public readonly TracerState $tracerState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
     private readonly InstrumentationScopeCache $instrumentationScopeCache;
     private readonly ConfiguratorStack $tracerConfigurator;
@@ -40,9 +40,6 @@ final class TracerProvider implements TracerProviderInterface {
         ConfiguratorStack $tracerConfigurator,
         Clock $clock,
         HighResolutionTime $highResolutionTime,
-        IdGenerator $idGenerator,
-        Sampler $sampler,
-        SpanProcessor $spanProcessor,
         AttributesFactory $spanAttributesFactory,
         AttributesFactory $eventAttributesFactory,
         AttributesFactory $linkAttributesFactory,
@@ -55,9 +52,6 @@ final class TracerProvider implements TracerProviderInterface {
             $resource,
             $clock,
             $highResolutionTime,
-            $idGenerator,
-            $sampler,
-            $spanProcessor,
             $spanAttributesFactory,
             $eventAttributesFactory,
             $linkAttributesFactory,

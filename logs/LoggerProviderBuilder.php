@@ -85,31 +85,53 @@ final class LoggerProviderBuilder {
         return $this;
     }
 
-    public function build(?LoggerInterface $logger = null): LoggerProviderInterface {
+    /**
+     * @internal
+     */
+    public function copyStateInto(LoggerProvider $loggerProvider): void {
+        $logRecordProcessors = $this->logRecordProcessors;
+        if ($loggerProvider->loggerState->logger) {
+            $logRecordProcessors[] = new LogDiscardedLogRecordProcessor($loggerProvider->loggerState->logger);
+        }
+
+        $loggerProvider->loggerState->logRecordProcessor = MultiLogRecordProcessor::composite(...$logRecordProcessors);
+
+        $loggerProvider->updateConfigurator(new Configurator\NoopConfigurator());
+    }
+
+    /**
+     * @internal
+     */
+    public function buildBase(?LoggerInterface $logger = null): LoggerProvider {
         $logRecordAttributesFactory = AttributesLimitingFactory::create(
             $this->logRecordAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
             $this->logRecordAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
         );
 
-        $logRecordProcessors = $this->logRecordProcessors;
-        if ($logger) {
-            $logRecordProcessors[] = new LogDiscardedLogRecordProcessor($logger);
-        }
-
         $loggerConfigurator = clone $this->loggerConfigurator;
-        $loggerConfigurator->push(new Configurator\NoopConfigurator());
+        $loggerConfigurator->push(static fn(LoggerConfig $loggerConfig) => $loggerConfig->disabled = true);
 
         $clock = $this->clock ?? SystemClock::create();
 
-        return new LoggerProvider(
+        $loggerProvider = new LoggerProvider(
             null,
             Resource::mergeAll(...$this->resources),
             UnlimitedAttributesFactory::create(),
             $loggerConfigurator,
             $clock,
-            MultiLogRecordProcessor::composite(...$logRecordProcessors),
             $logRecordAttributesFactory,
             $logger,
         );
+
+        $this->copyStateInto($loggerProvider);
+
+        return $loggerProvider;
+    }
+
+    public function build(?LoggerInterface $logger = null): LoggerProviderInterface {
+        $loggerProvider = $this->buildBase($logger);
+        $this->copyStateInto($loggerProvider);
+
+        return $loggerProvider;
     }
 }

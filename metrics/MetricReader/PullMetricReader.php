@@ -77,13 +77,6 @@ final class PullMetricReader implements MetricReader {
 
         $version = InstalledVersions::getVersionRanges('tbachert/otel-sdk-metrics');
         $tracer = $tracerProvider->getTracer('com.tobiasbachert.otel.sdk.metrics', $version);
-        $meter = $meterProvider->getMeter('com.tobiasbachert.otel.sdk.metrics', $version);
-
-        $processed = $meter->createCounter(
-            'otel.sdk.metric.processor.metrics_processed',
-            '{metrics}',
-            'The number of metrics for which the processing has finished, either successful or failed',
-        );
 
         $this->processor = new ExportingProcessor(
             $metricExporter,
@@ -91,7 +84,7 @@ final class PullMetricReader implements MetricReader {
             new NoopListener(),
             $exportTimeoutMillis,
             $tracer,
-            $processed,
+            null,
             $logger,
             $type,
             $name,

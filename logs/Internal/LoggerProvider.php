@@ -22,7 +22,7 @@ use Psr\Log\LoggerInterface as PsrLoggerInterface;
  */
 final class LoggerProvider implements LoggerProviderInterface {
 
-    private readonly LoggerState $loggerState;
+    public readonly LoggerState $loggerState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
     private readonly InstrumentationScopeCache $instrumentationScopeCache;
     private readonly ConfiguratorStack $loggerConfigurator;
@@ -36,7 +36,6 @@ final class LoggerProvider implements LoggerProviderInterface {
         AttributesFactory $instrumentationScopeAttributesFactory,
         ConfiguratorStack $loggerConfigurator,
         Clock $clock,
-        LogRecordProcessor $logRecordProcessor,
         AttributesFactory $logRecordAttributesFactory,
         ?PsrLoggerInterface $logger,
     ) {
@@ -44,7 +43,6 @@ final class LoggerProvider implements LoggerProviderInterface {
             $contextStorage,
             $resource,
             $clock,
-            $logRecordProcessor,
             $logRecordAttributesFactory,
             $logger,
         );

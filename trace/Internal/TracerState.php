@@ -16,14 +16,15 @@ use Psr\Log\LoggerInterface;
  */
 final class TracerState {
 
+    public IdGenerator $idGenerator;
+    public Sampler $sampler;
+    public SpanProcessor $spanProcessor;
+
     public function __construct(
         public readonly ?ContextStorageInterface $contextStorage,
         public readonly Resource $resource,
         public readonly Clock $clock,
         public readonly HighResolutionTime $highResolutionTime,
-        public readonly IdGenerator $idGenerator,
-        public readonly Sampler $sampler,
-        public readonly SpanProcessor $spanProcessor,
         public readonly AttributesFactory $spanAttributesFactory,
         public readonly AttributesFactory $eventAttributesFactory,
         public readonly AttributesFactory $linkAttributesFactory,

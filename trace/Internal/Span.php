@@ -15,7 +15,6 @@ use Nevay\OTelSDK\Trace\Span\Status;
 use OpenTelemetry\API\Trace\SpanContextInterface;
 use OpenTelemetry\API\Trace\SpanInterface;
 use Throwable;
-use function assert;
 use function count;
 
 /**
@@ -214,11 +213,13 @@ final class Span extends \OpenTelemetry\API\Trace\Span implements ReadWriteSpan,
     }
 
     public function end(?int $endEpochNanos = null): void {
+        if (!$this->recording) {
+            return;
+        }
         if ($this->spanData->endTimestamp !== null) {
             return;
         }
 
-        assert($this->recording);
         $this->recording = false;
         $this->spanData->endTimestamp = $endEpochNanos ?? $this->clock->now();
 
