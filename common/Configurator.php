@@ -9,7 +9,7 @@ namespace Nevay\OTelSDK\Common;
 interface Configurator {
 
     /**
-     * @param mixed $config configuration to update
+     * @param TConfig $config configuration to update
      * @return bool whether this configurator modified the given configuration
      */
     public function update(mixed $config, InstrumentationScope $instrumentationScope): bool;
