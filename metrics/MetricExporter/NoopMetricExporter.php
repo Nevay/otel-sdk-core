@@ -22,8 +22,4 @@ final class NoopMetricExporter extends NoopExporter implements MetricExporter {
     public function resolveAggregation(InstrumentType $instrumentType): Aggregation {
         return new DropAggregation();
     }
-
-    public function resolveCardinalityLimit(InstrumentType $instrumentType): ?int {
-        return 0;
-    }
 }

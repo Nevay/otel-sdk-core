@@ -4,7 +4,6 @@ namespace Nevay\OTelSDK\Metrics\MetricExporter;
 use Nevay\OTelSDK\Common\Internal\Export\Exporter\InMemoryExporter;
 use Nevay\OTelSDK\Metrics\Aggregation;
 use Nevay\OTelSDK\Metrics\Aggregation\DefaultAggregation;
-use Nevay\OTelSDK\Metrics\CardinalityLimitResolver;
 use Nevay\OTelSDK\Metrics\Data\Descriptor;
 use Nevay\OTelSDK\Metrics\Data\Metric;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
@@ -21,7 +20,6 @@ final class InMemoryMetricExporter extends InMemoryExporter implements MetricExp
     public function __construct(
         private readonly TemporalityResolver $temporalityResolver = TemporalityResolvers::LowMemory,
         private readonly Aggregation $aggregation = new DefaultAggregation(),
-        private readonly ?CardinalityLimitResolver $cardinalityLimitResolver = null,
     ) {}
 
     public function resolveTemporality(Descriptor $descriptor): ?Temporality {
@@ -30,9 +28,5 @@ final class InMemoryMetricExporter extends InMemoryExporter implements MetricExp
 
     public function resolveAggregation(InstrumentType $instrumentType): Aggregation {
         return $this->aggregation;
-    }
-
-    public function resolveCardinalityLimit(InstrumentType $instrumentType): ?int {
-        return $this->cardinalityLimitResolver?->resolveCardinalityLimit($instrumentType);
     }
 }

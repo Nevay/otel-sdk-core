@@ -7,6 +7,7 @@ use InvalidArgumentException;
 use Nevay\OTelSDK\Common\Internal\Export\ExportingProcessor;
 use Nevay\OTelSDK\Common\Internal\Export\Listener\NoopListener;
 use Nevay\OTelSDK\Metrics\Aggregation;
+use Nevay\OTelSDK\Metrics\CardinalityLimitResolver;
 use Nevay\OTelSDK\Metrics\Data\Descriptor;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use Nevay\OTelSDK\Metrics\InstrumentType;
@@ -32,6 +33,7 @@ use function sprintf;
 final class PeriodicExportingMetricReader implements MetricReader {
 
     private readonly MetricExporter $metricExporter;
+    private readonly ?CardinalityLimitResolver $cardinalityLimits;
     private readonly ExportingProcessor $processor;
     private readonly MultiMetricProducer $metricProducer;
     private readonly string $exportIntervalCallbackId;
@@ -48,6 +50,8 @@ final class PeriodicExportingMetricReader implements MetricReader {
      * @param int<0, max> $collectTimeoutMillis collect timeout in milliseconds
      * @param MetricFilter|null $metricFilter metric filter to apply to metrics
      *        and attributes during collect
+     * @param CardinalityLimitResolver|null $cardinalityLimits cardinality
+     *        limits to apply to metrics
      * @param iterable<MetricProducer> $metricProducers metric producers to
      *        collect metrics from in addition to metrics from the SDK
      * @param TracerProviderInterface $tracerProvider tracer provider for self
@@ -64,6 +68,7 @@ final class PeriodicExportingMetricReader implements MetricReader {
         int $exportTimeoutMillis = 30000,
         int $collectTimeoutMillis = 30000,
         ?MetricFilter $metricFilter = null,
+        ?CardinalityLimitResolver $cardinalityLimits = null,
         iterable $metricProducers = [],
         TracerProviderInterface $tracerProvider = new NoopTracerProvider(),
         MeterProviderInterface $meterProvider = new NoopMeterProvider(),
@@ -82,6 +87,7 @@ final class PeriodicExportingMetricReader implements MetricReader {
 
         $this->metricExporter = $metricExporter;
         $this->metricProducer = new MultiMetricProducer($metricProducers);
+        $this->cardinalityLimits = $cardinalityLimits;
 
         $type = 'periodic_exporting_reader';
         $name ??= $type . '/' . ++self::$instanceCounter;
@@ -159,6 +165,6 @@ final class PeriodicExportingMetricReader implements MetricReader {
     }
 
     public function resolveCardinalityLimit(InstrumentType $instrumentType): ?int {
-        return $this->metricExporter->resolveCardinalityLimit($instrumentType);
+        return $this->cardinalityLimits?->resolveCardinalityLimit($instrumentType);
     }
 }
