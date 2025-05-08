@@ -68,6 +68,7 @@ final class CompositeSampler implements Sampler {
         $intent = $this->sampler->getSamplingIntent(
             new SamplingParams(
                 $context,
+                $parent,
                 $traceId,
                 $spanName,
                 $spanKind,

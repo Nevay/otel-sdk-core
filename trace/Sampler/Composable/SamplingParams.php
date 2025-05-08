@@ -4,6 +4,7 @@ namespace Nevay\OTelSDK\Trace\Sampler\Composable;
 use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Trace\Span\Kind;
 use Nevay\OTelSDK\Trace\Span\Link;
+use OpenTelemetry\API\Trace\SpanContextInterface;
 use OpenTelemetry\Context\ContextInterface;
 
 /**
@@ -13,6 +14,7 @@ final class SamplingParams {
 
     /**
      * @param ContextInterface $context parent context
+     * @param SpanContextInterface $parent parent span context, equivalent to `Span::fromContext($context)->getContext()`
      * @param string $traceId trace id in binary format
      * @param string $spanName span name
      * @param Kind $spanKind span kind
@@ -21,6 +23,7 @@ final class SamplingParams {
      */
     public function __construct(
         public readonly ContextInterface $context,
+        public readonly SpanContextInterface $parent,
         public readonly string $traceId,
         public readonly string $spanName,
         public readonly Kind $spanKind,
