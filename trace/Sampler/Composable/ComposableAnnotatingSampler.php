@@ -1,6 +1,7 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Trace\Sampler\Composable;
 
+use Nevay\OTelSDK\Trace\SamplingParams;
 use function iterator_to_array;
 use function json_encode;
 use function sprintf;
@@ -18,12 +19,10 @@ final class ComposableAnnotatingSampler implements ComposableSampler {
     public function getSamplingIntent(
         SamplingParams $params,
         ?int $parentThreshold,
-        bool $parentThresholdReliable,
     ): SamplingIntent {
         $intent = $this->sampler->getSamplingIntent(
             $params,
             $parentThreshold,
-            $parentThresholdReliable,
         );
 
         $attributes = $intent->attributes;

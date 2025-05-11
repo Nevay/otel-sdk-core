@@ -2,6 +2,7 @@
 namespace Nevay\OTelSDK\Trace\Sampler\Composable;
 
 use InvalidArgumentException;
+use Nevay\OTelSDK\Trace\SamplingParams;
 use function assert;
 use function pack;
 use function sprintf;
@@ -10,7 +11,7 @@ use function unpack;
 /**
  * @experimental
  */
-final class ComposableTraceIdRatioSampler implements ComposableSampler {
+final class ComposableTraceIdRatioBasedSampler implements ComposableSampler {
 
     private readonly float $ratio;
     private readonly SamplingIntent $intent;
@@ -38,13 +39,12 @@ final class ComposableTraceIdRatioSampler implements ComposableSampler {
     public function getSamplingIntent(
         SamplingParams $params,
         ?int $parentThreshold,
-        bool $parentThresholdReliable,
     ): SamplingIntent {
         return $this->intent;
     }
 
     public function __toString(): string {
-        return sprintf('TraceIdRatio{%F}', $this->ratio);
+        return sprintf('TraceIdRatioBased{%F}', $this->ratio);
     }
 
     /**

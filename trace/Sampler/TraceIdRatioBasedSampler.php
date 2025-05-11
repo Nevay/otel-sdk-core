@@ -2,12 +2,10 @@
 namespace Nevay\OTelSDK\Trace\Sampler;
 
 use InvalidArgumentException;
-use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Trace\Sampler;
 use Nevay\OTelSDK\Trace\SamplingDecision;
+use Nevay\OTelSDK\Trace\SamplingParams;
 use Nevay\OTelSDK\Trace\SamplingResult;
-use Nevay\OTelSDK\Trace\Span\Kind;
-use OpenTelemetry\Context\ContextInterface;
 use function assert;
 use function pack;
 use function sprintf;
@@ -38,15 +36,8 @@ final class TraceIdRatioBasedSampler implements Sampler {
         $this->threshold = substr(pack('J', self::computeTValue($ratio, $precision, 4)), 1);
     }
 
-    public function shouldSample(
-        ContextInterface $context,
-        string $traceId,
-        string $spanName,
-        Kind $spanKind,
-        Attributes $attributes,
-        array $links,
-    ): SamplingResult {
-        return $this->ratio >= 2 ** -56 && substr_compare($traceId, $this->threshold, 9) >= 0
+    public function shouldSample(SamplingParams $params): SamplingResult {
+        return $this->ratio >= 2 ** -56 && substr_compare($params->traceId, $this->threshold, 9) >= 0
             ? SamplingDecision::RecordAndSample
             : SamplingDecision::Drop;
     }

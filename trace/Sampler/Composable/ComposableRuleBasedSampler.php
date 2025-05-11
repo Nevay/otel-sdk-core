@@ -1,6 +1,7 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Trace\Sampler\Composable;
 
+use Nevay\OTelSDK\Trace\SamplingParams;
 use function implode;
 use function sprintf;
 
@@ -20,7 +21,6 @@ final class ComposableRuleBasedSampler implements ComposableSampler {
     public function getSamplingIntent(
         SamplingParams $params,
         ?int $parentThreshold,
-        bool $parentThresholdReliable,
     ): SamplingIntent {
         foreach ($this->rules as $rule) {
             if (!$rule->predicate->matches($params)) {
@@ -30,7 +30,6 @@ final class ComposableRuleBasedSampler implements ComposableSampler {
             return $rule->sampler->getSamplingIntent(
                 $params,
                 $parentThreshold,
-                $parentThresholdReliable,
             );
         }
 

@@ -5,6 +5,7 @@
     "license": "Apache-2.0",
     "require": {
         "php-64bit": "^8.1",
+        "ext-random": "^8.2",
         "composer-runtime-api": "^2.0",
         "amphp/amp": "^3.0",
         "open-telemetry/api": "~1.1",

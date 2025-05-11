@@ -16,24 +16,12 @@ interface Sampler {
     /**
      * Returns the sampling decision for a `Span` to be created.
      *
-     * @param ContextInterface $context parent context
-     * @param string $traceId trace id in binary format
-     * @param string $spanName span name
-     * @param Kind $spanKind span kind
-     * @param Attributes $attributes span attributes
-     * @param list<Link> $links span links
+     * @param SamplingParams $params sampling parameters
      * @return SamplingResult sampling result
      *
      * @see https://opentelemetry.io/docs/specs/otel/trace/sdk/#shouldsample
      */
-    public function shouldSample(
-        ContextInterface $context,
-        string $traceId,
-        string $spanName,
-        Kind $spanKind,
-        Attributes $attributes,
-        array $links,
-    ): SamplingResult;
+    public function shouldSample(SamplingParams $params): SamplingResult;
 
     /**
      * Returns the sampler name or short description with the configuration.

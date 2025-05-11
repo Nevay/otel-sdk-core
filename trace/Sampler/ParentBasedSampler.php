@@ -1,12 +1,9 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Trace\Sampler;
 
-use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Trace\Sampler;
+use Nevay\OTelSDK\Trace\SamplingParams;
 use Nevay\OTelSDK\Trace\SamplingResult;
-use Nevay\OTelSDK\Trace\Span\Kind;
-use OpenTelemetry\API\Trace\Span;
-use OpenTelemetry\Context\ContextInterface;
 
 final class ParentBasedSampler implements Sampler {
 
@@ -18,15 +15,8 @@ final class ParentBasedSampler implements Sampler {
         private readonly Sampler $localParentNotSampled  = new AlwaysOffSampler(),
     ) {}
 
-    public function shouldSample(
-        ContextInterface $context,
-        string $traceId,
-        string $spanName,
-        Kind $spanKind,
-        Attributes $attributes,
-        array $links,
-    ): SamplingResult {
-        $parent = Span::fromContext($context)->getContext();
+    public function shouldSample(SamplingParams $params): SamplingResult {
+        $parent = $params->parent;
 
         $sampler = match (true) {
             !$parent->isValid() => $this->root,
@@ -36,7 +26,7 @@ final class ParentBasedSampler implements Sampler {
             !$parent->isRemote() && !$parent->isSampled() => $this->localParentNotSampled,
         };
 
-        return $sampler->shouldSample($context, $traceId, $spanName, $spanKind, $attributes, $links);
+        return $sampler->shouldSample($params);
     }
 
     public function __toString(): string {

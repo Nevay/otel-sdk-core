@@ -1,6 +1,8 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Trace\Sampler\Composable;
 
+use Nevay\OTelSDK\Trace\SamplingParams;
+
 /**
  * @experimental
  */
@@ -9,7 +11,6 @@ interface ComposableSampler {
     public function getSamplingIntent(
         SamplingParams $params,
         ?int $parentThreshold,
-        bool $parentThresholdReliable,
     ): SamplingIntent;
 
     /**

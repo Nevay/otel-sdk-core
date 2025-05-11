@@ -6,6 +6,7 @@ use Nevay\OTelSDK\Common\ClockAware;
 use Nevay\OTelSDK\Common\ContextResolver;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\MonotonicClock;
+use Nevay\OTelSDK\Trace\SamplingParams;
 use Nevay\OTelSDK\Trace\Span\Kind;
 use Nevay\OTelSDK\Trace\Span\Link;
 use Nevay\OTelSDK\Trace\TracerConfig;
@@ -126,14 +127,16 @@ final class SpanBuilder implements SpanBuilderInterface {
         $droppedLinksCount = $this->droppedLinksCount;
         $startTimestamp = $this->startTimestamp;
 
-        $samplingResult = $this->tracerState->sampler->shouldSample(
+        $samplingResult = $this->tracerState->sampler->shouldSample(new SamplingParams(
             $parent,
+            $parentSpan->getContext(),
             $traceId,
+            $flags,
             $name,
             $spanKind,
             $attributesBuilder->build(),
             $links,
-        );
+        ));
         $traceState = $samplingResult->traceState()
             ?? $parentSpanContext?->getTraceState();
 
