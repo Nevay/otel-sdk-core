@@ -3,6 +3,7 @@ namespace Nevay\OTelSDK\Logs;
 
 use Amp\Cancellation;
 use Amp\CancelledException;
+use Nevay\OTelSDK\Common\InstrumentationScope;
 use OpenTelemetry\API\Logs\LoggerInterface;
 use OpenTelemetry\Context\ContextInterface;
 
@@ -12,6 +13,23 @@ use OpenTelemetry\Context\ContextInterface;
  * @see https://opentelemetry.io/docs/specs/otel/logs/sdk/#logrecordprocessor
  */
 interface LogRecordProcessor {
+
+    /**
+     * May return false to filter out log records.
+     *
+     * `LogRecordProcessor` implementations responsible for filtering and supporting the `Enabled` operation should
+     * ensure that `OnEmit` handles filtering independently. API users cannot be expected to call `Enabled` before
+     * emitting a log record.
+     *
+     * @param ContextInterface $context the context passed by the caller or the current context
+     * @param InstrumentationScope $instrumentationScope instrumentation scope associated with the logger
+     * @param int|null $severityNumber severity number passed by the caller
+     * @param string|null $eventName event name passed by the caller
+     * @return bool whether a log record should be filtered out for the given parameters
+     *
+     * @see https://opentelemetry.io/docs/specs/otel/logs/sdk/#enabled-1
+     */
+    public function enabled(ContextInterface $context, InstrumentationScope $instrumentationScope, ?int $severityNumber, ?string $eventName): bool;
 
     /**
      * Called when a log record is emitted.

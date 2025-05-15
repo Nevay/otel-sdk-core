@@ -3,6 +3,7 @@ namespace Nevay\OTelSDK\Logs\LogRecordProcessor;
 
 use Amp\Cancellation;
 use Amp\Future;
+use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Logs\LogRecordProcessor;
 use Nevay\OTelSDK\Logs\ReadWriteLogRecord;
 use OpenTelemetry\Context\ContextInterface;
@@ -27,6 +28,16 @@ final class MultiLogRecordProcessor implements LogRecordProcessor {
             1 => $logRecordProcessors[array_key_first($logRecordProcessors)],
             default => new MultiLogRecordProcessor($logRecordProcessors),
         };
+    }
+
+    public function enabled(ContextInterface $context, InstrumentationScope $instrumentationScope, ?int $severityNumber, ?string $eventName): bool {
+        foreach ($this->logRecordProcessors as $logRecordProcessor) {
+            if ($logRecordProcessor->enabled($context, $instrumentationScope, $severityNumber, $eventName)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function onEmit(ReadWriteLogRecord $logRecord, ContextInterface $context): void {

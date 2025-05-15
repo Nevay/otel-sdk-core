@@ -3,6 +3,7 @@ namespace Nevay\OTelSDK\Logs\Internal;
 
 use Amp\Cancellation;
 use Composer\InstalledVersions;
+use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Logs\LogRecordProcessor;
 use Nevay\OTelSDK\Logs\ReadWriteLogRecord;
 use OpenTelemetry\API\Metrics\CounterInterface;
@@ -27,6 +28,10 @@ final class SelfDiagnosticsLogRecordProcessor implements LogRecordProcessor {
             '{logrecord}',
             'The number of log records which have been created',
         );
+    }
+
+    public function enabled(ContextInterface $context, InstrumentationScope $instrumentationScope, ?int $severityNumber, ?string $eventName): bool {
+        return $this->createdCount->isEnabled();
     }
 
     public function onEmit(ReadWriteLogRecord $logRecord, ContextInterface $context): void {

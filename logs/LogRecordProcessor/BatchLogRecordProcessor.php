@@ -4,6 +4,7 @@ namespace Nevay\OTelSDK\Logs\LogRecordProcessor;
 use Amp\Cancellation;
 use Composer\InstalledVersions;
 use InvalidArgumentException;
+use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\Export\Driver\BatchDriver;
 use Nevay\OTelSDK\Common\Internal\Export\ExportingProcessor;
 use Nevay\OTelSDK\Common\Internal\Export\Listener\QueueSizeListener;
@@ -146,6 +147,10 @@ final class BatchLogRecordProcessor implements LogRecordProcessor {
     public function __destruct() {
         $this->closed = true;
         EventLoop::cancel($this->scheduledDelayCallbackId);
+    }
+
+    public function enabled(ContextInterface $context, InstrumentationScope $instrumentationScope, ?int $severityNumber, ?string $eventName): bool {
+        return !$this->closed;
     }
 
     public function onEmit(ReadWriteLogRecord $logRecord, ContextInterface $context): void {

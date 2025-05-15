@@ -2,6 +2,7 @@
 namespace Nevay\OTelSDK\Logs\Internal;
 
 use Amp\Cancellation;
+use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Logs\LogRecordProcessor;
 use Nevay\OTelSDK\Logs\ReadWriteLogRecord;
 use OpenTelemetry\Context\ContextInterface;
@@ -15,6 +16,10 @@ final class LogDiscardedLogRecordProcessor implements LogRecordProcessor {
     public function __construct(
         private readonly LoggerInterface $logger,
     ) {}
+
+    public function enabled(ContextInterface $context, InstrumentationScope $instrumentationScope, ?int $severityNumber, ?string $eventName): bool {
+        return true;
+    }
 
     public function onEmit(ReadWriteLogRecord $logRecord, ContextInterface $context): void {
         if (!$logRecord->getAttributes()->getDroppedAttributesCount()) {

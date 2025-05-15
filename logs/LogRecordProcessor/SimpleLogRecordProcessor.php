@@ -4,6 +4,7 @@ namespace Nevay\OTelSDK\Logs\LogRecordProcessor;
 use Amp\Cancellation;
 use Composer\InstalledVersions;
 use InvalidArgumentException;
+use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\Export\Driver\SimpleDriver;
 use Nevay\OTelSDK\Common\Internal\Export\ExportingProcessor;
 use Nevay\OTelSDK\Common\Internal\Export\Listener\QueueSizeListener;
@@ -115,6 +116,10 @@ final class SimpleLogRecordProcessor implements LogRecordProcessor {
 
     public function __destruct() {
         $this->closed = true;
+    }
+
+    public function enabled(ContextInterface $context, InstrumentationScope $instrumentationScope, ?int $severityNumber, ?string $eventName): bool {
+        return !$this->closed;
     }
 
     public function onEmit(ReadWriteLogRecord $logRecord, ContextInterface $context): void {

@@ -7,6 +7,7 @@ use Nevay\OTelSDK\Logs\LoggerConfig;
 use OpenTelemetry\API\Logs\LoggerInterface;
 use OpenTelemetry\API\Logs\LogRecord;
 use OpenTelemetry\API\Trace\Span;
+use OpenTelemetry\Context\ContextInterface;
 
 /**
  * @internal
@@ -19,8 +20,14 @@ final class Logger implements LoggerInterface {
         private readonly LoggerConfig $loggerConfig,
     ) {}
 
-    public function isEnabled(): bool {
-        return !$this->loggerConfig->disabled;
+    public function isEnabled(?ContextInterface $context = null, ?int $severityNumber = null, ?string $eventName = null): bool {
+        return !$this->loggerConfig->disabled
+            && $this->loggerState->logRecordProcessor->enabled(
+                ContextResolver::resolve($context, $this->loggerState->contextStorage),
+                $this->instrumentationScope,
+                $severityNumber,
+                $eventName,
+            );
     }
 
     public function emit(LogRecord $logRecord): void {
