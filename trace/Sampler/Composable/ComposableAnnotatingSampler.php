@@ -2,6 +2,7 @@
 namespace Nevay\OTelSDK\Trace\Sampler\Composable;
 
 use Nevay\OTelSDK\Trace\SamplingParams;
+use Traversable;
 use function iterator_to_array;
 use function json_encode;
 use function sprintf;
@@ -39,6 +40,11 @@ final class ComposableAnnotatingSampler implements ComposableSampler {
     }
 
     public function __toString(): string {
-        return sprintf('Annotating{Sampler=%s,Attributes=%s}', $this->sampler, json_encode(iterator_to_array($this->attributes)));
+        $attributes = $this->attributes;
+        if ($attributes instanceof Traversable) {
+            $attributes = iterator_to_array($attributes);
+        }
+
+        return sprintf('Annotating{Sampler=%s,Attributes=%s}', $this->sampler, json_encode($attributes));
     }
 }
