@@ -1,11 +1,6 @@
 <?php
 namespace Nevay\OTelSDK\Trace;
 
-use Nevay\OTelSDK\Common\Attributes;
-use Nevay\OTelSDK\Trace\Span\Kind;
-use Nevay\OTelSDK\Trace\Span\Link;
-use OpenTelemetry\Context\ContextInterface;
-
 /**
  * Decides whether a `Span` should be recorded and sampled.
  *

@@ -9,6 +9,7 @@ use Nevay\OTelSDK\Common\HighResolutionTime;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Resource;
+use Nevay\OTelSDK\Common\SelfDiagnosticsContext;
 use Nevay\OTelSDK\Common\SystemClock;
 use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
 use Nevay\OTelSDK\Logs\Internal\LogDiscardedLogRecordProcessor;
@@ -87,8 +88,9 @@ final class LoggerProviderBuilder {
 
     /**
      * @internal
+     * @noinspection PhpUnusedParameterInspection
      */
-    public function copyStateInto(LoggerProvider $loggerProvider): void {
+    public function copyStateInto(LoggerProvider $loggerProvider, SelfDiagnosticsContext $selfDiagnostics): void {
         $logRecordProcessors = $this->logRecordProcessors;
         if ($loggerProvider->loggerState->logger) {
             $logRecordProcessors[] = new LogDiscardedLogRecordProcessor($loggerProvider->loggerState->logger);
@@ -113,7 +115,7 @@ final class LoggerProviderBuilder {
 
         $clock = $this->clock ?? SystemClock::create();
 
-        $loggerProvider = new LoggerProvider(
+        return new LoggerProvider(
             null,
             Resource::mergeAll(...$this->resources),
             UnlimitedAttributesFactory::create(),
@@ -122,15 +124,11 @@ final class LoggerProviderBuilder {
             $logRecordAttributesFactory,
             $logger,
         );
-
-        $this->copyStateInto($loggerProvider);
-
-        return $loggerProvider;
     }
 
     public function build(?LoggerInterface $logger = null): LoggerProviderInterface {
         $loggerProvider = $this->buildBase($logger);
-        $this->copyStateInto($loggerProvider);
+        $this->copyStateInto($loggerProvider, new SelfDiagnosticsContext());
 
         return $loggerProvider;
     }

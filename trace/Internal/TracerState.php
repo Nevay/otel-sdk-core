@@ -19,6 +19,7 @@ final class TracerState {
     public IdGenerator $idGenerator;
     public Sampler $sampler;
     public SpanProcessor $spanProcessor;
+    public SpanListener $spanListener;
 
     public function __construct(
         public readonly ?ContextStorageInterface $contextStorage,

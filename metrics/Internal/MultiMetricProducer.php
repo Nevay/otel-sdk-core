@@ -6,14 +6,19 @@ use Amp\Pipeline\DisposedException;
 use Amp\Pipeline\Queue;
 use Nevay\OTelSDK\Metrics\MetricFilter;
 use Nevay\OTelSDK\Metrics\MetricProducer;
+use OpenTelemetry\API\Metrics\HistogramInterface;
 use Revolt\EventLoop;
 use Throwable;
 use function count;
+use function hrtime;
 
 /**
  * @internal
  */
 final class MultiMetricProducer implements MetricProducer {
+
+    private readonly HistogramInterface $duration;
+    private readonly array $attributes;
 
     /** @var list<MetricProducer> */
     public array $metricProducers = [];
@@ -21,10 +26,16 @@ final class MultiMetricProducer implements MetricProducer {
     /**
      * @param iterable<MetricProducer> $metricProducers
      */
-    public function __construct(iterable $metricProducers = []) {
+    public function __construct(iterable $metricProducers, HistogramInterface $duration, string $type, string $name) {
         foreach ($metricProducers as $metricProducer) {
             $this->metricProducers[] = $metricProducer;
         }
+
+        $this->duration = $duration;
+        $this->attributes = [
+            'otel.component.name' => $name,
+            'otel.component.type' => $type,
+        ];
     }
 
     public function produce(?MetricFilter $metricFilter = null, ?Cancellation $cancellation = null): iterable {
@@ -34,7 +45,8 @@ final class MultiMetricProducer implements MetricProducer {
 
         $queue = new Queue();
         $pending = count($this->metricProducers);
-        $handler = static function(MetricProducer $metricProducer, ?MetricFilter $metricFilter, ?Cancellation $cancellation, Queue $queue) use (&$pending): void {
+        $start = hrtime(true);
+        $handler = function(MetricProducer $metricProducer, ?MetricFilter $metricFilter, ?Cancellation $cancellation, Queue $queue) use (&$pending, $start): void {
             if ($queue->isDisposed()) {
                 return;
             }
@@ -48,10 +60,14 @@ final class MultiMetricProducer implements MetricProducer {
                 }
             } catch (DisposedException) {
             } catch (Throwable $e) {
-                $queue->error($e);
+                if (!$queue->isComplete()) {
+                    $queue->error($e);
+                    $this->duration->record((hrtime(true) - $start) / 1e9, ['error.type' => $e::class, ...$this->attributes]);
+                }
             } finally {
-                if (!--$pending) {
+                if (!--$pending && !$queue->isComplete()) {
                     $queue->complete();
+                    $this->duration->record((hrtime(true) - $start) / 1e9, $this->attributes);
                 }
             }
         };

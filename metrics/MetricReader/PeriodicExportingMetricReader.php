@@ -86,15 +86,23 @@ final class PeriodicExportingMetricReader implements MetricReader {
         }
 
         $this->metricExporter = $metricExporter;
-        $this->metricProducer = new MultiMetricProducer($metricProducers);
         $this->cardinalityLimits = $cardinalityLimits;
 
-        $type = 'periodic_exporting_reader';
+        $type = 'periodic_metric_reader';
         $name ??= $type . '/' . ++self::$instanceCounter;
 
         $version = InstalledVersions::getVersionRanges('tbachert/otel-sdk-metrics');
-        $tracer = $tracerProvider->getTracer('com.tobiasbachert.otel.sdk.metrics', $version);
+        $tracer = $tracerProvider->getTracer('com.tobiasbachert.otel.sdk.metrics', $version, 'https://opentelemetry.io/schemas/1.34.0');
+        $meter = $meterProvider->getMeter('com.tobiasbachert.otel.sdk.metrics', $version, 'https://opentelemetry.io/schemas/1.34.0');
 
+        $duration = $meter->createHistogram(
+            'otel.sdk.metric_reader.collection.duration',
+            's',
+            'The duration of the collect operation of the metric reader',
+            advisory: ['ExplicitBucketBoundaries' => []],
+        );
+
+        $this->metricProducer = new MultiMetricProducer($metricProducers, $duration, $type, $name);
         $this->processor = $processor = new ExportingProcessor(
             $metricExporter,
             new MetricExportDriver($this->metricProducer, $metricFilter, $collectTimeoutMillis),

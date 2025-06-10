@@ -9,11 +9,13 @@ use Nevay\OTelSDK\Common\HighResolutionTime;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Resource;
+use Nevay\OTelSDK\Common\SelfDiagnosticsContext;
 use Nevay\OTelSDK\Common\SystemClock;
 use Nevay\OTelSDK\Common\SystemHighResolutionTime;
 use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
 use Nevay\OTelSDK\Trace\IdGenerator\RandomIdGenerator;
 use Nevay\OTelSDK\Trace\Internal\LogDiscardedSpanProcessor;
+use Nevay\OTelSDK\Trace\Internal\SelfDiagnosticsSpanListener;
 use Nevay\OTelSDK\Trace\Internal\TracerProvider;
 use Nevay\OTelSDK\Trace\Sampler\AlwaysOnSampler;
 use Nevay\OTelSDK\Trace\Sampler\ParentBasedSampler;
@@ -149,7 +151,7 @@ final class TracerProviderBuilder {
     /**
      * @internal
      */
-    public function copyStateInto(TracerProvider $tracerProvider): void {
+    public function copyStateInto(TracerProvider $tracerProvider, SelfDiagnosticsContext $selfDiagnostics): void {
         $idGenerator = $this->idGenerator ?? new RandomIdGenerator();
         $sampler = $this->sampler ?? new ParentBasedSampler(new AlwaysOnSampler());
         $spanProcessors = $this->spanProcessors;
@@ -160,6 +162,8 @@ final class TracerProviderBuilder {
         $tracerProvider->tracerState->idGenerator = $idGenerator;
         $tracerProvider->tracerState->sampler = $sampler;
         $tracerProvider->tracerState->spanProcessor = MultiSpanProcessor::composite(...$spanProcessors);
+
+        $tracerProvider->tracerState->spanListener = new SelfDiagnosticsSpanListener($selfDiagnostics->meterProvider);
 
         $tracerProvider->updateConfigurator(new Configurator\NoopConfigurator());
     }
@@ -210,7 +214,7 @@ final class TracerProviderBuilder {
 
     public function build(?LoggerInterface $logger = null): TracerProviderInterface {
         $tracerProvider = $this->buildBase($logger);
-        $this->copyStateInto($tracerProvider);
+        $this->copyStateInto($tracerProvider, new SelfDiagnosticsContext());
 
         return $tracerProvider;
     }

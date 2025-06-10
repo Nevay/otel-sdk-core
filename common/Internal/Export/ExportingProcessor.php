@@ -179,8 +179,8 @@ final class ExportingProcessor {
 
         $span = $tracer
             ->spanBuilder($p->type)
-            ->setAttribute('otel.sdk.component.name', $p->name)
-            ->setAttribute('otel.sdk.component.type', $p->type)
+            ->setAttribute('otel.component.name', $p->name)
+            ->setAttribute('otel.component.type', $p->type)
             ->setAttribute('code.function', __FUNCTION__)
             ->setAttribute('code.namespace', __CLASS__)
             ->setAttribute('code.filepath', __FILE__)
@@ -188,7 +188,7 @@ final class ExportingProcessor {
             ->startSpan();
         $scope = $span->activate();
 
-        $p->processedItems?->add($count, ['otel.sdk.component.name' => $p->name, 'otel.sdk.component.type' => $p->type]);
+        $p->processedItems?->add($count, ['otel.component.name' => $p->name, 'otel.component.type' => $p->type]);
 
         $listener->onExport($count);
 

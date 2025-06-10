@@ -93,26 +93,26 @@ final class BatchLogRecordProcessor implements LogRecordProcessor {
         $this->maxQueueSize = $maxQueueSize;
         $this->maxExportBatchSize = $maxExportBatchSize;
 
-        $type = 'batching_logrecord_processor';
+        $type = 'batching_log_processor';
         $name ??= $type . '/' . ++self::$instanceCounter;
 
         $version = InstalledVersions::getVersionRanges('tbachert/otel-sdk-logs');
-        $tracer = $tracerProvider->getTracer('com.tobiasbachert.otel.sdk.logs', $version);
-        $meter = $meterProvider->getMeter('com.tobiasbachert.otel.sdk.logs', $version);
+        $tracer = $tracerProvider->getTracer('com.tobiasbachert.otel.sdk.logs', $version, 'https://opentelemetry.io/schemas/1.34.0');
+        $meter = $meterProvider->getMeter('com.tobiasbachert.otel.sdk.logs', $version, 'https://opentelemetry.io/schemas/1.34.0');
 
         $queueSize = $meter->createObservableUpDownCounter(
-            'otel.sdk.log.processor.queue_size',
-            '{logrecord}',
+            'otel.sdk.processor.log.queue.size',
+            '{log_record}',
             'The number of log records in the queue of a given instance of an SDK log record processor',
         );
         $queueCapacity = $meter->createObservableGauge(
-            'otel.sdk.log.processor.queue_capacity',
-            '{logrecord}',
+            'otel.sdk.processor.log.queue.capacity',
+            '{log_record}',
             'The maximum number of log records the queue of a given instance of an SDK log record processor can hold',
         );
         $processed = $meter->createCounter(
-            'otel.sdk.log.processor.logrecords_processed',
-            '{logrecord}',
+            'otel.sdk.processor.log.processed',
+            '{log_record}',
             'The number of log records for which the processing has finished, either successful or failed',
         );
 
