@@ -1,7 +1,6 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Common\Internal;
 
-use Closure;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use WeakMap;
 use WeakReference;
@@ -21,28 +20,9 @@ final class InstrumentationScopeCache {
      * @noinspection PhpPropertyOnlyWrittenInspection
      */
     private readonly WeakMap $destructors;
-    private readonly Closure $destructorFunction;
-
-    private static ?bool $isShutdown = null;
 
     public function __construct() {
         $this->destructors = new WeakMap();
-
-        $instrumentationScopes = &$this->instrumentationScopes;
-        $this->destructorFunction = static function(string $index, int $id) use (&$instrumentationScopes): void {
-            if (self::$isShutdown) {
-                return;
-            }
-            unset($instrumentationScopes[$index][$id]);
-            if (!$instrumentationScopes[$index]) {
-                unset($instrumentationScopes[$index]);
-            }
-        };
-
-        if (self::$isShutdown === null) {
-            self::$isShutdown = false;
-            register_shutdown_function(static fn() => self::$isShutdown = true);
-        }
     }
 
     public function intern(InstrumentationScope $instrumentationScope): InstrumentationScope {
@@ -56,7 +36,7 @@ final class InstrumentationScopeCache {
 
         $id = spl_object_id($instrumentationScope);
         /** @noinspection PhpSecondWriteToReadonlyPropertyInspection */
-        $this->destructors[$instrumentationScope] = $this->destructor($this->destructorFunction, $index, $id);
+        $this->destructors[$instrumentationScope] = $this->destructor($this->instrumentationScopes, $index, $id);
         $this->instrumentationScopes[$index][$id] = WeakReference::create($instrumentationScope);
 
         return $instrumentationScope;
@@ -71,14 +51,30 @@ final class InstrumentationScopeCache {
         ;
     }
 
-    private function destructor(Closure $destructor, mixed ...$args): object {
-        return new class($destructor, $args) {
+    private function destructor(array &$instrumentationScopes, string $index, int $id): object {
+        return new class($instrumentationScopes, $index, $id) {
+
+            private static ?bool $isShutdown = null;
+
             public function __construct(
-                private readonly Closure $destructor,
-                private readonly array $args,
-            ) {}
+                private array &$instrumentationScopes,
+                private readonly string $index,
+                private readonly int $id,
+            ) {
+                if (self::$isShutdown === null) {
+                    self::$isShutdown = false;
+                    register_shutdown_function(static fn() => self::$isShutdown = true);
+                }
+            }
+
             public function __destruct() {
-                ($this->destructor)(...$this->args);
+                if (self::$isShutdown) {
+                    return;
+                }
+                unset($this->instrumentationScopes[$this->index][$this->id]);
+                if (!$this->instrumentationScopes[$this->index]) {
+                    unset($this->instrumentationScopes[$this->index]);
+                }
             }
         };
     }
