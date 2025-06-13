@@ -76,7 +76,7 @@ final class Base2ExponentialBucketHistogramBuckets {
     /**
      * Returns the buckets scaled down by the given factor.
      *
-     * @param int<0, max> $factor factor do scale down by
+     * @param int<0, max> $factor factor to scale down by
      * @return array<int, int> bucket counts
      */
     private function scaleBy(int $factor): array {
