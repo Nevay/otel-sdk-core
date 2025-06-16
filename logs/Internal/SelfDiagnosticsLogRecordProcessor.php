@@ -21,17 +21,18 @@ final class SelfDiagnosticsLogRecordProcessor implements LogRecordProcessor {
         $meter = $meterProvider->getMeter(
             'com.tobiasbachert.otel.sdk.logs',
             InstalledVersions::getVersionRanges('tbachert/otel-sdk-logs'),
+            'https://opentelemetry.io/schemas/1.34.0',
         );
 
         $this->createdCount = $meter->createCounter(
-            'otel.sdk.logrecord.created_count',
-            '{logrecord}',
-            'The number of log records which have been created',
+            'otel.sdk.log.created',
+            '{log_record}',
+            'The number of logs submitted to enabled SDK Loggers',
         );
     }
 
     public function enabled(ContextInterface $context, InstrumentationScope $instrumentationScope, ?int $severityNumber, ?string $eventName): bool {
-        return $this->createdCount->isEnabled();
+        return false;
     }
 
     public function onEmit(ReadWriteLogRecord $logRecord, ContextInterface $context): void {
