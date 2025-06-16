@@ -8,7 +8,6 @@ use Nevay\OTelSDK\Common\HighResolutionTime;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Resource;
-use Nevay\OTelSDK\Common\SelfDiagnosticsContext;
 use Nevay\OTelSDK\Common\SystemClock;
 use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
 use Nevay\OTelSDK\Metrics\Exemplar\AlignedHistogramBucketExemplarReservoir;
@@ -21,6 +20,7 @@ use Nevay\OTelSDK\Metrics\Internal\MeterMetricProducer;
 use Nevay\OTelSDK\Metrics\Internal\MeterProvider;
 use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\DelayedStalenessHandlerFactory;
 use Nevay\OTelSDK\Metrics\Internal\View\ViewRegistryBuilder;
+use OpenTelemetry\API\Configuration\Context;
 use Psr\Log\LoggerInterface;
 
 final class MeterProviderBuilder {
@@ -129,7 +129,7 @@ final class MeterProviderBuilder {
      * @internal
      * @noinspection PhpUnusedParameterInspection
      */
-    public function copyStateInto(MeterProvider $meterProvider, SelfDiagnosticsContext $selfDiagnostics): void {
+    public function copyStateInto(MeterProvider $meterProvider, Context $selfDiagnostics): void {
         $meterProvider->meterState->metricReaders = $this->metricReaders;
 
         foreach ($this->metricReaders as $metricReader) {
@@ -171,7 +171,7 @@ final class MeterProviderBuilder {
 
     public function build(?LoggerInterface $logger = null): MeterProviderInterface {
         $meterProvider = $this->buildBase($logger);
-        $this->copyStateInto($meterProvider, new SelfDiagnosticsContext());
+        $this->copyStateInto($meterProvider, new Context());
 
         return $meterProvider;
     }

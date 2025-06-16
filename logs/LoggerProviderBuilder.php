@@ -9,12 +9,12 @@ use Nevay\OTelSDK\Common\HighResolutionTime;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Resource;
-use Nevay\OTelSDK\Common\SelfDiagnosticsContext;
 use Nevay\OTelSDK\Common\SystemClock;
 use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
 use Nevay\OTelSDK\Logs\Internal\LogDiscardedLogRecordProcessor;
 use Nevay\OTelSDK\Logs\Internal\LoggerProvider;
 use Nevay\OTelSDK\Logs\LogRecordProcessor\MultiLogRecordProcessor;
+use OpenTelemetry\API\Configuration\Context;
 use Psr\Log\LoggerInterface;
 
 final class LoggerProviderBuilder {
@@ -90,7 +90,7 @@ final class LoggerProviderBuilder {
      * @internal
      * @noinspection PhpUnusedParameterInspection
      */
-    public function copyStateInto(LoggerProvider $loggerProvider, SelfDiagnosticsContext $selfDiagnostics): void {
+    public function copyStateInto(LoggerProvider $loggerProvider, Context $selfDiagnostics): void {
         $logRecordProcessors = $this->logRecordProcessors;
         if ($loggerProvider->loggerState->logger) {
             $logRecordProcessors[] = new LogDiscardedLogRecordProcessor($loggerProvider->loggerState->logger);
@@ -128,7 +128,7 @@ final class LoggerProviderBuilder {
 
     public function build(?LoggerInterface $logger = null): LoggerProviderInterface {
         $loggerProvider = $this->buildBase($logger);
-        $this->copyStateInto($loggerProvider, new SelfDiagnosticsContext());
+        $this->copyStateInto($loggerProvider, new Context());
 
         return $loggerProvider;
     }

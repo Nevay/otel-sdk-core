@@ -9,7 +9,6 @@ use Nevay\OTelSDK\Common\HighResolutionTime;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Resource;
-use Nevay\OTelSDK\Common\SelfDiagnosticsContext;
 use Nevay\OTelSDK\Common\SystemClock;
 use Nevay\OTelSDK\Common\SystemHighResolutionTime;
 use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
@@ -20,6 +19,7 @@ use Nevay\OTelSDK\Trace\Internal\TracerProvider;
 use Nevay\OTelSDK\Trace\Sampler\AlwaysOnSampler;
 use Nevay\OTelSDK\Trace\Sampler\ParentBasedSampler;
 use Nevay\OTelSDK\Trace\SpanProcessor\MultiSpanProcessor;
+use OpenTelemetry\API\Configuration\Context;
 use Psr\Log\LoggerInterface;
 use function str_starts_with;
 
@@ -151,7 +151,7 @@ final class TracerProviderBuilder {
     /**
      * @internal
      */
-    public function copyStateInto(TracerProvider $tracerProvider, SelfDiagnosticsContext $selfDiagnostics): void {
+    public function copyStateInto(TracerProvider $tracerProvider, Context $selfDiagnostics): void {
         $idGenerator = $this->idGenerator ?? new RandomIdGenerator();
         $sampler = $this->sampler ?? new ParentBasedSampler(new AlwaysOnSampler());
         $spanProcessors = $this->spanProcessors;
@@ -214,7 +214,7 @@ final class TracerProviderBuilder {
 
     public function build(?LoggerInterface $logger = null): TracerProviderInterface {
         $tracerProvider = $this->buildBase($logger);
-        $this->copyStateInto($tracerProvider, new SelfDiagnosticsContext());
+        $this->copyStateInto($tracerProvider, new Context());
 
         return $tracerProvider;
     }
