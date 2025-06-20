@@ -43,7 +43,7 @@ final class MultiMetricProducer implements MetricProducer {
             return [];
         }
 
-        $queue = new Queue();
+        $queue = new Queue(32);
         $pending = count($this->metricProducers);
         $start = hrtime(true);
         $handler = function(MetricProducer $metricProducer, ?MetricFilter $metricFilter, ?Cancellation $cancellation, Queue $queue) use (&$pending, $start): void {
