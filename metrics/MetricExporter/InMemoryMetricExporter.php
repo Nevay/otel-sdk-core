@@ -10,7 +10,6 @@ use Nevay\OTelSDK\Metrics\Data\Temporality;
 use Nevay\OTelSDK\Metrics\InstrumentType;
 use Nevay\OTelSDK\Metrics\MetricExporter;
 use Nevay\OTelSDK\Metrics\TemporalityResolver;
-use Nevay\OTelSDK\Metrics\TemporalityResolvers;
 
 /**
  * @extends InMemoryExporter<Metric>
@@ -18,7 +17,7 @@ use Nevay\OTelSDK\Metrics\TemporalityResolvers;
 final class InMemoryMetricExporter extends InMemoryExporter implements MetricExporter {
 
     public function __construct(
-        private readonly TemporalityResolver $temporalityResolver = TemporalityResolvers::LowMemory,
+        private readonly TemporalityResolver $temporalityResolver = TemporalityResolver::LowMemory,
         private readonly Aggregation $aggregation = new DefaultAggregation(),
     ) {}
 
