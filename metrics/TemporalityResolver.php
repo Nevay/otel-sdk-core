@@ -1,7 +1,6 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Metrics;
 
-use Nevay\OTelSDK\Metrics\Data\Descriptor;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use Nevay\OTelSDK\Metrics\Internal\TemporalityResolvers;
 
@@ -21,10 +20,12 @@ interface TemporalityResolver {
     const LowMemory = TemporalityResolvers::LowMemoryResolver;
 
     /**
-     * Resolves the temporality to use for the given stream descriptor.
+     * Resolves the temporality to use for the given instrument type.
      *
-     * @param Descriptor $descriptor stream descriptor
-     * @return Temporality|null temporality to use, or null to drop the stream
+     * @param InstrumentType $instrumentType stream descriptor
+     * @param Temporality $preferredTemporality preferred temporality of the underlying metric stream, `Delta` for
+     *        synchronous instruments and `Cumulative` for asynchronous instruments
+     * @return Temporality temporality to use
      */
-    public function resolveTemporality(Descriptor $descriptor): ?Temporality;
+    public function resolveTemporality(InstrumentType $instrumentType, Temporality $preferredTemporality): Temporality;
 }

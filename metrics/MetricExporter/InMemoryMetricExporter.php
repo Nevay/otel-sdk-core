@@ -4,7 +4,6 @@ namespace Nevay\OTelSDK\Metrics\MetricExporter;
 use Nevay\OTelSDK\Common\Internal\Export\Exporter\InMemoryExporter;
 use Nevay\OTelSDK\Metrics\Aggregation;
 use Nevay\OTelSDK\Metrics\Aggregation\DefaultAggregation;
-use Nevay\OTelSDK\Metrics\Data\Descriptor;
 use Nevay\OTelSDK\Metrics\Data\Metric;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use Nevay\OTelSDK\Metrics\InstrumentType;
@@ -21,8 +20,8 @@ final class InMemoryMetricExporter extends InMemoryExporter implements MetricExp
         private readonly Aggregation $aggregation = new DefaultAggregation(),
     ) {}
 
-    public function resolveTemporality(Descriptor $descriptor): ?Temporality {
-        return $this->temporalityResolver->resolveTemporality($descriptor);
+    public function resolveTemporality(InstrumentType $instrumentType, Temporality $preferredTemporality): Temporality {
+        return $this->temporalityResolver->resolveTemporality($instrumentType, $preferredTemporality);
     }
 
     public function resolveAggregation(InstrumentType $instrumentType): Aggregation {

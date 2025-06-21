@@ -238,10 +238,6 @@ final class MeterState {
             }
 
             foreach ($this->metricReaders as $i => $metricReader) {
-                if (!$producerTemporality = $metricReader->resolveTemporality($descriptor)) {
-                    continue;
-                }
-
                 $aggregator = $viewAggregator ?? $metricReader->resolveAggregation($instrument->type)->aggregator($instrument->type, $instrument->advisory);
                 if (!$aggregator || $aggregator instanceof DropAggregator) {
                     continue;
@@ -258,7 +254,7 @@ final class MeterState {
                     $exemplarReservoir,
                     $cardinalityLimit,
                     $this->metricProducers[$i],
-                    $producerTemporality,
+                    $metricReader->resolveTemporality($descriptor->instrumentType, $descriptor->temporality),
                 );
             }
         }

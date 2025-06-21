@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Metrics\Internal;
 
-use Nevay\OTelSDK\Metrics\Data\Descriptor;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
+use Nevay\OTelSDK\Metrics\InstrumentType;
 use Nevay\OTelSDK\Metrics\TemporalityResolver;
 
 /**
@@ -14,11 +14,11 @@ enum TemporalityResolvers implements TemporalityResolver {
     case CumulativeResolver;
     case LowMemoryResolver;
 
-    public function resolveTemporality(Descriptor $descriptor): Temporality {
+    public function resolveTemporality(InstrumentType $instrumentType, Temporality $preferredTemporality): Temporality {
         return match ($this) {
             self::DeltaResolver => Temporality::Delta,
             self::CumulativeResolver => Temporality::Cumulative,
-            self::LowMemoryResolver => $descriptor->temporality,
+            self::LowMemoryResolver => $preferredTemporality,
         };
     }
 }

@@ -145,8 +145,8 @@ final class PullMetricReader implements MetricReader {
         return $this->metricExporter->forceFlush($cancellation);
     }
 
-    public function resolveTemporality(Descriptor $descriptor): ?Temporality {
-        return $this->metricExporter->resolveTemporality($descriptor);
+    public function resolveTemporality(InstrumentType $instrumentType, Temporality $preferredTemporality): Temporality {
+        return $this->metricExporter->resolveTemporality($instrumentType, $preferredTemporality);
     }
 
     public function resolveAggregation(InstrumentType $instrumentType): Aggregation {
