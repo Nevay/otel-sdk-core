@@ -157,8 +157,6 @@ final class MeterState {
             $dedupId = self::streamDedupId($view);
             if (($streamId = $dedup[$dedupId] ?? null) === null) {
                 $stream = new SynchronousMetricStream($view->aggregator, $startTimestamp, $view->cardinalityLimit);
-                assert($stream->temporality() === $view->descriptor->temporality);
-
                 $streamId = $this->registry->registerSynchronousStream($instrument, $stream, new DefaultMetricAggregator(
                     $view->aggregator,
                     $view->attributeProcessor,
@@ -183,8 +181,6 @@ final class MeterState {
             $dedupId = self::streamDedupId($view);
             if (($streamId = $dedup[$dedupId] ?? null) === null) {
                 $stream = new AsynchronousMetricStream($view->aggregator, $startTimestamp);
-                assert($stream->temporality() === $view->descriptor->temporality);
-
                 $streamId = $this->registry->registerAsynchronousStream($instrument, $stream, new DefaultMetricAggregatorFactory(
                     $view->aggregator,
                     $view->attributeProcessor,
@@ -224,7 +220,6 @@ final class MeterState {
                 $instrument->unit,
                 $description,
                 $instrument->type,
-                $streamTemporality,
             );
 
             $viewAggregator = $view->aggregation?->aggregator($instrument->type, $instrument->advisory);
@@ -254,7 +249,7 @@ final class MeterState {
                     $exemplarReservoir,
                     $cardinalityLimit,
                     $this->metricProducers[$i],
-                    $metricReader->resolveTemporality($descriptor->instrumentType, $descriptor->temporality),
+                    $metricReader->resolveTemporality($descriptor->instrumentType, $streamTemporality),
                 );
             }
         }

@@ -14,6 +14,5 @@ final class Descriptor {
         public readonly ?string $unit,
         public readonly ?string $description,
         public readonly InstrumentType $instrumentType,
-        public readonly Temporality $temporality,
     ) {}
 }
