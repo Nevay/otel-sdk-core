@@ -8,7 +8,6 @@ use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\Data\Descriptor;
-use Nevay\OTelSDK\Metrics\Data\Temporality;
 use Nevay\OTelSDK\Metrics\ExemplarReservoir;
 use Nevay\OTelSDK\Metrics\Instrument;
 use Nevay\OTelSDK\Metrics\InstrumentType;
@@ -153,7 +152,7 @@ final class MeterState {
     private function createSynchronousStreams(Instrument $instrument, InstrumentationScope $instrumentationScope, int $startTimestamp): void {
         $streams = [];
         $dedup = [];
-        foreach ($this->views($instrument, $instrumentationScope, Temporality::Delta) as $view) {
+        foreach ($this->views($instrument, $instrumentationScope) as $view) {
             $dedupId = self::streamDedupId($view);
             if (($streamId = $dedup[$dedupId] ?? null) === null) {
                 $stream = new SynchronousMetricStream($view->aggregator, $startTimestamp, $view->cardinalityLimit);
@@ -177,7 +176,7 @@ final class MeterState {
     private function createAsynchronousStreams(Instrument $instrument, InstrumentationScope $instrumentationScope, int $startTimestamp): void {
         $streams = [];
         $dedup = [];
-        foreach ($this->views($instrument, $instrumentationScope, Temporality::Cumulative) as $view) {
+        foreach ($this->views($instrument, $instrumentationScope) as $view) {
             $dedupId = self::streamDedupId($view);
             if (($streamId = $dedup[$dedupId] ?? null) === null) {
                 $stream = new AsynchronousMetricStream($view->aggregator, $startTimestamp);
@@ -199,7 +198,7 @@ final class MeterState {
     /**
      * @return iterable<ResolvedView>
      */
-    private function views(Instrument $instrument, InstrumentationScope $instrumentationScope, Temporality $streamTemporality): iterable {
+    private function views(Instrument $instrument, InstrumentationScope $instrumentationScope): iterable {
         $attributeProcessor = new DefaultAttributeProcessor();
         if (($attributeKeys = $instrument->advisory['Attributes'] ?? null) !== null) {
             $attributeProcessor = new FilteredAttributeProcessor(Attributes::filterKeys(include: $attributeKeys));
@@ -249,7 +248,7 @@ final class MeterState {
                     $exemplarReservoir,
                     $cardinalityLimit,
                     $this->metricProducers[$i],
-                    $metricReader->resolveTemporality($descriptor->instrumentType, $streamTemporality),
+                    $metricReader->resolveTemporality($descriptor->instrumentType),
                 );
             }
         }

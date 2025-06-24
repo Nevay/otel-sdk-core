@@ -8,7 +8,6 @@ use Nevay\OTelSDK\Common\Internal\Export\ExportingProcessor;
 use Nevay\OTelSDK\Common\Internal\Export\Listener\NoopListener;
 use Nevay\OTelSDK\Metrics\Aggregation;
 use Nevay\OTelSDK\Metrics\CardinalityLimitResolver;
-use Nevay\OTelSDK\Metrics\Data\Descriptor;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use Nevay\OTelSDK\Metrics\InstrumentType;
 use Nevay\OTelSDK\Metrics\Internal\MetricExportDriver;
@@ -164,8 +163,8 @@ final class PeriodicExportingMetricReader implements MetricReader {
         return $this->processor->forceFlush($cancellation);
     }
 
-    public function resolveTemporality(InstrumentType $instrumentType, Temporality $preferredTemporality): Temporality {
-        return $this->metricExporter->resolveTemporality($instrumentType, $preferredTemporality);
+    public function resolveTemporality(InstrumentType $instrumentType): Temporality {
+        return $this->metricExporter->resolveTemporality($instrumentType);
     }
 
     public function resolveAggregation(InstrumentType $instrumentType): Aggregation {

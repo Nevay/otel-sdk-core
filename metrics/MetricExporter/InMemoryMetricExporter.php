@@ -20,8 +20,8 @@ final class InMemoryMetricExporter extends InMemoryExporter implements MetricExp
         private readonly Aggregation $aggregation = new DefaultAggregation(),
     ) {}
 
-    public function resolveTemporality(InstrumentType $instrumentType, Temporality $preferredTemporality): Temporality {
-        return $this->temporalityResolver?->resolveTemporality($instrumentType, $preferredTemporality) ?? Temporality::Cumulative;
+    public function resolveTemporality(InstrumentType $instrumentType): Temporality {
+        return $this->temporalityResolver?->resolveTemporality($instrumentType) ?? Temporality::Cumulative;
     }
 
     public function resolveAggregation(InstrumentType $instrumentType): Aggregation {

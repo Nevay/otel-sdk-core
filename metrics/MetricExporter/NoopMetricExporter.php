@@ -4,7 +4,6 @@ namespace Nevay\OTelSDK\Metrics\MetricExporter;
 use Nevay\OTelSDK\Common\Internal\Export\Exporter\NoopExporter;
 use Nevay\OTelSDK\Metrics\Aggregation;
 use Nevay\OTelSDK\Metrics\Aggregation\DropAggregation;
-use Nevay\OTelSDK\Metrics\Data\Descriptor;
 use Nevay\OTelSDK\Metrics\Data\Metric;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use Nevay\OTelSDK\Metrics\InstrumentType;
@@ -15,8 +14,8 @@ use Nevay\OTelSDK\Metrics\MetricExporter;
  */
 final class NoopMetricExporter extends NoopExporter implements MetricExporter {
 
-    public function resolveTemporality(InstrumentType $instrumentType, Temporality $preferredTemporality): Temporality {
-        return $preferredTemporality;
+    public function resolveTemporality(InstrumentType $instrumentType): Temporality {
+        return Temporality::Cumulative;
     }
 
     public function resolveAggregation(InstrumentType $instrumentType): Aggregation {

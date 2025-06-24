@@ -4,7 +4,6 @@ namespace Nevay\OTelSDK\Metrics\MetricReader;
 use Amp\Cancellation;
 use Nevay\OTelSDK\Metrics\Aggregation;
 use Nevay\OTelSDK\Metrics\Aggregation\DropAggregation;
-use Nevay\OTelSDK\Metrics\Data\Descriptor;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use Nevay\OTelSDK\Metrics\InstrumentType;
 use Nevay\OTelSDK\Metrics\MetricProducer;
@@ -28,8 +27,8 @@ final class NoopMetricReader implements MetricReader {
         return true;
     }
 
-    public function resolveTemporality(InstrumentType $instrumentType, Temporality $preferredTemporality): Temporality {
-        return $preferredTemporality;
+    public function resolveTemporality(InstrumentType $instrumentType): Temporality {
+        return Temporality::Cumulative;
     }
 
     public function resolveAggregation(InstrumentType $instrumentType): Aggregation {
