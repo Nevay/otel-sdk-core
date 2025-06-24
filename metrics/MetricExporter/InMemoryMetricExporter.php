@@ -16,12 +16,12 @@ use Nevay\OTelSDK\Metrics\TemporalityResolver;
 final class InMemoryMetricExporter extends InMemoryExporter implements MetricExporter {
 
     public function __construct(
-        private readonly TemporalityResolver $temporalityResolver = TemporalityResolver::LowMemory,
+        private readonly ?TemporalityResolver $temporalityResolver = null,
         private readonly Aggregation $aggregation = new DefaultAggregation(),
     ) {}
 
     public function resolveTemporality(InstrumentType $instrumentType, Temporality $preferredTemporality): Temporality {
-        return $this->temporalityResolver->resolveTemporality($instrumentType, $preferredTemporality);
+        return $this->temporalityResolver?->resolveTemporality($instrumentType, $preferredTemporality) ?? Temporality::Cumulative;
     }
 
     public function resolveAggregation(InstrumentType $instrumentType): Aggregation {
