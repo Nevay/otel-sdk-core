@@ -2,6 +2,7 @@
 namespace Nevay\OTelSDK\Metrics;
 
 use Amp\Cancellation;
+use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Metrics\Data\Metric;
 
 /**
@@ -17,5 +18,5 @@ interface MetricProducer {
      *
      * @see https://opentelemetry.io/docs/specs/otel/metrics/sdk/#produce-batch
      */
-    public function produce(?MetricFilter $metricFilter = null, ?Cancellation $cancellation = null): iterable;
+    public function produce(Resource $resource, ?MetricFilter $metricFilter = null, ?Cancellation $cancellation = null): iterable;
 }

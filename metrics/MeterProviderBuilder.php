@@ -78,7 +78,7 @@ final class MeterProviderBuilder {
     /**
      * Customizes telemetry pipelines.
      *
-     * @param View $view parameters that defines the telemetry pipeline
+     * @param View $view parameters defining the telemetry pipeline
      * @param InstrumentType|null $type type of instruments to match
      * @param string|null $name name of instruments to match, supports wildcard
      *        patterns:
@@ -131,9 +131,11 @@ final class MeterProviderBuilder {
      */
     public function copyStateInto(MeterProvider $meterProvider, Context $selfDiagnostics): void {
         $meterProvider->meterState->metricReaders = $this->metricReaders;
+        $resource = Resource::mergeAll(...$this->resources);
 
         foreach ($this->metricReaders as $metricReader) {
             $meterProvider->meterState->metricProducers[] = $metricProducer = new MeterMetricProducer($meterProvider->meterState->registry);
+            $metricReader->updateResource($resource);
             $metricReader->registerProducer($metricProducer);
         }
 
@@ -159,7 +161,6 @@ final class MeterProviderBuilder {
 
         return new MeterProvider(
             null,
-            Resource::mergeAll(...$this->resources),
             UnlimitedAttributesFactory::create(),
             $meterConfigurator,
             $clock,

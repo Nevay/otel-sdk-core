@@ -4,6 +4,7 @@ namespace Nevay\OTelSDK\Metrics\Internal;
 use Amp\Cancellation;
 use Amp\Pipeline\DisposedException;
 use Amp\Pipeline\Queue;
+use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Metrics\MetricFilter;
 use Nevay\OTelSDK\Metrics\MetricProducer;
 use OpenTelemetry\API\Metrics\HistogramInterface;
@@ -38,7 +39,7 @@ final class MultiMetricProducer implements MetricProducer {
         ];
     }
 
-    public function produce(?MetricFilter $metricFilter = null, ?Cancellation $cancellation = null): iterable {
+    public function produce(Resource $resource, ?MetricFilter $metricFilter = null, ?Cancellation $cancellation = null): iterable {
         if (!$this->metricProducers) {
             return [];
         }
@@ -46,13 +47,13 @@ final class MultiMetricProducer implements MetricProducer {
         $queue = new Queue(32);
         $pending = count($this->metricProducers);
         $start = hrtime(true);
-        $handler = function(MetricProducer $metricProducer, ?MetricFilter $metricFilter, ?Cancellation $cancellation, Queue $queue) use (&$pending, $start): void {
+        $handler = function(MetricProducer $metricProducer, Resource $resource, ?MetricFilter $metricFilter, ?Cancellation $cancellation, Queue $queue) use (&$pending, $start): void {
             if ($queue->isDisposed()) {
                 return;
             }
 
             try {
-                $metrics = $metricProducer->produce($metricFilter, $cancellation);
+                $metrics = $metricProducer->produce($resource, $metricFilter, $cancellation);
                 unset($metricProducer, $metricFilter, $cancellation);
 
                 foreach ($metrics as $metric) {
@@ -72,7 +73,7 @@ final class MultiMetricProducer implements MetricProducer {
             }
         };
         foreach ($this->metricProducers as $metricProducer) {
-            EventLoop::queue($handler, $metricProducer, $metricFilter, $cancellation, $queue);
+            EventLoop::queue($handler, $metricProducer, $resource, $metricFilter, $cancellation, $queue);
         }
 
         return $queue->iterate();

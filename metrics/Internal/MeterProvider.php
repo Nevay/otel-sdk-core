@@ -37,7 +37,6 @@ final class MeterProvider implements MeterProviderInterface {
      */
     public function __construct(
         ?ContextStorageInterface $contextStorage,
-        Resource $resource,
         AttributesFactory $instrumentationScopeAttributesFactory,
         ConfiguratorStack $meterConfigurator,
         Clock $clock,
@@ -52,7 +51,6 @@ final class MeterProvider implements MeterProviderInterface {
                 $clock,
                 $logger,
             ),
-            $resource,
             $clock,
             $stalenessHandlerFactory,
             new WeakMap(),

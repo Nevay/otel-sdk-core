@@ -5,7 +5,6 @@ use Closure;
 use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\InstrumentationScope;
-use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\Data\Descriptor;
 use Nevay\OTelSDK\Metrics\ExemplarReservoir;
@@ -64,7 +63,6 @@ final class MeterState {
      */
     public function __construct(
         public readonly MetricRegistry $registry,
-        private readonly Resource $resource,
         private readonly Clock $clock,
         private readonly StalenessHandlerFactory $stalenessHandlerFactory,
         public readonly WeakMap $destructors,
@@ -213,7 +211,6 @@ final class MeterState {
             };
 
             $descriptor = new Descriptor(
-                $this->resource,
                 $instrumentationScope,
                 $name,
                 $instrument->unit,

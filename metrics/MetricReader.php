@@ -2,11 +2,14 @@
 namespace Nevay\OTelSDK\Metrics;
 
 use Amp\Cancellation;
+use Nevay\OTelSDK\Common\Resource;
 
 /**
  * @see https://opentelemetry.io/docs/specs/otel/metrics/sdk/#metricreader
  */
 interface MetricReader extends TemporalityResolver, AggregationResolver, CardinalityLimitResolver {
+
+    public function updateResource(Resource $resource): void;
 
     /**
      * @see https://opentelemetry.io/docs/specs/otel/metrics/sdk/#metricproducer

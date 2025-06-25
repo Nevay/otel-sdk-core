@@ -2,6 +2,7 @@
 namespace Nevay\OTelSDK\Metrics\Internal;
 
 use Amp\Cancellation;
+use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Metrics\Data\Metric;
 use Nevay\OTelSDK\Metrics\Internal\Registry\MetricCollector;
 use Nevay\OTelSDK\Metrics\MetricFilter;
@@ -40,7 +41,7 @@ final class MeterMetricProducer implements MetricProducer {
         $this->streamIds = null;
     }
 
-    public function produce(?MetricFilter $metricFilter = null, ?Cancellation $cancellation = null): iterable {
+    public function produce(Resource $resource, ?MetricFilter $metricFilter = null, ?Cancellation $cancellation = null): iterable {
         $sources = $metricFilter
             ? $this->applyMetricFilter($this->sources, $metricFilter)
             : $this->sources;
@@ -58,7 +59,7 @@ final class MeterMetricProducer implements MetricProducer {
                     continue;
                 }
 
-                yield new Metric($source->descriptor, $data);
+                yield new Metric($resource, $source->descriptor, $data);
             }
         }
     }

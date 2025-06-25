@@ -6,6 +6,7 @@ use Composer\InstalledVersions;
 use InvalidArgumentException;
 use Nevay\OTelSDK\Common\Internal\Export\ExportingProcessor;
 use Nevay\OTelSDK\Common\Internal\Export\Listener\NoopListener;
+use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Metrics\Aggregation;
 use Nevay\OTelSDK\Metrics\CardinalityLimitResolver;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
@@ -30,6 +31,7 @@ final class PullMetricReader implements MetricReader {
     private readonly MetricExporter $metricExporter;
     private readonly ?CardinalityLimitResolver $cardinalityLimits;
     private readonly ExportingProcessor $processor;
+    private readonly MetricExportDriver $driver;
     private readonly MultiMetricProducer $metricProducer;
 
     private static int $instanceCounter = -1;
@@ -93,7 +95,7 @@ final class PullMetricReader implements MetricReader {
         $this->metricProducer = new MultiMetricProducer($metricProducers, $duration, $type, $name);
         $this->processor = new ExportingProcessor(
             $metricExporter,
-            new MetricExportDriver($this->metricProducer, $metricFilter, $collectTimeoutMillis),
+            $this->driver = new MetricExportDriver($this->metricProducer, $metricFilter, $collectTimeoutMillis),
             new NoopListener(),
             $exportTimeoutMillis,
             $tracer,
@@ -110,6 +112,10 @@ final class PullMetricReader implements MetricReader {
 
     public function __destruct() {
         $this->closed = true;
+    }
+
+    public function updateResource(Resource $resource): void {
+        $this->driver->resource = $resource;
     }
 
     public function registerProducer(MetricProducer $metricProducer): void {

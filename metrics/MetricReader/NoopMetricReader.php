@@ -2,6 +2,7 @@
 namespace Nevay\OTelSDK\Metrics\MetricReader;
 
 use Amp\Cancellation;
+use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Metrics\Aggregation;
 use Nevay\OTelSDK\Metrics\Aggregation\DropAggregation;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
@@ -10,6 +11,10 @@ use Nevay\OTelSDK\Metrics\MetricProducer;
 use Nevay\OTelSDK\Metrics\MetricReader;
 
 final class NoopMetricReader implements MetricReader {
+
+    public function updateResource(Resource $resource): void {
+        // no-op
+    }
 
     public function registerProducer(MetricProducer $metricProducer): void {
         // no-op

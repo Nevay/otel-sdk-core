@@ -2,7 +2,9 @@
 namespace Nevay\OTelSDK\Metrics\Internal;
 
 use Amp\TimeoutCancellation;
+use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Common\Internal\Export\ExportingProcessorDriver;
+use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Metrics\Data\Metric;
 use Nevay\OTelSDK\Metrics\MetricFilter;
 use Nevay\OTelSDK\Metrics\MetricProducer;
@@ -18,10 +20,11 @@ final class MetricExportDriver implements ExportingProcessorDriver {
         private readonly MetricProducer $metricProducer,
         private readonly ?MetricFilter $metricFilter,
         private readonly int $collectTimeoutMillis,
+        public Resource $resource = new Resource(new Attributes([])),
     ) {}
 
     public function getPending(): iterable {
-        return $this->metricProducer->produce($this->metricFilter, new TimeoutCancellation($this->collectTimeoutMillis / 1000));
+        return $this->metricProducer->produce($this->resource, $this->metricFilter, new TimeoutCancellation($this->collectTimeoutMillis / 1000));
     }
 
     public function hasPending(): bool {
