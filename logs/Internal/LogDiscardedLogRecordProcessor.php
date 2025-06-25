@@ -18,7 +18,7 @@ final class LogDiscardedLogRecordProcessor implements LogRecordProcessor {
     ) {}
 
     public function enabled(ContextInterface $context, InstrumentationScope $instrumentationScope, ?int $severityNumber, ?string $eventName): bool {
-        return true;
+        return false;
     }
 
     public function onEmit(ReadWriteLogRecord $logRecord, ContextInterface $context): void {
