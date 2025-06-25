@@ -13,6 +13,7 @@ use Nevay\OTelSDK\Common\SystemClock;
 use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
 use Nevay\OTelSDK\Logs\Internal\LogDiscardedLogRecordProcessor;
 use Nevay\OTelSDK\Logs\Internal\LoggerProvider;
+use Nevay\OTelSDK\Logs\Internal\SelfDiagnosticsLogRecordProcessor;
 use Nevay\OTelSDK\Logs\LogRecordProcessor\MultiLogRecordProcessor;
 use OpenTelemetry\API\Configuration\Context;
 use Psr\Log\LoggerInterface;
@@ -88,13 +89,13 @@ final class LoggerProviderBuilder {
 
     /**
      * @internal
-     * @noinspection PhpUnusedParameterInspection
      */
     public function copyStateInto(LoggerProvider $loggerProvider, Context $selfDiagnostics): void {
         $logRecordProcessors = $this->logRecordProcessors;
         if ($loggerProvider->loggerState->logger) {
             $logRecordProcessors[] = new LogDiscardedLogRecordProcessor($loggerProvider->loggerState->logger);
         }
+        $logRecordProcessors[] = new SelfDiagnosticsLogRecordProcessor($selfDiagnostics->meterProvider);
 
         $loggerProvider->loggerState->logRecordProcessor = MultiLogRecordProcessor::composite(...$logRecordProcessors);
 
