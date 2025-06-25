@@ -32,7 +32,6 @@ final class TracerProvider implements TracerProviderInterface {
      */
     public function __construct(
         ?ContextStorageInterface $contextStorage,
-        Resource $resource,
         AttributesFactory $instrumentationScopeAttributesFactory,
         ConfiguratorStack $tracerConfigurator,
         Clock $clock,
@@ -46,7 +45,6 @@ final class TracerProvider implements TracerProviderInterface {
     ) {
         $this->tracerState = new TracerState(
             $contextStorage,
-            $resource,
             $clock,
             $highResolutionTime,
             $spanAttributesFactory,

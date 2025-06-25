@@ -31,7 +31,6 @@ final class LoggerProvider implements LoggerProviderInterface {
      */
     public function __construct(
         ?ContextStorageInterface $contextStorage,
-        Resource $resource,
         AttributesFactory $instrumentationScopeAttributesFactory,
         ConfiguratorStack $loggerConfigurator,
         Clock $clock,
@@ -40,7 +39,6 @@ final class LoggerProvider implements LoggerProviderInterface {
     ) {
         $this->loggerState = new LoggerState(
             $contextStorage,
-            $resource,
             $clock,
             $logRecordAttributesFactory,
             $logger,

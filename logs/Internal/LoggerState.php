@@ -13,11 +13,11 @@ use Psr\Log\LoggerInterface;
  */
 final class LoggerState {
 
+    public Resource $resource;
     public LogRecordProcessor $logRecordProcessor;
 
     public function __construct(
         public readonly ?ContextStorageInterface $contextStorage,
-        public readonly Resource $resource,
         public readonly Clock $clock,
         public readonly AttributesFactory $logRecordAttributesFactory,
         public readonly ?LoggerInterface $logger,

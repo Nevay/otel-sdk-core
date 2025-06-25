@@ -144,6 +144,7 @@ final class TracerProviderBuilder {
      * @internal
      */
     public function copyStateInto(TracerProvider $tracerProvider, Context $selfDiagnostics): void {
+        $resource = Resource::mergeAll(...$this->resources);
         $idGenerator = $this->idGenerator ?? new RandomIdGenerator();
         $sampler = $this->sampler ?? new ParentBasedSampler(new AlwaysOnSampler());
         $spanProcessors = $this->spanProcessors;
@@ -151,6 +152,7 @@ final class TracerProviderBuilder {
             $spanProcessors[] = new LogDiscardedSpanProcessor($tracerProvider->tracerState->logger);
         }
 
+        $tracerProvider->tracerState->resource = $resource;
         $tracerProvider->tracerState->idGenerator = $idGenerator;
         $tracerProvider->tracerState->sampler = $sampler;
         $tracerProvider->tracerState->spanProcessor = MultiSpanProcessor::composite(...$spanProcessors);
@@ -187,7 +189,6 @@ final class TracerProviderBuilder {
 
         return new TracerProvider(
             null,
-            Resource::mergeAll(...$this->resources),
             UnlimitedAttributesFactory::create(),
             $tracerConfigurator,
             $clock,

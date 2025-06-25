@@ -91,12 +91,14 @@ final class LoggerProviderBuilder {
      * @internal
      */
     public function copyStateInto(LoggerProvider $loggerProvider, Context $selfDiagnostics): void {
+        $resource = Resource::mergeAll(...$this->resources);
         $logRecordProcessors = $this->logRecordProcessors;
         if ($loggerProvider->loggerState->logger) {
             $logRecordProcessors[] = new LogDiscardedLogRecordProcessor($loggerProvider->loggerState->logger);
         }
         $logRecordProcessors[] = new SelfDiagnosticsLogRecordProcessor($selfDiagnostics->meterProvider);
 
+        $loggerProvider->loggerState->resource = $resource;
         $loggerProvider->loggerState->logRecordProcessor = MultiLogRecordProcessor::composite(...$logRecordProcessors);
 
         $loggerProvider->updateConfigurator(new Configurator\NoopConfigurator());
@@ -118,7 +120,6 @@ final class LoggerProviderBuilder {
 
         return new LoggerProvider(
             null,
-            Resource::mergeAll(...$this->resources),
             UnlimitedAttributesFactory::create(),
             $loggerConfigurator,
             $clock,
