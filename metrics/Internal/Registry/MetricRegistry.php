@@ -85,6 +85,21 @@ final class MetricRegistry implements MetricWriter, MetricCollector {
         return $streamId;
     }
 
+    public function unregisterStream(Instrument $instrument, int $streamId): void {
+        $instrumentId = spl_object_id($instrument);
+
+        unset(
+            $this->streams[$streamId],
+            $this->synchronousAggregators[$streamId],
+            $this->asynchronousAggregatorFactories[$streamId],
+            $this->streamToInstrument[$streamId],
+            $this->instrumentToStreams[$instrumentId][$streamId],
+        );
+        if (!$this->instrumentToStreams[$instrumentId]) {
+            unset($this->instrumentToStreams[$instrumentId]);
+        }
+    }
+
     public function unregisterStreams(Instrument $instrument): array {
         $instrumentId = spl_object_id($instrument);
         $streamIds = $this->instrumentToStreams[$instrumentId] ?? [];
