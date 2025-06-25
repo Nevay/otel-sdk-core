@@ -46,6 +46,10 @@ final class FilteredMetricStream implements MetricStream {
         $this->stream->unregister($reader);
     }
 
+    public function hasReaders(): bool {
+        return $this->stream->hasReaders();
+    }
+
     public function collect(int $reader): Data {
         $data = $this->stream->collect($reader);
 

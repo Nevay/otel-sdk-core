@@ -49,6 +49,13 @@ interface MetricStream {
     public function unregister(int $reader): void;
 
     /**
+     * Returns whether this stream has registered readers.
+     *
+     * @return bool whether this stream has registered readers
+     */
+    public function hasReaders(): bool;
+
+    /**
      * Collects metric data for the given reader.
      *
      * @param int $reader reader id

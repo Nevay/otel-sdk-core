@@ -6,6 +6,7 @@ use Nevay\OTelSDK\Metrics\Data\Data;
 use Nevay\OTelSDK\Metrics\Data\DataPoint;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use function array_search;
+use function assert;
 use function count;
 
 /**
@@ -25,6 +26,7 @@ final class AsynchronousMetricStream implements MetricStream {
 
     /** @var array<int, Metric<TSummary>|null> */
     private array $lastReads = [];
+    private int $cumulativeReaders = 0;
 
     /**
      * @param Aggregator<TSummary, TData, DataPoint> $aggregation
@@ -49,6 +51,7 @@ final class AsynchronousMetricStream implements MetricStream {
 
     public function register(Temporality $temporality): int {
         if ($temporality === Temporality::Cumulative) {
+            $this->cumulativeReaders++;
             return -1;
         }
 
@@ -63,10 +66,16 @@ final class AsynchronousMetricStream implements MetricStream {
 
     public function unregister(int $reader): void {
         if (!isset($this->lastReads[$reader])) {
+            assert($this->cumulativeReaders > 0);
+            $this->cumulativeReaders--;
             return;
         }
 
         $this->lastReads[$reader] = null;
+    }
+
+    public function hasReaders(): bool {
+        return $this->lastReads || $this->cumulativeReaders;
     }
 
     public function collect(int $reader): Data {

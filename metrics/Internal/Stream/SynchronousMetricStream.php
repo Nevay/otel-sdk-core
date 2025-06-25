@@ -78,6 +78,8 @@ final class SynchronousMetricStream implements MetricStream {
     }
 
     public function unregister(int $reader): void {
+        assert(($this->readers >> $reader & 1) != 0);
+
         $readerMask = ($this->readers & 1 | 1) << $reader;
         if (($this->readers & $readerMask) == 0) {
             return;
@@ -91,7 +93,13 @@ final class SynchronousMetricStream implements MetricStream {
         }
     }
 
+    public function hasReaders(): bool {
+        return $this->readers != 0;
+    }
+
     public function collect(int $reader): Data {
+        assert(($this->readers >> $reader & 1) != 0);
+
         $cumulative = ($this->cumulative >> $reader & 1) != 0;
         $metric = $this->storage->collect($reader, $cumulative) ?? new Metric([], $this->timestamp);
 
