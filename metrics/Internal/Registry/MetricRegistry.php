@@ -85,8 +85,8 @@ final class MetricRegistry implements MetricWriter, MetricCollector {
         return $streamId;
     }
 
-    public function unregisterStream(Instrument $instrument, int $streamId): void {
-        $instrumentId = spl_object_id($instrument);
+    public function unregisterStream(int $streamId): void {
+        $instrumentId = $this->streamToInstrument[$streamId];
 
         unset(
             $this->streams[$streamId],
