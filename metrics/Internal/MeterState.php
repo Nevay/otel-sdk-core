@@ -26,14 +26,11 @@ use Nevay\OTelSDK\Metrics\Internal\View\ViewRegistry;
 use Nevay\OTelSDK\Metrics\MeterConfig;
 use Nevay\OTelSDK\Metrics\MetricReader;
 use Psr\Log\LoggerInterface;
-use Throwable;
 use WeakMap;
-use function assert;
 use function bin2hex;
 use function hash;
 use function preg_match;
 use function serialize;
-use function spl_object_hash;
 use function spl_object_id;
 use function strtolower;
 
@@ -337,21 +334,12 @@ final class MeterState {
     }
 
     private static function streamDedupId(ResolvedView $view): string {
-        return ''
-            . self::serialize($view->attributeProcessor)
-            . self::serialize($view->aggregator)
-            . self::serialize(($view->exemplarReservoir)($view->aggregator))
-            . $view->cardinalityLimit
-        ;
-    }
-
-    private static function serialize(?object $object): string {
-        try {
-            return serialize($object);
-        } catch (Throwable) {}
-
-        assert($object !== null);
-
-        return spl_object_hash($object);
+        return hash('xxh128', \Opis\Closure\serialize([
+            $view->attributeProcessor,
+            $view->aggregator,
+            $view->exemplarFilter,
+            ($view->exemplarReservoir)($view->aggregator),
+            $view->cardinalityLimit,
+        ]));
     }
 }
