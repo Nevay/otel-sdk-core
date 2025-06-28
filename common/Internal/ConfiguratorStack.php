@@ -21,6 +21,8 @@ final class ConfiguratorStack implements Configurable {
     private readonly Closure $factory;
     /** @var Closure(TConfig): void */
     private readonly Closure $baseConfigurator;
+    /** @var Closure(TConfig): mixed */
+    private readonly Closure $hash;
     /** @var list<Configurator<TConfig>> */
     private array $configurators = [];
     /** @var WeakMap<InstrumentationScope, TConfig> */
@@ -32,11 +34,13 @@ final class ConfiguratorStack implements Configurable {
     /**
      * @param Closure(): TConfig $factory
      * @param Closure(TConfig): void $baseConfigurator
+     * @param Closure(TConfig): mixed|null $hash
      */
-    public function __construct(Closure $factory, Closure $baseConfigurator) {
+    public function __construct(Closure $factory, Closure $baseConfigurator, ?Closure $hash = null) {
         $this->factory = $factory;
         $this->baseConfigurator = $baseConfigurator;
         $this->configs = new WeakMap();
+        $this->hash = $hash ?? serialize(...);
     }
 
     public function __clone(): void {
@@ -64,10 +68,13 @@ final class ConfiguratorStack implements Configurable {
         $this->configurators[] = $configurator;
         foreach ($this->configs as $instrumentationScope => $config) {
             if ($previousConfigurator?->appliesTo($instrumentationScope)) {
+                $hash = ($this->hash)($config);
                 $this->applyConfiguratorStack($config, $instrumentationScope);
-                $this->triggerOnChange($config, $instrumentationScope);
-            } elseif ($configurator->update($config, $instrumentationScope)) {
-                $this->triggerOnChange($config, $instrumentationScope);
+                $this->triggerOnChange($config, $hash, $instrumentationScope);
+            } elseif ($configurator->appliesTo($instrumentationScope)) {
+                $hash = ($this->hash)($config);
+                $configurator->update($config, $instrumentationScope);
+                $this->triggerOnChange($config, $hash, $instrumentationScope);
             }
         }
     }
@@ -84,8 +91,10 @@ final class ConfiguratorStack implements Configurable {
 
         $this->configurators[] = $configurator;
         foreach ($this->configs as $instrumentationScope => $config) {
-            if ($configurator->update($config, $instrumentationScope)) {
-                $this->triggerOnChange($config, $instrumentationScope);
+            if ($configurator->appliesTo($instrumentationScope)) {
+                $hash = ($this->hash)($config);
+                $configurator->update($config, $instrumentationScope);
+                $this->triggerOnChange($config, $hash, $instrumentationScope);
             }
         }
 
@@ -103,8 +112,9 @@ final class ConfiguratorStack implements Configurable {
 
         foreach ($this->configs as $instrumentationScope => $config) {
             if ($previousConfigurator->appliesTo($instrumentationScope)) {
+                $hash = ($this->hash)($config);
                 $this->applyConfiguratorStack($config, $instrumentationScope);
-                $this->triggerOnChange($config, $instrumentationScope);
+                $this->triggerOnChange($config, $hash, $instrumentationScope);
             }
         }
 
@@ -144,7 +154,10 @@ final class ConfiguratorStack implements Configurable {
         }
     }
 
-    private function triggerOnChange(mixed $config, InstrumentationScope $instrumentationScope): void {
+    private function triggerOnChange(mixed $config, mixed $hash, InstrumentationScope $instrumentationScope): void {
+        if (($this->hash)($config) === $hash) {
+            return;
+        }
         foreach ($this->onChange as $callback) {
             $callback($config, $instrumentationScope);
         }
