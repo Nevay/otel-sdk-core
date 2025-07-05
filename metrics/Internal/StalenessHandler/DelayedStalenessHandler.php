@@ -9,21 +9,13 @@ use Revolt\EventLoop;
  */
 final class DelayedStalenessHandler implements StalenessHandler, ReferenceCounter {
 
+    private readonly float $delay;
     private ?int $count = 0;
     private array $callbacks = [];
-    private string $timerId;
+    private string $timerId = '';
 
     public function __construct(float $delay) {
-        $callbacks = &$this->callbacks;
-        $this->timerId = $timerId = EventLoop::disable(EventLoop::unreference(EventLoop::repeat($delay, static function() use (&$callbacks, &$timerId): void {
-            $_callbacks = $callbacks;
-            $callbacks = [];
-            EventLoop::disable($timerId);
-
-            foreach ($_callbacks as $callback) {
-                $callback();
-            }
-        })));
+        $this->delay = $delay;
     }
 
     public function __destruct() {
@@ -44,9 +36,19 @@ final class DelayedStalenessHandler implements StalenessHandler, ReferenceCounte
     }
 
     public function release(): void {
-        if ($this->count !== null && --$this->count === 0) {
-            EventLoop::enable($this->timerId);
+        if ($this->count === null || --$this->count > 0) {
+            return;
         }
+
+        $callbacks = $this->callbacks;
+        $this->timerId = EventLoop::unreference(EventLoop::delay($this->delay, static function() use (&$callbacks): void {
+            $_callbacks = $callbacks;
+            $callbacks = [];
+
+            foreach ($_callbacks as $callback) {
+                $callback();
+            }
+        }));
     }
 
     public function onStale(Closure $callback): void {
