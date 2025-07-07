@@ -181,10 +181,9 @@ final class ExportingProcessor {
             ->spanBuilder($p->type)
             ->setAttribute('otel.component.name', $p->name)
             ->setAttribute('otel.component.type', $p->type)
-            ->setAttribute('code.function', __FUNCTION__)
-            ->setAttribute('code.namespace', __CLASS__)
-            ->setAttribute('code.filepath', __FILE__)
-            ->setAttribute('code.lineno', __LINE__)
+            ->setAttribute('code.function.name', __METHOD__)
+            ->setAttribute('code.file.path', __FILE__)
+            ->setAttribute('code.line.number', __LINE__)
             ->startSpan();
         $scope = $span->activate();
 
