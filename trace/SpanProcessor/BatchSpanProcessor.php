@@ -95,8 +95,8 @@ final class BatchSpanProcessor implements SpanProcessor {
         $name ??= $type . '/' . ++self::$instanceCounter;
 
         $version = InstalledVersions::getVersionRanges('tbachert/otel-sdk-trace');
-        $tracer = $tracerProvider->getTracer('com.tobiasbachert.otel.sdk.trace', $version, 'https://opentelemetry.io/schemas/1.34.0');
-        $meter = $meterProvider->getMeter('com.tobiasbachert.otel.sdk.trace', $version, 'https://opentelemetry.io/schemas/1.34.0');
+        $tracer = $tracerProvider->getTracer('com.tobiasbachert.otel.sdk.trace', $version, 'https://opentelemetry.io/schemas/1.36.0');
+        $meter = $meterProvider->getMeter('com.tobiasbachert.otel.sdk.trace', $version, 'https://opentelemetry.io/schemas/1.36.0');
 
         $queueSize = $meter->createObservableUpDownCounter(
             'otel.sdk.processor.span.queue.size',

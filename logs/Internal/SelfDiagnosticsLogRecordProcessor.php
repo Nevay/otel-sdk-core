@@ -21,7 +21,7 @@ final class SelfDiagnosticsLogRecordProcessor implements LogRecordProcessor {
         $meter = $meterProvider->getMeter(
             'com.tobiasbachert.otel.sdk.logs',
             InstalledVersions::getVersionRanges('tbachert/otel-sdk-logs'),
-            'https://opentelemetry.io/schemas/1.34.0',
+            'https://opentelemetry.io/schemas/1.36.0',
         );
 
         $this->createdCount = $meter->createCounter(

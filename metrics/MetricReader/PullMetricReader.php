@@ -82,8 +82,8 @@ final class PullMetricReader implements MetricReader {
         $name ??= $type . '/' . ++self::$instanceCounter;
 
         $version = InstalledVersions::getVersionRanges('tbachert/otel-sdk-metrics');
-        $tracer = $tracerProvider->getTracer('com.tobiasbachert.otel.sdk.metrics', $version, 'https://opentelemetry.io/schemas/1.34.0');
-        $meter = $meterProvider->getMeter('com.tobiasbachert.otel.sdk.metrics', $version, 'https://opentelemetry.io/schemas/1.34.0');
+        $tracer = $tracerProvider->getTracer('com.tobiasbachert.otel.sdk.metrics', $version, 'https://opentelemetry.io/schemas/1.36.0');
+        $meter = $meterProvider->getMeter('com.tobiasbachert.otel.sdk.metrics', $version, 'https://opentelemetry.io/schemas/1.36.0');
 
         $duration = $meter->createHistogram(
             'otel.sdk.metric_reader.collection.duration',

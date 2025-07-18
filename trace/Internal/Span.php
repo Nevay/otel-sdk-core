@@ -230,7 +230,6 @@ final class Span extends \OpenTelemetry\API\Trace\Span implements ReadWriteSpan,
          * within the invoked OnEnding callbacks.
          */
         $span = new Span($this->tracerState, $this->clock, $this->spanData);
-        $this->tracerState->spanListener->onEnding($span);
         $this->tracerState->spanProcessor->onEnding($span);
         $span->recording = false;
 

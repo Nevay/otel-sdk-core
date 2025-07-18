@@ -146,12 +146,10 @@ final class SpanBuilder implements SpanBuilderInterface {
         assert(SpanContextValidator::isValidTraceId($spanContext->getTraceId()));
         assert(SpanContextValidator::isValidSpanId($spanContext->getSpanId()));
 
-        if (!$samplingResult->shouldRecord()) {
-            assert(!$spanContext->isSampled());
-            $span = new NonRecordingSpan($spanContext, $this->tracerState->spanListener);
-            $this->tracerState->spanListener->onStart($span);
+        if (!$samplingResult->shouldRecord() && assert(!$spanContext->isSampled())) {
+            $this->tracerState->spanListener->onStartNonRecording($parentSpanContext);
 
-            return $span;
+            return new NonRecordingSpan($spanContext);
         }
 
         // Use monotonic clock within recorded traces
@@ -181,7 +179,6 @@ final class SpanBuilder implements SpanBuilderInterface {
         );
 
         $this->tracerState->spanProcessor->onStart($span, $parent);
-        $this->tracerState->spanListener->onStart($span);
 
         return $span;
     }

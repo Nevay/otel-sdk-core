@@ -14,7 +14,7 @@ use Nevay\OTelSDK\Common\SystemHighResolutionTime;
 use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
 use Nevay\OTelSDK\Trace\IdGenerator\RandomIdGenerator;
 use Nevay\OTelSDK\Trace\Internal\LogDiscardedSpanProcessor;
-use Nevay\OTelSDK\Trace\Internal\SelfDiagnosticsSpanListener;
+use Nevay\OTelSDK\Trace\Internal\SelfDiagnosticsSpanProcessor;
 use Nevay\OTelSDK\Trace\Internal\TracerProvider;
 use Nevay\OTelSDK\Trace\Sampler\AlwaysOnSampler;
 use Nevay\OTelSDK\Trace\Sampler\ParentBasedSampler;
@@ -152,12 +152,11 @@ final class TracerProviderBuilder {
             $spanProcessors[] = new LogDiscardedSpanProcessor($tracerProvider->tracerState->logger);
         }
 
+        $tracerProvider->tracerState->spanListener = $spanProcessors[] = new SelfDiagnosticsSpanProcessor($selfDiagnostics->meterProvider);
         $tracerProvider->tracerState->resource = $resource;
         $tracerProvider->tracerState->idGenerator = $idGenerator;
         $tracerProvider->tracerState->sampler = $sampler;
         $tracerProvider->tracerState->spanProcessor = MultiSpanProcessor::composite(...$spanProcessors);
-
-        $tracerProvider->tracerState->spanListener = new SelfDiagnosticsSpanListener($selfDiagnostics->meterProvider);
 
         $tracerProvider->updateConfigurator(new Configurator\NoopConfigurator());
     }

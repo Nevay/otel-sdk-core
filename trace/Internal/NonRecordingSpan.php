@@ -9,7 +9,6 @@ final class NonRecordingSpan extends \OpenTelemetry\API\Trace\Span implements Sp
 
     public function __construct(
         private readonly SpanContextInterface $spanContext,
-        private ?SpanListener $spanListener,
     ) {}
 
     public function getContext(): SpanContextInterface {
@@ -49,7 +48,6 @@ final class NonRecordingSpan extends \OpenTelemetry\API\Trace\Span implements Sp
     }
 
     public function end(?int $endEpochNanos = null): void {
-        $this->spanListener?->onEnding($this);
-        $this->spanListener = null;
+        // no-op
     }
 }
