@@ -210,8 +210,15 @@ final class MetricRegistry implements MetricWriter, MetricCollector {
             $cancellationId = $cancellation?->subscribe(EventLoop::getSuspension()->throw(...));
 
             try {
-                $callback(...$args);
+                $result = $callback(...$args);
                 unset($callbacks[$callbackId]);
+
+                if ($result !== null) {
+                    $logger?->warning('Non-null return value received from callback during asynchronous metric collection', [
+                        'callback_id' => $callbackId,
+                        'collection_timestamp' => $timestamp,
+                    ]);
+                }
             } catch (CancelledException) {
             } catch (Exception $e) {
                 $logger?->error('Exception thrown by callback during asynchronous metric collection', [
