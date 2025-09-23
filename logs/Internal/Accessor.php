@@ -25,7 +25,7 @@ final class Accessor extends LogRecord {
         return $logRecord->severityText;
     }
 
-    public static function getSeverityNumber(LogRecord $logRecord): ?int {
+    public static function getSeverityNumber(LogRecord $logRecord): int {
         return $logRecord->severityNumber;
     }
 

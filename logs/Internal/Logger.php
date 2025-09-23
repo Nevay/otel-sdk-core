@@ -22,8 +22,10 @@ final class Logger implements LoggerInterface {
 
     public function isEnabled(?ContextInterface $context = null, ?int $severityNumber = null, ?string $eventName = null): bool {
         return !$this->loggerConfig->disabled
+            && $this->filterSeverity($severityNumber)
+            && $this->filterTraceBased($context = ContextResolver::resolve($context, $this->loggerState->contextStorage))
             && $this->loggerState->logRecordProcessor->enabled(
-                ContextResolver::resolve($context, $this->loggerState->contextStorage),
+                $context,
                 $this->instrumentationScope,
                 $severityNumber,
                 $eventName,
@@ -34,8 +36,15 @@ final class Logger implements LoggerInterface {
         if ($this->loggerConfig->disabled) {
             return;
         }
+        if (!$this->filterSeverity(Accessor::getSeverityNumber($logRecord))) {
+            return;
+        }
 
         $context = ContextResolver::resolve(Accessor::getContext($logRecord), $this->loggerState->contextStorage);
+
+        if (!$this->filterTraceBased($context)) {
+            return;
+        }
 
         $record = new ReadWriteLogRecord(
             $this->instrumentationScope,
@@ -59,5 +68,22 @@ final class Logger implements LoggerInterface {
         }
 
         $this->loggerState->logRecordProcessor->onEmit($record, $context);
+    }
+
+    private function filterSeverity(?int $severityNumber): bool {
+        return $severityNumber && $severityNumber >= $this->loggerConfig->minimumSeverity;
+    }
+
+    private function filterTraceBased(ContextInterface $context): bool {
+        if (!$this->loggerConfig->traceBased) {
+            return true;
+        }
+
+        $spanContext = Span::fromContext($context)->getContext();
+        if (!$spanContext->isValid()) {
+            return true;
+        }
+
+        return $spanContext->isSampled();
     }
 }
