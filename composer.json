@@ -9,7 +9,7 @@
         "amphp/amp": "^3.0",
         "amphp/pipeline": "^1.0",
         "amphp/sync": "^2.0",
-        "open-telemetry/api": "^1.1 <1.5",
+        "open-telemetry/api": "^1.1 <1.7",
         "open-telemetry/context": "^1.0",
         "opis/closure": "^4.0",
         "psr/log": "^1 || ^2 || ^3",
