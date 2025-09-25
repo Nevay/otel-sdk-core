@@ -39,7 +39,7 @@ final class RuleConfiguratorBuilder {
      * @param int $priority priority of this rule, rules with higher priority take precedence
      */
     public function withRule(Closure $configurator, ?string $name = null, ?string $version = null, ?string $schemaUrl = null, ?Closure $filter = null, int $priority = 0): self {
-        $this->patternMatcherBuilder->add($name ?? '*', new RuleConfiguratorRule($priority, ++$this->order, $configurator, null, $version, $schemaUrl, $filter));
+        $this->patternMatcherBuilder->add($name ?? '*', new RuleConfiguratorRule($priority, ++$this->order, $configurator, $version, $schemaUrl, $filter));
 
         return $this;
     }
