@@ -26,10 +26,6 @@ final class FilteredMetricStream implements MetricStream {
         private readonly MetricFilter $filter,
     ) {}
 
-    public function temporality(): Temporality {
-        return $this->stream->temporality();
-    }
-
     public function timestamp(): int {
         return $this->stream->timestamp();
     }

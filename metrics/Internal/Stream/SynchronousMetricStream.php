@@ -41,10 +41,6 @@ final class SynchronousMetricStream implements MetricStream {
         $this->storage = new DeltaStorage($aggregator, $cardinalityLimit);
     }
 
-    public function temporality(): Temporality {
-        return Temporality::Delta;
-    }
-
     public function timestamp(): int {
         return $this->timestamp;
     }
