@@ -10,7 +10,6 @@ use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Internal\InstrumentationScopeCache;
-use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Metrics\Internal\Registry\MetricRegistry;
 use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\StalenessHandlerFactory;
 use Nevay\OTelSDK\Metrics\MeterConfig;
