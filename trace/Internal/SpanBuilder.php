@@ -121,15 +121,6 @@ final class SpanBuilder implements SpanBuilderInterface {
         $droppedLinksCount = $this->droppedLinksCount;
         $startTimestamp = $this->startTimestamp;
 
-        $attributes = $attributesBuilder->build();
-
-        $spanSuppression = $this->spanSuppressor->resolveSuppression($spanKind, $attributes);
-        if ($spanSuppression->isSuppressed($parent)) {
-            return $parentSpan->isRecording()
-                ? Span::wrap($parentSpan->getContext())
-                : $parentSpan;
-        }
-
         $parentSpanContext = $parentSpan->getContext()->isValid()
             ? $parentSpan->getContext()
             : null;
@@ -140,16 +131,25 @@ final class SpanBuilder implements SpanBuilderInterface {
             ?? $this->tracerState->idGenerator->traceFlags();
         $flags &= 0x2;
 
-        $samplingResult = $this->tracerState->sampler->shouldSample(new SamplingParams(
+        $samplingParams = new SamplingParams(
             $parent,
             $parentSpan->getContext(),
             $traceId,
             $flags,
             $name,
             $spanKind,
-            $attributes,
+            $attributesBuilder->build(),
             $links,
-        ));
+        );
+
+        $spanSuppression = $this->spanSuppressor->resolveSuppression($samplingParams);
+        if ($spanSuppression->isSuppressed($parent)) {
+            return $parentSpan->isRecording()
+                ? Span::wrap($parentSpan->getContext())
+                : $parentSpan;
+        }
+
+        $samplingResult = $this->tracerState->sampler->shouldSample($samplingParams);
         $traceState = $samplingResult->traceState()
             ?? $parentSpanContext?->getTraceState();
 

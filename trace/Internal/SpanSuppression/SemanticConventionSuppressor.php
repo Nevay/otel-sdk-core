@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Trace\Internal\SpanSuppression;
 
-use Nevay\OTelSDK\Common\Attributes;
+use Nevay\OTelSDK\Trace\SamplingParams;
 use Nevay\OTelSDK\Trace\Span\Kind;
 use Nevay\OTelSDK\Trace\SpanSuppression;
 use Nevay\OTelSDK\Trace\SpanSuppressor;
@@ -20,10 +20,10 @@ final class SemanticConventionSuppressor implements SpanSuppressor {
         private readonly SemanticConventionSuppressionEntry $consumer,
     ) {}
 
-    public function resolveSuppression(Kind $spanKind, Attributes $attributes): SpanSuppression {
-        $attributes = $attributes->toArray();
+    public function resolveSuppression(SamplingParams $params): SpanSuppression {
+        $attributes = $params->attributes->toArray();
 
-        $entry = match ($spanKind) {
+        $entry = match ($params->spanKind) {
             Kind::Internal => $this->internal,
             Kind::Client => $this->client,
             Kind::Server => $this->server,
@@ -41,11 +41,11 @@ final class SemanticConventionSuppressor implements SpanSuppressor {
             }
         }
 
-        if ($candidates == 0 && $spanKind === Kind::Internal) {
+        if ($candidates == 0 && $params->spanKind === Kind::Internal) {
             return NoopSuppression::Instance;
         }
 
-        $suppression = match ($spanKind) {
+        $suppression = match ($params->spanKind) {
             Kind::Internal => SpanKindSuppression::Internal,
             Kind::Client => SpanKindSuppression::Client,
             Kind::Server => SpanKindSuppression::Server,
