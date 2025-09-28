@@ -19,6 +19,7 @@ use Nevay\OTelSDK\Trace\Internal\TracerProvider;
 use Nevay\OTelSDK\Trace\Sampler\AlwaysOnSampler;
 use Nevay\OTelSDK\Trace\Sampler\ParentBasedSampler;
 use Nevay\OTelSDK\Trace\SpanProcessor\MultiSpanProcessor;
+use Nevay\OTelSDK\Trace\SpanSuppression\NoopSuppressionStrategy;
 use OpenTelemetry\API\Configuration\Context;
 use Psr\Log\LoggerInterface;
 
@@ -33,6 +34,7 @@ final class TracerProviderBuilder {
     private ?Sampler $sampler = null;
     /** @var ConfiguratorStack<TracerConfig> */
     private readonly ConfiguratorStack $tracerConfigurator;
+    private ?SpanSuppressionStrategy $spanSuppressionStrategy = null;
 
     private ?Clock $clock = null;
     private ?HighResolutionTime $highResolutionTime = null;
@@ -86,6 +88,15 @@ final class TracerProviderBuilder {
      */
     public function addTracerConfigurator(Configurator|Closure $configurator): self {
         $this->tracerConfigurator->push($configurator);
+
+        return $this;
+    }
+
+    /**
+     * @experimental
+     */
+    public function setSuppressionStrategy(SpanSuppressionStrategy $strategy): self {
+        $this->spanSuppressionStrategy = $strategy;
 
         return $this;
     }
@@ -183,6 +194,8 @@ final class TracerProviderBuilder {
         $tracerConfigurator = clone $this->tracerConfigurator;
         $tracerConfigurator->push(static fn(TracerConfig $tracerConfig) => $tracerConfig->disabled = true);
 
+        $spanSuppressionStrategy = $this->spanSuppressionStrategy ?? new NoopSuppressionStrategy();
+
         $clock = $this->clock ?? SystemClock::create();
         $highResolutionTime = $this->highResolutionTime ?? SystemHighResolutionTime::create();
 
@@ -190,6 +203,7 @@ final class TracerProviderBuilder {
             null,
             UnlimitedAttributesFactory::create(),
             $tracerConfigurator,
+            $spanSuppressionStrategy,
             $clock,
             $highResolutionTime,
             $spanAttributesFactory,

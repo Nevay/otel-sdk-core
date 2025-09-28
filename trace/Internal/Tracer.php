@@ -2,6 +2,7 @@
 namespace Nevay\OTelSDK\Trace\Internal;
 
 use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Trace\SpanSuppressor;
 use Nevay\OTelSDK\Trace\TracerConfig;
 use OpenTelemetry\API\Trace\SpanBuilderInterface;
 use OpenTelemetry\API\Trace\TracerInterface;
@@ -15,6 +16,7 @@ final class Tracer implements TracerInterface {
         private readonly TracerState $tracerState,
         private readonly InstrumentationScope $instrumentationScope,
         private readonly TracerConfig $tracerConfig,
+        private readonly SpanSuppressor $spanSuppressor,
     ) {}
 
     public function isEnabled(): bool {
@@ -22,6 +24,6 @@ final class Tracer implements TracerInterface {
     }
 
     public function spanBuilder(string $spanName): SpanBuilderInterface {
-        return new SpanBuilder($this->tracerState, $this->instrumentationScope, $this->tracerConfig, $spanName);
+        return new SpanBuilder($this->tracerState, $this->instrumentationScope, $this->tracerConfig, $this->spanSuppressor, $spanName);
     }
 }

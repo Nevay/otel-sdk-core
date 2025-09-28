@@ -9,6 +9,7 @@ use Nevay\OTelSDK\Common\MonotonicClock;
 use Nevay\OTelSDK\Trace\SamplingParams;
 use Nevay\OTelSDK\Trace\Span\Kind;
 use Nevay\OTelSDK\Trace\Span\Link;
+use Nevay\OTelSDK\Trace\SpanSuppressor;
 use Nevay\OTelSDK\Trace\TracerConfig;
 use OpenTelemetry\API\Trace\SpanBuilderInterface;
 use OpenTelemetry\API\Trace\SpanContextInterface;
@@ -26,6 +27,7 @@ final class SpanBuilder implements SpanBuilderInterface {
     private readonly TracerState $tracerState;
     private readonly InstrumentationScope $instrumentationScope;
     private readonly TracerConfig $tracerConfig;
+    private readonly SpanSuppressor $spanSuppressor;
 
     private readonly string $name;
     private ContextInterface|false|null $parent = null;
@@ -40,11 +42,13 @@ final class SpanBuilder implements SpanBuilderInterface {
         TracerState $tracerState,
         InstrumentationScope $instrumentationScope,
         TracerConfig $tracerConfig,
+        SpanSuppressor $spanSuppressor,
         string $name,
     ) {
         $this->tracerState = $tracerState;
         $this->instrumentationScope = $instrumentationScope;
         $this->tracerConfig = $tracerConfig;
+        $this->spanSuppressor = $spanSuppressor;
         $this->name = $name;
 
         $this->attributesBuilder = $tracerState->spanAttributesFactory->builder();
@@ -110,6 +114,22 @@ final class SpanBuilder implements SpanBuilderInterface {
                 : $parentSpan;
         }
 
+        $name = $this->name;
+        $spanKind = $this->spanKind;
+        $attributesBuilder = clone $this->attributesBuilder;
+        $links = $this->links;
+        $droppedLinksCount = $this->droppedLinksCount;
+        $startTimestamp = $this->startTimestamp;
+
+        $attributes = $attributesBuilder->build();
+
+        $spanSuppression = $this->spanSuppressor->resolveSuppression($spanKind, $attributes);
+        if ($spanSuppression->isSuppressed($parent)) {
+            return $parentSpan->isRecording()
+                ? Span::wrap($parentSpan->getContext())
+                : $parentSpan;
+        }
+
         $parentSpanContext = $parentSpan->getContext()->isValid()
             ? $parentSpan->getContext()
             : null;
@@ -120,13 +140,6 @@ final class SpanBuilder implements SpanBuilderInterface {
             ?? $this->tracerState->idGenerator->traceFlags();
         $flags &= 0x2;
 
-        $name = $this->name;
-        $spanKind = $this->spanKind;
-        $attributesBuilder = clone $this->attributesBuilder;
-        $links = $this->links;
-        $droppedLinksCount = $this->droppedLinksCount;
-        $startTimestamp = $this->startTimestamp;
-
         $samplingResult = $this->tracerState->sampler->shouldSample(new SamplingParams(
             $parent,
             $parentSpan->getContext(),
@@ -134,7 +147,7 @@ final class SpanBuilder implements SpanBuilderInterface {
             $flags,
             $name,
             $spanKind,
-            $attributesBuilder->build(),
+            $attributes,
             $links,
         ));
         $traceState = $samplingResult->traceState()
@@ -149,7 +162,7 @@ final class SpanBuilder implements SpanBuilderInterface {
         if (!$samplingResult->shouldRecord() && assert(!$spanContext->isSampled())) {
             $this->tracerState->spanListener->onStartNonRecording($parentSpanContext);
 
-            return new NonRecordingSpan($spanContext);
+            return new NonRecordingSpan($spanContext, $spanSuppression);
         }
 
         // Use monotonic clock within recorded traces
@@ -176,6 +189,7 @@ final class SpanBuilder implements SpanBuilderInterface {
                 $attributesBuilder,
                 $startTimestamp,
             ),
+            $spanSuppression,
         );
 
         $this->tracerState->spanProcessor->onStart($span, $parent);

@@ -1,15 +1,23 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Trace\Internal;
 
+use Nevay\OTelSDK\Trace\SpanSuppression;
 use OpenTelemetry\API\Trace\SpanContextInterface;
 use OpenTelemetry\API\Trace\SpanInterface;
+use OpenTelemetry\Context\ContextInterface;
 use Throwable;
 
-final class NonRecordingSpan extends \OpenTelemetry\API\Trace\Span implements SpanInterface {
+final class NonRecordingSpan implements SpanInterface {
+    use SpanTrait { SpanTrait::storeInContext as private _storeInContext; }
 
     public function __construct(
         private readonly SpanContextInterface $spanContext,
+        private readonly SpanSuppression $spanSuppression,
     ) {}
+
+    public function storeInContext(ContextInterface $context): ContextInterface {
+        return $this->spanSuppression->suppress($this->_storeInContext($context));
+    }
 
     public function getContext(): SpanContextInterface {
         return $this->spanContext;

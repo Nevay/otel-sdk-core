@@ -12,22 +12,30 @@ use Nevay\OTelSDK\Trace\Span\Event;
 use Nevay\OTelSDK\Trace\Span\Kind;
 use Nevay\OTelSDK\Trace\Span\Link;
 use Nevay\OTelSDK\Trace\Span\Status;
+use Nevay\OTelSDK\Trace\SpanSuppression;
 use OpenTelemetry\API\Trace\SpanContextInterface;
 use OpenTelemetry\API\Trace\SpanInterface;
+use OpenTelemetry\Context\ContextInterface;
 use Throwable;
 use function count;
 
 /**
  * @internal
  */
-final class Span extends \OpenTelemetry\API\Trace\Span implements ReadWriteSpan, ClockAware {
+final class Span implements ReadWriteSpan, ClockAware {
+    use SpanTrait { SpanTrait::storeInContext as private _storeInContext; }
 
     public function __construct(
         private readonly TracerState $tracerState,
         private readonly Clock $clock,
         private readonly SpanData $spanData,
+        private readonly SpanSuppression $spanSuppression,
         private bool $recording = true,
     ) {}
+
+    public function storeInContext(ContextInterface $context): ContextInterface {
+        return $this->spanSuppression->suppress($this->_storeInContext($context));
+    }
 
     public function __clone() {
         $this->recording = false;
@@ -229,7 +237,7 @@ final class Span extends \OpenTelemetry\API\Trace\Span implements ReadWriteSpan,
          * From that point on, modifications are only allowed synchronously from
          * within the invoked OnEnding callbacks.
          */
-        $span = new Span($this->tracerState, $this->clock, $this->spanData);
+        $span = new Span($this->tracerState, $this->clock, $this->spanData, $this->spanSuppression);
         $this->tracerState->spanProcessor->onEnding($span);
         $span->recording = false;
 
