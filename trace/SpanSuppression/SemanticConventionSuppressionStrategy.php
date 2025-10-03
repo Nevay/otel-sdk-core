@@ -5,7 +5,7 @@ use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\WildcardPatternMatcherBuilder;
 use Nevay\OTelSDK\Trace\Internal\SpanSuppression\SemanticConventionSuppressionEntry;
 use Nevay\OTelSDK\Trace\Internal\SpanSuppression\SemanticConventionSuppressor;
-use Nevay\OTelSDK\Trace\Span\Kind;
+use Nevay\OTelSDK\Trace\Span;
 use Nevay\OTelSDK\Trace\SpanSuppressionStrategy;
 use Nevay\OTelSDK\Trace\SpanSuppressor;
 use OpenTelemetry\API\Trace\SpanSuppression\SemanticConvention;
@@ -39,7 +39,8 @@ final class SemanticConventionSuppressionStrategy implements SpanSuppressionStra
         $semanticConventionsBySpanKind = [];
         foreach ($this->resolvers as $resolver) {
             foreach ($resolver->resolveSemanticConventions($instrumentationScope->name, $instrumentationScope->version, $instrumentationScope->schemaUrl) as $semanticConvention) {
-                $semanticConventionsBySpanKind[$semanticConvention->spanKind->name][] = $semanticConvention;
+                $spanKind = Span\Kind::fromApi($semanticConvention->spanKind);
+                $semanticConventionsBySpanKind[$spanKind->name][] = $semanticConvention;
             }
         }
 
@@ -101,11 +102,11 @@ final class SemanticConventionSuppressionStrategy implements SpanSuppressionStra
         static $empty = new SemanticConventionSuppressionEntry(0, [], [], []);
 
         return new SemanticConventionSuppressor(
-            internal: $entries[Kind::Internal->name] ?? $empty,
-            client: $entries[Kind::Client->name] ?? $empty,
-            server: $entries[Kind::Server->name] ?? $empty,
-            producer: $entries[Kind::Producer->name] ?? $empty,
-            consumer: $entries[Kind::Consumer->name] ?? $empty,
+            internal: $entries[Span\Kind::Internal->name] ?? $empty,
+            client: $entries[Span\Kind::Client->name] ?? $empty,
+            server: $entries[Span\Kind::Server->name] ?? $empty,
+            producer: $entries[Span\Kind::Producer->name] ?? $empty,
+            consumer: $entries[Span\Kind::Consumer->name] ?? $empty,
         );
     }
 }
