@@ -22,6 +22,8 @@ use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\DelayedStalenessHandlerFacto
 use Nevay\OTelSDK\Metrics\Internal\View\ViewRegistryBuilder;
 use OpenTelemetry\API\Configuration\Context;
 use Psr\Log\LoggerInterface;
+use Random\Engine\PcgOneseq128XslRr64;
+use Random\Randomizer;
 
 final class MeterProviderBuilder {
 
@@ -38,9 +40,10 @@ final class MeterProviderBuilder {
     private ?Clock $clock = null;
 
     public function __construct() {
+        $randomizer = new Randomizer(new PcgOneseq128XslRr64());
         $this->exemplarReservoir = static fn(Aggregator $aggregator) => $aggregator instanceof ExplicitBucketHistogramAggregator && $aggregator->boundaries
-            ? new AlignedHistogramBucketExemplarReservoir($aggregator->boundaries)
-            : new SimpleFixedSizeExemplarReservoir(1);
+            ? new AlignedHistogramBucketExemplarReservoir($aggregator->boundaries, $randomizer)
+            : new SimpleFixedSizeExemplarReservoir(1, $randomizer);
         $this->viewRegistryBuilder = new ViewRegistryBuilder();
         $this->meterConfigurator = new ConfiguratorStack(
             static fn() => new MeterConfig(),
