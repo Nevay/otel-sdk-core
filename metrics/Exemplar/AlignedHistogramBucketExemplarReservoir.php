@@ -2,48 +2,104 @@
 namespace Nevay\OTelSDK\Metrics\Exemplar;
 
 use Nevay\OTelSDK\Common\Attributes;
+use Nevay\OTelSDK\Metrics\Data\Exemplar;
 use Nevay\OTelSDK\Metrics\ExemplarReservoir;
-use Nevay\OTelSDK\Metrics\Internal\Exemplar\BucketStorage;
+use Nevay\OTelSDK\Metrics\Internal\Exemplar\AlignedHistogramBucketExemplarReservoirEntry;
+use OpenTelemetry\API\Trace\Span;
 use OpenTelemetry\Context\ContextInterface;
 use Random\Engine\PcgOneseq128XslRr64;
 use Random\Randomizer;
 use function array_fill;
+use function ceil;
 use function count;
+use function lcg_value;
+use function log;
+use const PHP_VERSION_ID;
 
+/**
+ * @see https://opentelemetry.io/docs/specs/otel/metrics/sdk/#alignedhistogrambucketexemplarreservoir
+ */
 final class AlignedHistogramBucketExemplarReservoir implements ExemplarReservoir {
 
     private readonly Randomizer $randomizer;
-    private readonly BucketStorage $storage;
     private readonly array $boundaries;
 
-    private array $measurements;
+    /** @var list<AlignedHistogramBucketExemplarReservoirEntry> */
+    private array $buckets;
 
     /**
      * @param list<float|int> $boundaries
      */
     public function __construct(array $boundaries, Randomizer $randomizer = new Randomizer(new PcgOneseq128XslRr64())) {
         $this->randomizer = $randomizer;
-        $this->storage = new BucketStorage(count($boundaries) + 1);
         $this->boundaries = $boundaries;
-        $this->measurements = array_fill(0, count($boundaries) + 1, 0);
+        $this->buckets = array_fill(0, count($boundaries) + 1, null);
     }
 
     public function offer(float|int $value, Attributes $attributes, ContextInterface $context, int $timestamp): void {
         for ($i = 0, $n = count($this->boundaries); $i < $n && $this->boundaries[$i] < $value; $i++) {}
 
-        $measurement = $this->randomizer->getInt(0, $this->measurements[$i]);
-        $this->measurements[$i]++;
+        $entry = $this->buckets[$i] ??= new AlignedHistogramBucketExemplarReservoirEntry();
 
-        if ($measurement === 0) {
-            $this->storage->store($i, $value, $attributes, $context, $timestamp);
+        if (--$entry->jumpWeight > 0) {
+            return;
         }
+
+        $entry->value = $value;
+        $entry->timestamp = $timestamp;
+        $entry->attributes = $attributes;
+
+        $spanContext = Span::fromContext($context)->getContext();
+        $entry->spanContext = $spanContext->isValid()
+            ? $spanContext
+            : null;
+
+        $entry->priority = $this->rand($entry->priority);
+        $entry->jumpWeight = (int) (string) ceil(log($this->rand()) / log($entry->priority));
     }
 
     public function collect(Attributes $dataPointAttributes): array {
-        for ($i = 0; $i < count($this->measurements); $i++) {
-            $this->measurements[$i] = 0;
+        $exemplars = [];
+        foreach ($this->buckets as $bucket => &$entry) {
+            if (!$entry->priority) {
+                continue;
+            }
+
+            $exemplars[$bucket] = new Exemplar(
+                $entry->value,
+                $entry->timestamp,
+                $this->filterExemplarAttributes(
+                    $dataPointAttributes,
+                    $entry->attributes,
+                ),
+                $entry->spanContext,
+            );
+
+            unset(
+                $entry->value,
+                $entry->timestamp,
+                $entry->attributes,
+                $entry->spanContext,
+            );
+            $entry->priority = 0;
+            $entry->jumpWeight = 0;
         }
 
-        return $this->storage->collect($dataPointAttributes);
+        return $exemplars;
+    }
+
+    private function filterExemplarAttributes(Attributes $dataPointAttributes, Attributes $exemplarAttributes): Attributes {
+        $attributes = $exemplarAttributes->toArray();
+        foreach ($dataPointAttributes->toArray() as $key => $_) {
+            unset($attributes[$key]);
+        }
+
+        return new Attributes($attributes, $exemplarAttributes->getDroppedAttributesCount());
+    }
+
+    private function rand(float $min = 0): float {
+        return PHP_VERSION_ID >= 80300
+            ? $this->randomizer->getFloat($min, 1, \Random\IntervalBoundary::OpenOpen)
+            : lcg_value() * (1 - $min) + $min;
     }
 }

@@ -7,7 +7,9 @@ use OpenTelemetry\API\Trace\SpanContextInterface;
 /**
  * @internal
  */
-final class BucketEntry {
+final class SimpleFixedSizeExemplarReservoirEntry {
+
+    public float $priority = 0;
 
     public float|int $value;
     public int $timestamp;
