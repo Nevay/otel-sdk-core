@@ -4,7 +4,10 @@ namespace Nevay\OTelSDK\Metrics\Exemplar;
 use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Metrics\Data\Exemplar;
 use Nevay\OTelSDK\Metrics\ExemplarReservoir;
+use Nevay\OTelSDK\Metrics\Exemplars;
 use Nevay\OTelSDK\Metrics\Internal\Exemplar\AlignedHistogramBucketExemplarReservoirEntry;
+use Nevay\OTelSDK\Metrics\Internal\Exemplar\AlignedHistogramBucketExemplars;
+use Nevay\OTelSDK\Metrics\Internal\Exemplar\ExemplarAttributes;
 use OpenTelemetry\API\Trace\Span;
 use OpenTelemetry\Context\ContextInterface;
 use Random\Engine\PcgOneseq128XslRr64;
@@ -22,9 +25,9 @@ use const PHP_VERSION_ID;
 final class AlignedHistogramBucketExemplarReservoir implements ExemplarReservoir {
 
     private readonly Randomizer $randomizer;
-    private readonly array $boundaries;
 
-    /** @var list<AlignedHistogramBucketExemplarReservoirEntry> */
+    private readonly array $boundaries;
+    /** @var list<AlignedHistogramBucketExemplarReservoirEntry|null> */
     private array $buckets;
 
     /**
@@ -58,22 +61,21 @@ final class AlignedHistogramBucketExemplarReservoir implements ExemplarReservoir
         $entry->jumpWeight = (int) (string) ceil(log($this->rand()) / log($entry->priority));
     }
 
-    public function collect(Attributes $dataPointAttributes): array {
+    public function collect(Attributes $dataPointAttributes): Exemplars {
         $exemplars = [];
-        foreach ($this->buckets as $bucket => &$entry) {
-            if (!$entry->priority) {
+        $priorities = [];
+        foreach ($this->buckets as $bucket => $entry) {
+            if (!$entry?->priority) {
                 continue;
             }
 
             $exemplars[$bucket] = new Exemplar(
                 $entry->value,
                 $entry->timestamp,
-                $this->filterExemplarAttributes(
-                    $dataPointAttributes,
-                    $entry->attributes,
-                ),
+                ExemplarAttributes::filter($dataPointAttributes, $entry->attributes),
                 $entry->spanContext,
             );
+            $priorities[$bucket] = $entry->priority;
 
             unset(
                 $entry->value,
@@ -85,16 +87,7 @@ final class AlignedHistogramBucketExemplarReservoir implements ExemplarReservoir
             $entry->jumpWeight = 0;
         }
 
-        return $exemplars;
-    }
-
-    private function filterExemplarAttributes(Attributes $dataPointAttributes, Attributes $exemplarAttributes): Attributes {
-        $attributes = $exemplarAttributes->toArray();
-        foreach ($dataPointAttributes->toArray() as $key => $_) {
-            unset($attributes[$key]);
-        }
-
-        return new Attributes($attributes, $exemplarAttributes->getDroppedAttributesCount());
+        return new AlignedHistogramBucketExemplars($exemplars, $priorities);
     }
 
     private function rand(float $min = 0): float {

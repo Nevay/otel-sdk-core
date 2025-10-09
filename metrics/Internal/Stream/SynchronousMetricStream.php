@@ -108,7 +108,7 @@ final class SynchronousMetricStream implements MetricStream {
             $dataPoints[] = $this->aggregator->toDataPoint(
                 $metricPoint->attributes,
                 $metricPoint->summary,
-                $metricPoint->exemplars,
+                $metricPoint->exemplars->extract(),
                 $metric->timestamp,
                 $this->timestamp,
             );

@@ -95,7 +95,7 @@ final class AsynchronousMetricStream implements MetricStream {
             $dataPoints[] = $this->aggregator->toDataPoint(
                 $metricPoint->attributes,
                 $summary,
-                $metricPoint->exemplars,
+                $metricPoint->exemplars->extract(),
                 $startTimestamp,
                 $metric->timestamp,
             );

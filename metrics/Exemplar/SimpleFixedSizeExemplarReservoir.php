@@ -4,13 +4,17 @@ namespace Nevay\OTelSDK\Metrics\Exemplar;
 use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Metrics\Data\Exemplar;
 use Nevay\OTelSDK\Metrics\ExemplarReservoir;
+use Nevay\OTelSDK\Metrics\Exemplars;
+use Nevay\OTelSDK\Metrics\Internal\Exemplar\ExemplarAttributes;
 use Nevay\OTelSDK\Metrics\Internal\Exemplar\SimpleFixedSizeExemplarReservoirEntry;
+use Nevay\OTelSDK\Metrics\Internal\Exemplar\SimpleFixedSizeExemplars;
 use OpenTelemetry\API\Trace\Span;
 use OpenTelemetry\Context\ContextInterface;
 use Random\Engine\PcgOneseq128XslRr64;
 use Random\Randomizer;
 use function array_fill;
 use function ceil;
+use function count;
 use function lcg_value;
 use function log;
 use function min;
@@ -62,8 +66,9 @@ final class SimpleFixedSizeExemplarReservoir implements ExemplarReservoir {
         $this->jumpWeight = (int) (string) ceil(log($this->rand()) / log($this->head->priority));
     }
 
-    public function collect(Attributes $dataPointAttributes): array {
+    public function collect(Attributes $dataPointAttributes): Exemplars {
         $exemplars = [];
+        $priorities = [];
         foreach ($this->buckets as $bucket => $entry) {
             if (!$entry->priority) {
                 continue;
@@ -72,12 +77,10 @@ final class SimpleFixedSizeExemplarReservoir implements ExemplarReservoir {
             $exemplars[$bucket] = new Exemplar(
                 $entry->value,
                 $entry->timestamp,
-                $this->filterExemplarAttributes(
-                    $dataPointAttributes,
-                    $entry->attributes,
-                ),
+                ExemplarAttributes::filter($dataPointAttributes, $entry->attributes),
                 $entry->spanContext,
             );
+            $priorities[$bucket] = $entry->priority;
 
             unset(
                 $entry->value,
@@ -90,16 +93,11 @@ final class SimpleFixedSizeExemplarReservoir implements ExemplarReservoir {
 
         $this->jumpWeight = 0;
 
-        return $exemplars;
-    }
-
-    private function filterExemplarAttributes(Attributes $dataPointAttributes, Attributes $exemplarAttributes): Attributes {
-        $attributes = $exemplarAttributes->toArray();
-        foreach ($dataPointAttributes->toArray() as $key => $_) {
-            unset($attributes[$key]);
-        }
-
-        return new Attributes($attributes, $exemplarAttributes->getDroppedAttributesCount());
+        return new SimpleFixedSizeExemplars(
+            count($this->buckets),
+            $exemplars,
+            $priorities,
+        );
     }
 
     private function rand(float $min = 0): float {

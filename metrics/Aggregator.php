@@ -4,6 +4,7 @@ namespace Nevay\OTelSDK\Metrics;
 use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Metrics\Data\Data;
 use Nevay\OTelSDK\Metrics\Data\DataPoint;
+use Nevay\OTelSDK\Metrics\Data\Exemplar;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use OpenTelemetry\Context\ContextInterface;
 
@@ -46,7 +47,7 @@ interface Aggregator {
 
     /**
      * @param TSummary $summary
-     * @param iterable $exemplars
+     * @param iterable<Exemplar> $exemplars
      * @return TDataPoint
      */
     public function toDataPoint(

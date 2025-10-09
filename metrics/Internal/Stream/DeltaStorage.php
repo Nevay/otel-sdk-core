@@ -2,12 +2,9 @@
 namespace Nevay\OTelSDK\Metrics\Internal\Stream;
 
 use GMP;
-use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\Data\Data;
 use Nevay\OTelSDK\Metrics\Data\DataPoint;
-use Nevay\OTelSDK\Metrics\Data\Exemplar;
-use const INF;
 
 /**
  * @template TSummary
@@ -99,16 +96,14 @@ final class DeltaStorage {
     }
 
     private function mergeInto(Metric $into, Metric $metric): void {
-        $overflowExemplars = [];
         foreach ($metric->metricPoints as $index => $delta) {
             if (Overflow::check($into->metricPoints, $index, $this->cardinalityLimit)) {
                 $index = Overflow::INDEX;
-                $into->metricPoints[$index] ??= new MetricPoint(
+                $delta = new MetricPoint(
                     Overflow::attributes(),
-                    $this->aggregator->initialize(),
+                    $delta->summary,
+                    $delta->exemplars->enrich($delta->attributes),
                 );
-
-                self::mergeOverflowExemplars($overflowExemplars, $delta->exemplars, $delta->attributes->toArray());
             }
 
             $target = $into->metricPoints[$index] ??= new MetricPoint(
@@ -117,32 +112,7 @@ final class DeltaStorage {
             );
 
             $target->summary = $this->aggregator->merge($target->summary, $delta->summary);
-            $target->exemplars = $delta->exemplars + $target->exemplars;
-        }
-
-        if ($overflowExemplars) {
-            $index = Overflow::INDEX;
-            self::mergeOverflowExemplars($overflowExemplars, $metric->metricPoints[$index]->exemplars ?? [], []);
-
-            $target = $into->metricPoints[$index];
-            $target->exemplars = $overflowExemplars + $target->exemplars;
-        }
-    }
-
-    /**
-     * @param array<Exemplar> $overflowExemplars
-     * @param array<Exemplar> $exemplars
-     */
-    private static function mergeOverflowExemplars(array &$overflowExemplars, array $exemplars, array $dataPointAttributes): void {
-        foreach ($exemplars as $i => $exemplar) {
-            if ($exemplar->timestamp > ($overflowExemplars[$i]->timestamp ?? -INF)) {
-                $overflowExemplars[$i] = new Exemplar(
-                    $exemplar->value,
-                    $exemplar->timestamp,
-                    new Attributes($exemplar->attributes->toArray() + $dataPointAttributes, $exemplar->attributes->getDroppedAttributesCount()),
-                    $exemplar->spanContext,
-                );
-            }
+            $target->exemplars = $delta->exemplars->merge($target->exemplars);
         }
     }
 }

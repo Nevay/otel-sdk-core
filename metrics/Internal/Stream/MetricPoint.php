@@ -2,7 +2,8 @@
 namespace Nevay\OTelSDK\Metrics\Internal\Stream;
 
 use Nevay\OTelSDK\Common\Attributes;
-use Nevay\OTelSDK\Metrics\Data\Exemplar;
+use Nevay\OTelSDK\Metrics\Exemplars;
+use Nevay\OTelSDK\Metrics\Internal\Exemplar\EmptyExemplars;
 
 /**
  * @template TSummary
@@ -13,11 +14,10 @@ final class MetricPoint {
 
     /**
      * @param TSummary $summary
-     * @param array<Exemplar> $exemplars
      */
     public function __construct(
         public readonly Attributes $attributes,
         public mixed $summary,
-        public array $exemplars = [],
+        public Exemplars $exemplars = EmptyExemplars::Instance,
     ) {}
 }
