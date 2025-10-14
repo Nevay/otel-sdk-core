@@ -92,7 +92,7 @@ final class PeriodicExportingMetricReader implements MetricReader {
         $type = 'periodic_metric_reader';
         $name ??= $type . '/' . ++self::$instanceCounter;
 
-        $version = InstalledVersions::getVersionRanges('tbachert/otel-sdk-metrics');
+        $version = InstalledVersions::getPrettyVersion('tbachert/otel-sdk-metrics');
         $tracer = $tracerProvider->getTracer('com.tobiasbachert.otel.sdk.metrics', $version, 'https://opentelemetry.io/schemas/1.36.0');
         $meter = $meterProvider->getMeter('com.tobiasbachert.otel.sdk.metrics', $version, 'https://opentelemetry.io/schemas/1.36.0');
 

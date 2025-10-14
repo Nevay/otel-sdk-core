@@ -96,7 +96,7 @@ final class BatchLogRecordProcessor implements LogRecordProcessor {
         $type = 'batching_log_processor';
         $name ??= $type . '/' . ++self::$instanceCounter;
 
-        $version = InstalledVersions::getVersionRanges('tbachert/otel-sdk-logs');
+        $version = InstalledVersions::getPrettyVersion('tbachert/otel-sdk-logs');
         $tracer = $tracerProvider->getTracer('com.tobiasbachert.otel.sdk.logs', $version, 'https://opentelemetry.io/schemas/1.36.0');
         $meter = $meterProvider->getMeter('com.tobiasbachert.otel.sdk.logs', $version, 'https://opentelemetry.io/schemas/1.36.0');
 
