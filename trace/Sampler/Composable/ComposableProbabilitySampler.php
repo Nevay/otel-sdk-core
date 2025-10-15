@@ -11,7 +11,7 @@ use function unpack;
 /**
  * @experimental
  */
-final class ComposableTraceIdRatioBasedSampler implements ComposableSampler {
+final class ComposableProbabilitySampler implements ComposableSampler {
 
     private readonly float $ratio;
     private readonly SamplingIntent $intent;
@@ -44,7 +44,7 @@ final class ComposableTraceIdRatioBasedSampler implements ComposableSampler {
     }
 
     public function __toString(): string {
-        return sprintf('TraceIdRatioBased{%F}', $this->ratio);
+        return sprintf('Probability{%F}', $this->ratio);
     }
 
     /**
