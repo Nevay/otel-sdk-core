@@ -71,6 +71,10 @@ final class CompositeSampler implements Sampler {
             $parentThreshold,
         );
 
+        if ($intent->updateTraceState) {
+            $traceState = ($intent->updateTraceState)($traceState);
+        }
+
         $ot = $intent->threshold !== null && $intent->thresholdReliable
             ? Internal\TraceStateHandler::set($ot, $ths, 'th', $intent->th(), true, $this->logger)
             : Internal\TraceStateHandler::unset($ot, $ths, 'th');

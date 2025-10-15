@@ -36,6 +36,7 @@ final class ComposableAnnotatingSampler implements ComposableSampler {
                 yield from $attributes;
                 yield from $annotated;
             })(),
+            updateTraceState: $intent->updateTraceState,
         );
     }
 
