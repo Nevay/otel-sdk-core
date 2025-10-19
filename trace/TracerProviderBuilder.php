@@ -14,11 +14,13 @@ use Nevay\OTelSDK\Common\SystemHighResolutionTime;
 use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
 use Nevay\OTelSDK\Trace\IdGenerator\RandomIdGenerator;
 use Nevay\OTelSDK\Trace\Internal\LogDiscardedSpanProcessor;
+use Nevay\OTelSDK\Trace\Internal\NoopSpanListener;
 use Nevay\OTelSDK\Trace\Internal\SelfDiagnosticsSpanProcessor;
 use Nevay\OTelSDK\Trace\Internal\TracerProvider;
 use Nevay\OTelSDK\Trace\Sampler\AlwaysOnSampler;
 use Nevay\OTelSDK\Trace\Sampler\ParentBasedSampler;
 use Nevay\OTelSDK\Trace\SpanProcessor\MultiSpanProcessor;
+use Nevay\OTelSDK\Trace\SpanProcessor\NoopSpanProcessor;
 use Nevay\OTelSDK\Trace\SpanSuppression\NoopSuppressionStrategy;
 use OpenTelemetry\API\Configuration\Context;
 use Psr\Log\LoggerInterface;
@@ -32,12 +34,9 @@ final class TracerProviderBuilder {
 
     private ?IdGenerator $idGenerator = null;
     private ?Sampler $sampler = null;
-    /** @var ConfiguratorStack<TracerConfig> */
-    private readonly ConfiguratorStack $tracerConfigurator;
+    /** @var list<Configurator<TracerConfig>|Closure(TracerConfig, InstrumentationScope): void> */
+    private array $configurators = [];
     private ?SpanSuppressionStrategy $spanSuppressionStrategy = null;
-
-    private ?Clock $clock = null;
-    private ?HighResolutionTime $highResolutionTime = null;
 
     private ?int $attributeCountLimit = null;
     private ?int $attributeValueLengthLimit = null;
@@ -49,13 +48,6 @@ final class TracerProviderBuilder {
     private ?int $linkAttributeValueLengthLimit = null;
     private ?int $eventCountLimit = null;
     private ?int $linkCountLimit = null;
-
-    public function __construct() {
-        $this->tracerConfigurator = new ConfiguratorStack(
-            static fn() => new TracerConfig(),
-            static fn(TracerConfig $tracerConfig) => $tracerConfig->__construct(),
-        );
-    }
 
     public function addResource(Resource $resource): self {
         $this->resources[] = $resource;
@@ -87,7 +79,7 @@ final class TracerProviderBuilder {
      * @experimental
      */
     public function addTracerConfigurator(Configurator|Closure $configurator): self {
-        $this->tracerConfigurator->push($configurator);
+        $this->configurators[] = $configurator;
 
         return $this;
     }
@@ -142,20 +134,14 @@ final class TracerProviderBuilder {
     }
 
     /**
-     * @experimental
-     */
-    public function setClock(Clock&HighResolutionTime $clock): self {
-        $this->clock = $clock;
-        $this->highResolutionTime = $clock;
-
-        return $this;
-    }
-
-    /**
      * @internal
      */
     public function copyStateInto(TracerProvider $tracerProvider, Context $selfDiagnostics): void {
-        $resource = Resource::mergeAll(...$this->resources);
+        foreach ($this->configurators as $configurator) {
+            $tracerProvider->tracerConfigurator->push($configurator);
+        }
+        $tracerProvider->tracerConfigurator->push(new Configurator\NoopConfigurator());
+
         $idGenerator = $this->idGenerator ?? new RandomIdGenerator();
         $sampler = $this->sampler ?? new ParentBasedSampler(new AlwaysOnSampler());
         $spanProcessors = $this->spanProcessors;
@@ -164,59 +150,59 @@ final class TracerProviderBuilder {
         }
 
         $tracerProvider->tracerState->spanListener = $spanProcessors[] = new SelfDiagnosticsSpanProcessor($selfDiagnostics->meterProvider);
-        $tracerProvider->tracerState->resource = $resource;
+        $tracerProvider->tracerState->resource = Resource::mergeAll(...$this->resources);
         $tracerProvider->tracerState->idGenerator = $idGenerator;
         $tracerProvider->tracerState->sampler = $sampler;
         $tracerProvider->tracerState->spanProcessor = MultiSpanProcessor::composite(...$spanProcessors);
 
-        $tracerProvider->updateConfigurator(new Configurator\NoopConfigurator());
+        $tracerProvider->tracerState->spanAttributesFactory = AttributesLimitingFactory::create(
+            $this->spanAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
+            $this->spanAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
+        );
+        $tracerProvider->tracerState->eventAttributesFactory = AttributesLimitingFactory::create(
+            $this->eventAttributeCountLimit ?? $this->spanAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
+            $this->eventAttributeValueLengthLimit ?? $this->spanAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
+        );
+        $tracerProvider->tracerState->linkAttributesFactory = AttributesLimitingFactory::create(
+            $this->linkAttributeCountLimit ?? $this->spanAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
+            $this->linkAttributeValueLengthLimit ?? $this->spanAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
+        );
+        $tracerProvider->tracerState->eventCountLimit = $this->eventCountLimit ?? 128;
+        $tracerProvider->tracerState->linkCountLimit = $this->linkCountLimit ?? 128;
+
+        $tracerProvider->spanSuppressionStrategy = $this->spanSuppressionStrategy ?? new NoopSuppressionStrategy();
     }
 
     /**
      * @internal
      */
-    public function buildBase(?LoggerInterface $logger = null): TracerProvider {
-        $spanAttributesFactory = AttributesLimitingFactory::create(
-            $this->spanAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
-            $this->spanAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
-        );
-        $eventAttributesFactory = AttributesLimitingFactory::create(
-            $this->eventAttributeCountLimit ?? $this->spanAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
-            $this->eventAttributeValueLengthLimit ?? $this->spanAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
-        );
-        $linkAttributesFactory = AttributesLimitingFactory::create(
-            $this->linkAttributeCountLimit ?? $this->spanAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
-            $this->linkAttributeValueLengthLimit ?? $this->spanAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
-        );
-        $eventCountLimit = $this->eventCountLimit ?? 128;
-        $linkCountLimit = $this->linkCountLimit ?? 128;
-
-        $tracerConfigurator = clone $this->tracerConfigurator;
-        $tracerConfigurator->push(static fn(TracerConfig $tracerConfig) => $tracerConfig->disabled = true);
-
-        $spanSuppressionStrategy = $this->spanSuppressionStrategy ?? new NoopSuppressionStrategy();
-
-        $clock = $this->clock ?? SystemClock::create();
-        $highResolutionTime = $this->highResolutionTime ?? SystemHighResolutionTime::create();
-
+    public static function buildBase(?LoggerInterface $logger = null, (Clock&HighResolutionTime)|null $clock = null): TracerProvider {
         return new TracerProvider(
             null,
+            Resource::default(),
             UnlimitedAttributesFactory::create(),
-            $tracerConfigurator,
-            $spanSuppressionStrategy,
-            $clock,
-            $highResolutionTime,
-            $spanAttributesFactory,
-            $eventAttributesFactory,
-            $linkAttributesFactory,
-            $eventCountLimit,
-            $linkCountLimit,
+            new ConfiguratorStack(
+                static fn() => new TracerConfig(),
+                static fn(TracerConfig $tracerConfig) => $tracerConfig->__construct(),
+            ),
+            new NoopSuppressionStrategy(),
+            $clock ?? SystemClock::create(),
+            $clock ?? SystemHighResolutionTime::create(),
+            new RandomIdGenerator(),
+            new ParentBasedSampler(new AlwaysOnSampler()),
+            new NoopSpanProcessor(),
+            new NoopSpanListener(),
+            AttributesLimitingFactory::create(),
+            AttributesLimitingFactory::create(),
+            AttributesLimitingFactory::create(),
+            128,
+            128,
             $logger,
         );
     }
 
     public function build(?LoggerInterface $logger = null): TracerProviderInterface {
-        $tracerProvider = $this->buildBase($logger);
+        $tracerProvider = self::buildBase($logger);
         $this->copyStateInto($tracerProvider, new Context());
 
         return $tracerProvider;

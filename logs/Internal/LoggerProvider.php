@@ -9,8 +9,10 @@ use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Internal\InstrumentationScopeCache;
+use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Logs\LoggerConfig;
 use Nevay\OTelSDK\Logs\LoggerProviderInterface;
+use Nevay\OTelSDK\Logs\LogRecordProcessor;
 use OpenTelemetry\API\Logs\LoggerInterface;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface as PsrLoggerInterface;
@@ -23,22 +25,26 @@ final class LoggerProvider implements LoggerProviderInterface {
     public readonly LoggerState $loggerState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
     private readonly InstrumentationScopeCache $instrumentationScopeCache;
-    private readonly ConfiguratorStack $loggerConfigurator;
+    public readonly ConfiguratorStack $loggerConfigurator;
 
     /**
      * @param ConfiguratorStack<LoggerConfig> $loggerConfigurator
      */
     public function __construct(
         ?ContextStorageInterface $contextStorage,
+        Resource $resource,
         AttributesFactory $instrumentationScopeAttributesFactory,
         ConfiguratorStack $loggerConfigurator,
         Clock $clock,
+        LogRecordProcessor $logRecordProcessor,
         AttributesFactory $logRecordAttributesFactory,
         ?PsrLoggerInterface $logger,
     ) {
         $this->loggerState = new LoggerState(
             $contextStorage,
+            $resource,
             $clock,
+            $logRecordProcessor,
             $logRecordAttributesFactory,
             $logger,
         );

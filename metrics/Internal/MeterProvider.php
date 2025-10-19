@@ -10,8 +10,13 @@ use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Internal\InstrumentationScopeCache;
+use Nevay\OTelSDK\Common\Resource;
+use Nevay\OTelSDK\Metrics\Aggregator;
+use Nevay\OTelSDK\Metrics\ExemplarReservoir;
+use Nevay\OTelSDK\Metrics\Internal\Exemplar\ExemplarFilter;
 use Nevay\OTelSDK\Metrics\Internal\Registry\MetricRegistry;
 use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\StalenessHandlerFactory;
+use Nevay\OTelSDK\Metrics\Internal\View\ViewRegistry;
 use Nevay\OTelSDK\Metrics\MeterConfig;
 use Nevay\OTelSDK\Metrics\MeterProviderInterface;
 use Nevay\OTelSDK\Metrics\MetricReader;
@@ -29,17 +34,22 @@ final class MeterProvider implements MeterProviderInterface {
     public readonly MeterState $meterState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
     private readonly InstrumentationScopeCache $instrumentationScopeCache;
-    private readonly ConfiguratorStack $meterConfigurator;
+    public readonly ConfiguratorStack $meterConfigurator;
 
     /**
      * @param ConfiguratorStack<MeterConfig> $meterConfigurator
+     * @param Closure(Aggregator): ExemplarReservoir $exemplarReservoir
      */
     public function __construct(
         ?ContextStorageInterface $contextStorage,
+        Resource $resource,
         AttributesFactory $instrumentationScopeAttributesFactory,
         ConfiguratorStack $meterConfigurator,
         Clock $clock,
         AttributesFactory $metricAttributesFactory,
+        ExemplarFilter $exemplarFilter,
+        Closure $exemplarReservoir,
+        ViewRegistry $viewRegistry,
         StalenessHandlerFactory $stalenessHandlerFactory,
         ?LoggerInterface $logger,
     ) {
@@ -50,7 +60,11 @@ final class MeterProvider implements MeterProviderInterface {
                 $clock,
                 $logger,
             ),
+            $resource,
             $clock,
+            $exemplarFilter,
+            $exemplarReservoir,
+            $viewRegistry,
             $stalenessHandlerFactory,
             new WeakMap(),
             $logger,

@@ -15,10 +15,11 @@ use Nevay\OTelSDK\Metrics\Exemplar\SimpleFixedSizeExemplarReservoir;
 use Nevay\OTelSDK\Metrics\Internal\Aggregation\ExplicitBucketHistogramAggregator;
 use Nevay\OTelSDK\Metrics\Internal\Exemplar\AlwaysOffFilter;
 use Nevay\OTelSDK\Metrics\Internal\Exemplar\AlwaysOnFilter;
+use Nevay\OTelSDK\Metrics\Internal\Exemplar\ExemplarReservoirs;
 use Nevay\OTelSDK\Metrics\Internal\Exemplar\TraceBasedFilter;
-use Nevay\OTelSDK\Metrics\Internal\MeterMetricProducer;
 use Nevay\OTelSDK\Metrics\Internal\MeterProvider;
 use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\DelayedStalenessHandlerFactory;
+use Nevay\OTelSDK\Metrics\Internal\View\DefaultViewRegistry;
 use Nevay\OTelSDK\Metrics\Internal\View\ViewRegistryBuilder;
 use OpenTelemetry\API\Configuration\Context;
 use Psr\Log\LoggerInterface;
@@ -34,10 +35,8 @@ final class MeterProviderBuilder {
     private ExemplarFilter $exemplarFilter = ExemplarFilter::TraceBased;
     private Closure $exemplarReservoir;
     private readonly ViewRegistryBuilder $viewRegistryBuilder;
-    /** @var ConfiguratorStack<MeterConfig> */
-    private readonly ConfiguratorStack $meterConfigurator;
-
-    private ?Clock $clock = null;
+    /** @var list<Configurator<MeterConfig>|Closure(MeterConfig, InstrumentationScope): void> */
+    private array $configurators = [];
 
     public function __construct() {
         $randomizer = new Randomizer(new PcgOneseq128XslRr64());
@@ -45,10 +44,6 @@ final class MeterProviderBuilder {
             ? new AlignedHistogramBucketExemplarReservoir($aggregator->boundaries, $randomizer)
             : new SimpleFixedSizeExemplarReservoir(1, $randomizer);
         $this->viewRegistryBuilder = new ViewRegistryBuilder();
-        $this->meterConfigurator = new ConfiguratorStack(
-            static fn() => new MeterConfig(),
-            static fn(MeterConfig $meterConfig) => $meterConfig->__construct(),
-        );
     }
 
     public function addResource(Resource $resource): self {
@@ -114,16 +109,7 @@ final class MeterProviderBuilder {
      * @experimental
      */
     public function addMeterConfigurator(Configurator|Closure $configurator): self {
-        $this->meterConfigurator->push($configurator);
-
-        return $this;
-    }
-
-    /**
-     * @experimental
-     */
-    public function setClock(Clock&HighResolutionTime $clock): self {
-        $this->clock = $clock;
+        $this->configurators[] = $configurator;
 
         return $this;
     }
@@ -133,9 +119,12 @@ final class MeterProviderBuilder {
      * @noinspection PhpUnusedParameterInspection
      */
     public function copyStateInto(MeterProvider $meterProvider, Context $selfDiagnostics): void {
-        $resource = Resource::mergeAll(...$this->resources);
+        foreach ($this->configurators as $configurator) {
+            $meterProvider->meterConfigurator->push($configurator);
+        }
+        $meterProvider->meterConfigurator->push(new Configurator\NoopConfigurator());
 
-        $meterProvider->meterState->updateResource($resource);
+        $meterProvider->meterState->updateResource(Resource::mergeAll(...$this->resources));
         $meterProvider->meterState->exemplarFilter = match ($this->exemplarFilter) {
             ExemplarFilter::AlwaysOn => new AlwaysOnFilter(),
             ExemplarFilter::AlwaysOff => new AlwaysOffFilter(),
@@ -149,31 +138,32 @@ final class MeterProviderBuilder {
         }
 
         $meterProvider->meterState->reload();
-        $meterProvider->updateConfigurator(new Configurator\NoopConfigurator());
     }
 
     /**
      * @internal
      */
-    public function buildBase(?LoggerInterface $logger = null): MeterProvider {
-        $meterConfigurator = clone $this->meterConfigurator;
-        $meterConfigurator->push(static fn(MeterConfig $meterConfig) => $meterConfig->disabled = true);
-
-        $clock = $this->clock ?? SystemClock::create();
-
+    public static function buildBase(?LoggerInterface $logger = null, (Clock&HighResolutionTime)|null $clock = null): MeterProvider {
         return new MeterProvider(
             null,
+            Resource::default(),
             UnlimitedAttributesFactory::create(),
-            $meterConfigurator,
-            $clock,
+            new ConfiguratorStack(
+                static fn() => new MeterConfig(),
+                static fn(MeterConfig $meterConfig) => $meterConfig->__construct(),
+            ),
+            $clock ?? SystemClock::create(),
             UnlimitedAttributesFactory::create(),
+            new TraceBasedFilter(),
+            ExemplarReservoirs::defaultFactory(),
+            new DefaultViewRegistry(),
             new DelayedStalenessHandlerFactory(24 * 60 * 60),
             $logger,
         );
     }
 
     public function build(?LoggerInterface $logger = null): MeterProviderInterface {
-        $meterProvider = $this->buildBase($logger);
+        $meterProvider = self::buildBase($logger);
         $this->copyStateInto($meterProvider, new Context());
 
         return $meterProvider;

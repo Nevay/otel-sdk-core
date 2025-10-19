@@ -41,15 +41,10 @@ use function strtolower;
  */
 final class MeterState {
 
-    private Resource $resource;
     /** @var array<MetricReader> */
     public array $metricReaders = [];
     /** @var array<MeterMetricProducer> */
     private array $metricProducers = [];
-    public ExemplarFilter $exemplarFilter;
-    /** @var Closure(Aggregator): ExemplarReservoir */
-    public Closure $exemplarReservoir;
-    public ViewRegistry $viewRegistry;
 
     private ?int $startTimestamp = null;
 
@@ -59,11 +54,16 @@ final class MeterState {
     private array $instrumentIdentities = [];
 
     /**
+     * @param Closure(Aggregator): ExemplarReservoir $exemplarReservoir
      * @param WeakMap<object, ObservableCallbackDestructor> $destructors
      */
     public function __construct(
         public readonly MetricRegistry $registry,
+        private Resource $resource,
         private readonly Clock $clock,
+        public ExemplarFilter $exemplarFilter,
+        public Closure $exemplarReservoir,
+        public ViewRegistry $viewRegistry,
         private readonly StalenessHandlerFactory $stalenessHandlerFactory,
         public readonly WeakMap $destructors,
         public readonly ?LoggerInterface $logger,

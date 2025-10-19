@@ -10,6 +10,11 @@ use Nevay\OTelSDK\Common\HighResolutionTime;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Internal\InstrumentationScopeCache;
+use Nevay\OTelSDK\Common\Resource;
+use Nevay\OTelSDK\Trace\IdGenerator;
+use Nevay\OTelSDK\Trace\Internal\SpanSuppression\SpanSuppressorProxy;
+use Nevay\OTelSDK\Trace\Sampler;
+use Nevay\OTelSDK\Trace\SpanProcessor;
 use Nevay\OTelSDK\Trace\SpanSuppressionStrategy;
 use Nevay\OTelSDK\Trace\TracerConfig;
 use Nevay\OTelSDK\Trace\TracerProviderInterface;
@@ -25,19 +30,24 @@ final class TracerProvider implements TracerProviderInterface {
     public readonly TracerState $tracerState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
     private readonly InstrumentationScopeCache $instrumentationScopeCache;
-    private readonly ConfiguratorStack $tracerConfigurator;
-    private readonly SpanSuppressionStrategy $spanSuppressionStrategy;
+    public readonly ConfiguratorStack $tracerConfigurator;
+    public SpanSuppressionStrategy $spanSuppressionStrategy;
 
     /**
      * @param ConfiguratorStack<TracerConfig> $tracerConfigurator
      */
     public function __construct(
         ?ContextStorageInterface $contextStorage,
+        Resource $resource,
         AttributesFactory $instrumentationScopeAttributesFactory,
         ConfiguratorStack $tracerConfigurator,
         SpanSuppressionStrategy $spanSuppressionStrategy,
         Clock $clock,
         HighResolutionTime $highResolutionTime,
+        IdGenerator $idGenerator,
+        Sampler $sampler,
+        SpanProcessor $spanProcessor,
+        SpanListener $spanListener,
         AttributesFactory $spanAttributesFactory,
         AttributesFactory $eventAttributesFactory,
         AttributesFactory $linkAttributesFactory,
@@ -47,8 +57,13 @@ final class TracerProvider implements TracerProviderInterface {
     ) {
         $this->tracerState = new TracerState(
             $contextStorage,
+            $resource,
             $clock,
             $highResolutionTime,
+            $idGenerator,
+            $sampler,
+            $spanProcessor,
+            $spanListener,
             $spanAttributesFactory,
             $eventAttributesFactory,
             $linkAttributesFactory,
@@ -85,9 +100,7 @@ final class TracerProvider implements TracerProviderInterface {
         $tracerConfig = $this->tracerConfigurator->resolveConfig($instrumentationScope);
         $this->tracerState->logger?->debug('Creating tracer', ['scope' => $instrumentationScope, 'config' => $tracerConfig]);
 
-        $spanSuppressor = $this->spanSuppressionStrategy->getSuppressor($instrumentationScope);
-
-        return new Tracer($this->tracerState, $instrumentationScope, $tracerConfig, $spanSuppressor);
+        return new Tracer($this->tracerState, $instrumentationScope, $tracerConfig, new SpanSuppressorProxy($this->spanSuppressionStrategy, $instrumentationScope));
     }
 
     public function shutdown(?Cancellation $cancellation = null): bool {
