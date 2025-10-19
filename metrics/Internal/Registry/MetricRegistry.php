@@ -61,10 +61,26 @@ final class MetricRegistry implements MetricWriter, MetricCollector {
         $this->logger = $logger;
     }
 
+    public function streams(Instrument $instrument): array {
+        $instrumentId = spl_object_id($instrument);
+        return $this->instrumentToStreams[$instrumentId] ?? [];
+    }
+
+    public function stream(int $streamId): MetricStream {
+        return $this->streams[$streamId];
+    }
+
     public function registerSynchronousStream(Instrument $instrument, MetricStream $stream, MetricAggregator $aggregator): int {
+        $instrumentId = spl_object_id($instrument);
+
+        foreach ($this->instrumentToStreams[$instrumentId] ?? [] as $streamId) {
+            if (($this->synchronousAggregators[$streamId] ?? null)?->equals($aggregator)) {
+                return $streamId;
+            }
+        }
+
         $this->streams[] = $stream;
         $streamId = array_key_last($this->streams);
-        $instrumentId = spl_object_id($instrument);
 
         $this->synchronousAggregators[$streamId] = $aggregator;
         $this->instrumentToStreams[$instrumentId][$streamId] = $streamId;
@@ -74,9 +90,16 @@ final class MetricRegistry implements MetricWriter, MetricCollector {
     }
 
     public function registerAsynchronousStream(Instrument $instrument, MetricStream $stream, MetricAggregatorFactory $aggregatorFactory): int {
+        $instrumentId = spl_object_id($instrument);
+
+        foreach ($this->instrumentToStreams[$instrumentId] ?? [] as $streamId) {
+            if (($this->asynchronousAggregatorFactories[$streamId] ?? null)?->equals($aggregatorFactory)) {
+                return $streamId;
+            }
+        }
+
         $this->streams[] = $stream;
         $streamId = array_key_last($this->streams);
-        $instrumentId = spl_object_id($instrument);
 
         $this->asynchronousAggregatorFactories[$streamId] = $aggregatorFactory;
         $this->instrumentToStreams[$instrumentId][$streamId] = $streamId;

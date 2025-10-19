@@ -71,7 +71,17 @@ final class AsynchronousMetricStream implements MetricStream {
     }
 
     public function hasReaders(): bool {
-        return $this->lastReads || $this->cumulativeReaders;
+        if ($this->cumulativeReaders) {
+            return true;
+        }
+
+        foreach ($this->lastReads as $lastRead) {
+            if ($lastRead !== null) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function collect(int $reader): Data {

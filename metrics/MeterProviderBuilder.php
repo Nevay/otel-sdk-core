@@ -133,15 +133,9 @@ final class MeterProviderBuilder {
      * @noinspection PhpUnusedParameterInspection
      */
     public function copyStateInto(MeterProvider $meterProvider, Context $selfDiagnostics): void {
-        $meterProvider->meterState->metricReaders = $this->metricReaders;
         $resource = Resource::mergeAll(...$this->resources);
 
-        foreach ($this->metricReaders as $metricReader) {
-            $meterProvider->meterState->metricProducers[] = $metricProducer = new MeterMetricProducer($meterProvider->meterState->registry);
-            $metricReader->updateResource($resource);
-            $metricReader->registerProducer($metricProducer);
-        }
-
+        $meterProvider->meterState->updateResource($resource);
         $meterProvider->meterState->exemplarFilter = match ($this->exemplarFilter) {
             ExemplarFilter::AlwaysOn => new AlwaysOnFilter(),
             ExemplarFilter::AlwaysOff => new AlwaysOffFilter(),
@@ -150,6 +144,11 @@ final class MeterProviderBuilder {
         $meterProvider->meterState->exemplarReservoir = $this->exemplarReservoir;
         $meterProvider->meterState->viewRegistry = $this->viewRegistryBuilder->build();
 
+        foreach ($this->metricReaders as $metricReader) {
+            $meterProvider->meterState->register($metricReader);
+        }
+
+        $meterProvider->meterState->reload();
         $meterProvider->updateConfigurator(new Configurator\NoopConfigurator());
     }
 

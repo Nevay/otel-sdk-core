@@ -12,4 +12,6 @@ interface MetricAggregatorFactory {
      * @return MetricAggregator<TSummary>
      */
     public function create(): MetricAggregator;
+
+    public function equals(MetricAggregatorFactory $other): bool;
 }

@@ -18,4 +18,6 @@ interface MetricAggregator {
      * @return Metric<TSummary>
      */
     public function collect(int $timestamp): Metric;
+
+    public function equals(MetricAggregator $other): bool;
 }

@@ -5,6 +5,7 @@ use Closure;
 use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\InstrumentationScope;
+use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\Data\Descriptor;
 use Nevay\OTelSDK\Metrics\ExemplarReservoir;
@@ -27,6 +28,7 @@ use Nevay\OTelSDK\Metrics\MeterConfig;
 use Nevay\OTelSDK\Metrics\MetricReader;
 use Psr\Log\LoggerInterface;
 use WeakMap;
+use function array_search;
 use function bin2hex;
 use function hash;
 use function preg_match;
@@ -39,10 +41,11 @@ use function strtolower;
  */
 final class MeterState {
 
+    private Resource $resource;
     /** @var array<MetricReader> */
-    public array $metricReaders;
+    public array $metricReaders = [];
     /** @var array<MeterMetricProducer> */
-    public array $metricProducers;
+    private array $metricProducers = [];
     public ExemplarFilter $exemplarFilter;
     /** @var Closure(Aggregator): ExemplarReservoir */
     public Closure $exemplarReservoir;
@@ -66,6 +69,13 @@ final class MeterState {
         public readonly ?LoggerInterface $logger,
     ) {}
 
+    public function updateResource(Resource $resource): void {
+        $this->resource = $resource;
+        foreach ($this->metricReaders as $metricReader) {
+            $metricReader->updateResource($resource);
+        }
+    }
+
     public function updateConfig(MeterConfig $meterConfig, InstrumentationScope $instrumentationScope): void {
         $startTimestamp = $this->clock->now();
         foreach ($this->instruments[spl_object_id($instrumentationScope)] ?? [] as $r) {
@@ -76,6 +86,56 @@ final class MeterState {
             if (!$r->dormant && $meterConfig->disabled) {
                 $this->releaseStreams($r->instrument);
                 $r->dormant = true;
+            }
+        }
+    }
+
+    public function reload(): void {
+        $startTimestamp = $this->clock->now();
+        foreach ($this->instruments as $instruments) {
+            foreach ($instruments as $r) {
+                if (!$r->dormant) {
+                    $this->createStreams($r->instrument, $r->instrumentationScope, $startTimestamp);
+                }
+            }
+        }
+    }
+
+    public function register(MetricReader $metricReader): void {
+        $this->metricReaders[] = $metricReader;
+        $this->metricProducers[] = $metricProducer = new MeterMetricProducer($this->registry);
+        $metricReader->updateResource($this->resource);
+        $metricReader->registerProducer($metricProducer);
+
+        $startTimestamp = $this->clock->now();
+        foreach ($this->instruments as $instruments) {
+            foreach ($instruments as $r) {
+                if (!$r->dormant) {
+                    $this->createStreams($r->instrument, $r->instrumentationScope, $startTimestamp);
+                }
+            }
+        }
+    }
+
+    public function unregister(MetricReader $metricReader): void {
+        $index = array_search($metricReader, $this->metricReaders, true);
+        if ($index === false) {
+            return;
+        }
+
+        $metricProducer = $this->metricProducers[$index];
+
+        unset(
+            $this->metricReaders[$index],
+            $this->metricProducers[$index],
+        );
+
+        foreach ($metricProducer->sources as $streamId => $sources) {
+            foreach ($sources as $source) {
+                $source->stream->unregister($source->reader);
+                if (!$source->stream->hasReaders()) {
+                    $this->registry->unregisterStream($streamId);
+                }
             }
         }
     }
@@ -130,8 +190,50 @@ final class MeterState {
         );
     }
 
+    /**
+     * @param array<int, array<int, list<Descriptor>>> $descriptors $streams
+     */
+    private function reconcileStreamSources(Instrument $instrument, array $descriptors): void {
+        $streamIds = $this->registry->streams($instrument);
+
+        foreach ($streamIds as $streamId) {
+            $stream = $this->registry->stream($streamId);
+
+            foreach ($this->metricReaders as $index => $metricReader) {
+                $producer = $this->metricProducers[$index];
+                $reusableSources = $producer->unregisterStream($streamId);
+
+                foreach ($descriptors[$index][$streamId] ?? [] as $descriptor) {
+                    foreach ($reusableSources as $i => $source) {
+                        if (self::descriptorsEqual($descriptor, $source->descriptor)) {
+                            $producer->registerMetricSource($streamId, $source);
+                            unset($reusableSources[$i]);
+                            continue 2;
+                        }
+                    }
+
+                    $this->logger?->debug('Creating metric source', ['descriptor' => $descriptor, 'reader' => $index]);
+                    $producer->registerMetricSource($streamId, new MetricStreamSource(
+                        $descriptor,
+                        $stream,
+                        $stream->register($metricReader->resolveTemporality($descriptor->instrumentType)),
+                    ));
+                }
+
+                foreach ($reusableSources as $source) {
+                    $this->logger?->debug('Releasing metric source', ['descriptor' => $source->descriptor, 'reader' => $index]);
+                    $source->stream->unregister($source->reader);
+                }
+            }
+
+            if (!$stream->hasReaders()) {
+                $this->registry->unregisterStream($streamId);
+            }
+        }
+    }
+
     private function createStreams(Instrument $instrument, InstrumentationScope $instrumentationScope, int $startTimestamp): void {
-        match ($instrument->type) {
+        $descriptors = match ($instrument->type) {
             InstrumentType::Counter,
             InstrumentType::UpDownCounter,
             InstrumentType::Histogram,
@@ -142,52 +244,56 @@ final class MeterState {
             InstrumentType::AsynchronousGauge,
                 => $this->createAsynchronousStreams($instrument, $instrumentationScope, $startTimestamp),
         };
+
+        $this->reconcileStreamSources($instrument, $descriptors);
     }
 
-    private function createSynchronousStreams(Instrument $instrument, InstrumentationScope $instrumentationScope, int $startTimestamp): void {
-        $streams = [];
-        $dedup = [];
+    private function createSynchronousStreams(Instrument $instrument, InstrumentationScope $instrumentationScope, int $startTimestamp): array {
+        $descriptors = [];
         foreach ($this->views($instrument, $instrumentationScope) as $view) {
-            $dedupId = self::streamDedupId($view);
-            if (($streamId = $dedup[$dedupId] ?? null) === null) {
-                $stream = new SynchronousMetricStream($view->aggregator, $startTimestamp, $view->cardinalityLimit);
-                $streamId = $this->registry->registerSynchronousStream($instrument, $stream, new DefaultMetricAggregator(
+            $streamId = $this->registry->registerSynchronousStream(
+                $instrument,
+                new SynchronousMetricStream($view->aggregator, $startTimestamp, $view->cardinalityLimit),
+                new DefaultMetricAggregator(
                     $view->aggregator,
                     $view->attributeProcessor,
                     $view->exemplarFilter,
                     $view->exemplarReservoir,
                     $view->cardinalityLimit,
-                ));
+                ),
+            );
 
-                $streams[$streamId] = $stream;
-                $dedup[$dedupId] = $streamId;
-            }
-            $stream = $streams[$streamId];
-            $source = new MetricStreamSource($view->descriptor, $stream, $stream->register($view->temporality));
-            $view->metricProducer->registerMetricSource($streamId, $source);
+            $descriptors[$view->index][$streamId][] = $view->descriptor;
         }
+
+        return $descriptors;
     }
 
-    private function createAsynchronousStreams(Instrument $instrument, InstrumentationScope $instrumentationScope, int $startTimestamp): void {
-        $streams = [];
-        $dedup = [];
+    private function createAsynchronousStreams(Instrument $instrument, InstrumentationScope $instrumentationScope, int $startTimestamp): array {
+        $descriptors = [];
         foreach ($this->views($instrument, $instrumentationScope) as $view) {
-            $dedupId = self::streamDedupId($view);
-            if (($streamId = $dedup[$dedupId] ?? null) === null) {
-                $stream = new AsynchronousMetricStream($view->aggregator, $startTimestamp);
-                $streamId = $this->registry->registerAsynchronousStream($instrument, $stream, new DefaultMetricAggregatorFactory(
+            $streamId = $this->registry->registerAsynchronousStream(
+                $instrument,
+                new AsynchronousMetricStream($view->aggregator, $startTimestamp),
+                new DefaultMetricAggregatorFactory(
                     $view->aggregator,
                     $view->attributeProcessor,
                     $view->cardinalityLimit,
-                ));
+                ),
+            );
 
-                $streams[$streamId] = $stream;
-                $dedup[$dedupId] = $streamId;
-            }
-            $stream = $streams[$streamId];
-            $source = new MetricStreamSource($view->descriptor, $stream, $stream->register($view->temporality));
-            $view->metricProducer->registerMetricSource($streamId, $source);
+            $descriptors[$view->index][$streamId][] = $view->descriptor;
         }
+
+        return $descriptors;
+    }
+
+    private static function descriptorsEqual(Descriptor $left, Descriptor $right): bool {
+        return $left->instrumentationScope === $right->instrumentationScope
+            && $left->instrumentType === $right->instrumentType
+            && $left->name === $right->name
+            && $left->unit === $right->unit
+            && $left->description === $right->description;
     }
 
     /**
@@ -241,8 +347,7 @@ final class MeterState {
                     $this->exemplarFilter,
                     $exemplarReservoir,
                     $cardinalityLimit,
-                    $this->metricProducers[$i],
-                    $metricReader->resolveTemporality($descriptor->instrumentType),
+                    $i,
                 );
             }
         }
@@ -257,7 +362,7 @@ final class MeterState {
     }
 
     private function acquireInstrumentName(int $instrumentationScopeId, string $instrumentId, string $instrumentName): void {
-        $this->logger?->debug('Creating metric stream for instrument', [
+        $this->logger?->debug('Creating instrument', [
             'name' => $instrumentName,
             'scope_hash' => $instrumentationScopeId,
             'instrument_hash' => bin2hex($instrumentId),
@@ -268,7 +373,7 @@ final class MeterState {
     }
 
     private function releaseInstrumentName(int $instrumentationScopeId, string $instrumentId, string $instrumentName): void {
-        $this->logger?->debug('Releasing metric stream for instrument', [
+        $this->logger?->debug('Releasing instrument', [
             'name' => $instrumentName,
             'scope_hash' => $instrumentationScopeId,
             'instrument_hash' => bin2hex($instrumentId),
@@ -331,15 +436,5 @@ final class MeterState {
             $instrument->unit,
             $instrument->description,
         ]), true);
-    }
-
-    private static function streamDedupId(ResolvedView $view): string {
-        return hash('xxh128', \Opis\Closure\serialize([
-            $view->attributeProcessor,
-            $view->aggregator,
-            $view->exemplarFilter,
-            ($view->exemplarReservoir)($view->aggregator),
-            $view->cardinalityLimit,
-        ]));
     }
 }

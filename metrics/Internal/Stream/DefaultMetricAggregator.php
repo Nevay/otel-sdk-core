@@ -28,6 +28,7 @@ final class DefaultMetricAggregator implements MetricAggregator {
     private readonly ExemplarFilter $exemplarFilter;
     private readonly Closure $exemplarReservoir;
     private readonly ?int $cardinalityLimit;
+    private readonly string $hash;
 
     /** @var array<MetricPoint> */
     private array $metricPoints = [];
@@ -89,5 +90,26 @@ final class DefaultMetricAggregator implements MetricAggregator {
         $this->exemplarReservoirs = [];
 
         return $metric;
+    }
+
+    public function equals(MetricAggregator $other): bool {
+        if (!$other instanceof self) {
+            return false;
+        }
+
+        $this->hash ??= self::computeHash($this);
+        $other->hash ??= self::computeHash($other);
+
+        return $this->hash === $other->hash;
+    }
+
+    private static function computeHash(self $aggregator): string {
+        return hash('xxh128', \Opis\Closure\serialize([
+            $aggregator->aggregator,
+            $aggregator->attributeProcessor,
+            $aggregator->exemplarFilter,
+            ($aggregator->exemplarReservoir)($aggregator->aggregator),
+            $aggregator->cardinalityLimit,
+        ]));
     }
 }

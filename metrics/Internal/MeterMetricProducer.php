@@ -19,7 +19,7 @@ final class MeterMetricProducer implements MetricProducer {
     private readonly MetricCollector $collector;
 
     /** @var array<int, list<MetricStreamSource>> */
-    private array $sources = [];
+    public array $sources = [];
     /** @var list<int>|null */
     private ?array $streamIds = null;
 
@@ -27,13 +27,13 @@ final class MeterMetricProducer implements MetricProducer {
         $this->collector = $collector;
     }
 
-    public function unregisterStream(int $streamId): void {
-        if (!isset($this->sources[$streamId])) {
-            return;
+    public function unregisterStream(int $streamId): array {
+        if ($sources = $this->sources[$streamId] ?? []) {
+            $this->streamIds = null;
+            unset($this->sources[$streamId]);
         }
 
-        unset($this->sources[$streamId]);
-        $this->streamIds = null;
+        return $sources;
     }
 
     public function registerMetricSource(int $streamId, MetricStreamSource $streamSource): void {
