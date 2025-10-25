@@ -6,7 +6,6 @@ use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\HighResolutionTime;
 use Nevay\OTelSDK\Common\InstrumentationScope;
-use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Common\SystemClock;
 use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
@@ -119,10 +118,11 @@ final class MeterProviderBuilder {
      * @noinspection PhpUnusedParameterInspection
      */
     public function copyStateInto(MeterProvider $meterProvider, Context $selfDiagnostics): void {
+        $builder = new Configurator\RuleConfiguratorBuilder();
         foreach ($this->configurators as $configurator) {
-            $meterProvider->meterConfigurator->push($configurator);
+            $builder->withRule($configurator->update(...));
         }
-        $meterProvider->meterConfigurator->push(new Configurator\NoopConfigurator());
+        $meterProvider->configurator = $builder->toConfigurator();
 
         $meterProvider->meterState->updateResource(Resource::mergeAll(...$this->resources));
         $meterProvider->meterState->exemplarFilter = match ($this->exemplarFilter) {
@@ -137,7 +137,7 @@ final class MeterProviderBuilder {
             $meterProvider->meterState->register($metricReader);
         }
 
-        $meterProvider->meterState->reload();
+        $meterProvider->reload();
     }
 
     /**
@@ -148,10 +148,7 @@ final class MeterProviderBuilder {
             null,
             Resource::default(),
             UnlimitedAttributesFactory::create(),
-            new ConfiguratorStack(
-                static fn() => new MeterConfig(),
-                static fn(MeterConfig $meterConfig) => $meterConfig->__construct(),
-            ),
+            new Configurator\NoopConfigurator(),
             $clock ?? SystemClock::create(),
             UnlimitedAttributesFactory::create(),
             new TraceBasedFilter(),

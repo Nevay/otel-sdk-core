@@ -77,16 +77,8 @@ final class MeterState {
     }
 
     public function updateConfig(MeterConfig $meterConfig, InstrumentationScope $instrumentationScope): void {
-        $startTimestamp = $this->clock->now();
         foreach ($this->instruments[spl_object_id($instrumentationScope)] ?? [] as $r) {
-            if ($r->dormant && !$meterConfig->disabled) {
-                $this->createStreams($r->instrument, $r->instrumentationScope, $startTimestamp);
-                $r->dormant = false;
-            }
-            if (!$r->dormant && $meterConfig->disabled) {
-                $this->releaseStreams($r->instrument);
-                $r->dormant = true;
-            }
+            $r->dormant = $meterConfig->disabled;
         }
     }
 
@@ -96,6 +88,8 @@ final class MeterState {
             foreach ($instruments as $r) {
                 if (!$r->dormant) {
                     $this->createStreams($r->instrument, $r->instrumentationScope, $startTimestamp);
+                } else {
+                    $this->releaseStreams($r->instrument);
                 }
             }
         }
@@ -152,7 +146,7 @@ final class MeterState {
         return $r;
     }
 
-    public function createInstrument(Instrument $instrument, InstrumentationScope $instrumentationScope, MeterConfig $meterConfig): RegisteredInstrument {
+    public function createInstrument(Instrument $instrument, InstrumentationScope $instrumentationScope, bool $dormant): RegisteredInstrument {
         $instrumentationScopeId = spl_object_id($instrumentationScope);
         $instrumentId = self::instrumentId($instrument);
 
@@ -166,7 +160,7 @@ final class MeterState {
         self::ensureInstrumentNameNotConflicting($instrument, $instrumentationScopeId, $instrumentId, $instrumentName);
         self::acquireInstrumentName($instrumentationScopeId, $instrumentId, $instrumentName);
 
-        if (!$meterConfig->disabled) {
+        if (!$dormant) {
             $this->startTimestamp ??= $this->clock->now();
             $this->createStreams($instrument, $instrumentationScope, $this->startTimestamp);
         }
@@ -186,7 +180,7 @@ final class MeterState {
             $instrument,
             $instrumentationScope,
             $stalenessHandler,
-            $meterConfig->disabled,
+            $dormant,
         );
     }
 

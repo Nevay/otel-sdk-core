@@ -3,7 +3,6 @@ namespace Nevay\OTelSDK\Logs\Internal;
 
 use Nevay\OTelSDK\Common\ContextResolver;
 use Nevay\OTelSDK\Common\InstrumentationScope;
-use Nevay\OTelSDK\Logs\LoggerConfig;
 use OpenTelemetry\API\Logs\LoggerInterface;
 use OpenTelemetry\API\Logs\LogRecord;
 use OpenTelemetry\API\Trace\Span;
@@ -16,12 +15,14 @@ final class Logger implements LoggerInterface {
 
     public function __construct(
         private readonly LoggerState $loggerState,
-        private readonly InstrumentationScope $instrumentationScope,
-        private readonly LoggerConfig $loggerConfig,
+        public readonly InstrumentationScope $instrumentationScope,
+        public bool $disabled,
+        public int $minimumSeverity,
+        public bool $traceBased,
     ) {}
 
     public function isEnabled(?ContextInterface $context = null, ?int $severityNumber = null, ?string $eventName = null): bool {
-        return !$this->loggerConfig->disabled
+        return !$this->disabled
             && $this->filterSeverity($severityNumber)
             && $this->filterTraceBased($context = ContextResolver::resolve($context, $this->loggerState->contextStorage))
             && $this->loggerState->logRecordProcessor->enabled(
@@ -33,7 +34,7 @@ final class Logger implements LoggerInterface {
     }
 
     public function emit(LogRecord $logRecord): void {
-        if ($this->loggerConfig->disabled) {
+        if ($this->disabled) {
             return;
         }
         if (!$this->filterSeverity(Accessor::getSeverityNumber($logRecord))) {
@@ -71,11 +72,11 @@ final class Logger implements LoggerInterface {
     }
 
     private function filterSeverity(?int $severityNumber): bool {
-        return $severityNumber && $severityNumber >= $this->loggerConfig->minimumSeverity;
+        return !$severityNumber || $severityNumber >= $this->minimumSeverity;
     }
 
     private function filterTraceBased(ContextInterface $context): bool {
-        if (!$this->loggerConfig->traceBased) {
+        if (!$this->traceBased) {
             return true;
         }
 

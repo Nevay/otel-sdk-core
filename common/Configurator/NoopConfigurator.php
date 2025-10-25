@@ -14,11 +14,7 @@ use Nevay\OTelSDK\Common\InstrumentationScope;
  */
 final class NoopConfigurator implements Configurator {
 
-    public function update(mixed $config, InstrumentationScope $instrumentationScope): bool {
-        return false;
-    }
-
-    public function appliesTo(InstrumentationScope $instrumentationScope): bool {
-        return false;
+    public function update(mixed $config, InstrumentationScope $instrumentationScope): void {
+        // no-op
     }
 }

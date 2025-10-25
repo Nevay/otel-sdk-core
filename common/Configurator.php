@@ -10,12 +10,6 @@ interface Configurator {
 
     /**
      * @param TConfig $config configuration to update
-     * @return bool whether this configurator modified the given configuration
      */
-    public function update(mixed $config, InstrumentationScope $instrumentationScope): bool;
-
-    /**
-     * @return bool whether this configurator applies to the given instrumentation scope
-     */
-    public function appliesTo(InstrumentationScope $instrumentationScope): bool;
+    public function update(mixed $config, InstrumentationScope $instrumentationScope): void;
 }

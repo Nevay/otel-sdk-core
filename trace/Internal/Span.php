@@ -3,7 +3,6 @@ namespace Nevay\OTelSDK\Trace\Internal;
 
 use Nevay\OTelSDK\Common\Attributes;
 use Nevay\OTelSDK\Common\Clock;
-use Nevay\OTelSDK\Common\ClockAware;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Common\StackTrace;
@@ -22,12 +21,12 @@ use function count;
 /**
  * @internal
  */
-final class Span implements ReadWriteSpan, ClockAware {
+final class Span implements ReadWriteSpan {
     use SpanTrait { SpanTrait::storeInContext as private _storeInContext; }
 
     public function __construct(
         private readonly TracerState $tracerState,
-        private readonly Clock $clock,
+        public readonly Clock $clock,
         private readonly SpanData $spanData,
         private readonly SpanSuppression $spanSuppression,
         private bool $recording = true,
@@ -39,10 +38,6 @@ final class Span implements ReadWriteSpan, ClockAware {
 
     public function __clone() {
         $this->recording = false;
-    }
-
-    public function getClock(): Clock {
-        return $this->clock;
     }
 
     public function getInstrumentationScope(): InstrumentationScope {
@@ -133,7 +128,7 @@ final class Span implements ReadWriteSpan, ClockAware {
         if (!$this->recording) {
             return $this;
         }
-        if ($this->tracerState->linkCountLimit === count($this->spanData->links)) {
+        if ($this->tracerState->linkCountLimit >= count($this->spanData->links)) {
             $this->spanData->droppedLinksCount++;
             return $this;
         }
@@ -152,7 +147,7 @@ final class Span implements ReadWriteSpan, ClockAware {
         if (!$this->recording) {
             return $this;
         }
-        if ($this->tracerState->eventCountLimit === count($this->spanData->events)) {
+        if ($this->tracerState->eventCountLimit >= count($this->spanData->events)) {
             $this->spanData->droppedEventsCount++;
             return $this;
         }
@@ -172,7 +167,7 @@ final class Span implements ReadWriteSpan, ClockAware {
         if (!$this->recording) {
             return $this;
         }
-        if ($this->tracerState->eventCountLimit === count($this->spanData->events)) {
+        if ($this->tracerState->eventCountLimit >= count($this->spanData->events)) {
             $this->spanData->droppedEventsCount++;
             return $this;
         }

@@ -7,7 +7,6 @@ use Nevay\OTelSDK\Common\AttributesFactory;
 use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\InstrumentationScope;
-use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Internal\InstrumentationScopeCache;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Logs\LoggerConfig;
@@ -16,6 +15,7 @@ use Nevay\OTelSDK\Logs\LogRecordProcessor;
 use OpenTelemetry\API\Logs\LoggerInterface;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface as PsrLoggerInterface;
+use WeakMap;
 
 /**
  * @internal
@@ -25,16 +25,20 @@ final class LoggerProvider implements LoggerProviderInterface {
     public readonly LoggerState $loggerState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
     private readonly InstrumentationScopeCache $instrumentationScopeCache;
-    public readonly ConfiguratorStack $loggerConfigurator;
+    /** @var Configurator<LoggerConfig> */
+    public Configurator $configurator;
+
+    /** @var WeakMap<InstrumentationScope, Logger> */
+    private WeakMap $loggers;
 
     /**
-     * @param ConfiguratorStack<LoggerConfig> $loggerConfigurator
+     * @param Configurator<LoggerConfig> $configurator
      */
     public function __construct(
         ?ContextStorageInterface $contextStorage,
         Resource $resource,
         AttributesFactory $instrumentationScopeAttributesFactory,
-        ConfiguratorStack $loggerConfigurator,
+        Configurator $configurator,
         Clock $clock,
         LogRecordProcessor $logRecordProcessor,
         AttributesFactory $logRecordAttributesFactory,
@@ -50,13 +54,25 @@ final class LoggerProvider implements LoggerProviderInterface {
         );
         $this->instrumentationScopeAttributesFactory = $instrumentationScopeAttributesFactory;
         $this->instrumentationScopeCache = new InstrumentationScopeCache();
-        $this->loggerConfigurator = $loggerConfigurator;
-        $this->loggerConfigurator->onChange(static fn(LoggerConfig $loggerConfig, InstrumentationScope $instrumentationScope)
-            => $logger?->debug('Updating logger configuration', ['scope' => $instrumentationScope, 'config' => $loggerConfig]));
+        $this->configurator = $configurator;
+        $this->loggers = new WeakMap();
     }
 
-    public function updateConfigurator(Configurator|Closure $configurator): void {
-        $this->loggerConfigurator->updateConfigurator($configurator);
+    public function reload(): void {
+        foreach ($this->loggers as $logger) {
+            $config = new LoggerConfig();
+            $this->configurator->update($config, $logger->instrumentationScope);
+
+            if ($logger->disabled === $config->disabled && $logger->minimumSeverity === $config->minimumSeverity && $logger->traceBased === $config->traceBased) {
+                continue;
+            }
+
+            $this->loggerState->logger?->debug('Updating logger', ['scope' => $logger->instrumentationScope, 'config' => $config]);
+
+            $logger->disabled = $config->disabled;
+            $logger->minimumSeverity = $config->minimumSeverity;
+            $logger->traceBased = $config->traceBased;
+        }
     }
 
     public function getLogger(
@@ -73,10 +89,22 @@ final class LoggerProvider implements LoggerProviderInterface {
             $this->instrumentationScopeAttributesFactory->builder()->addAll($attributes)->build());
         $instrumentationScope = $this->instrumentationScopeCache->intern($instrumentationScope);
 
-        $loggerConfig = $this->loggerConfigurator->resolveConfig($instrumentationScope);
-        $this->loggerState->logger?->debug('Creating logger', ['scope' => $instrumentationScope, 'config' => $loggerConfig]);
+        if ($logger = $this->loggers[$instrumentationScope] ?? null) {
+            return $logger;
+        }
 
-        return new Logger($this->loggerState, $instrumentationScope, $loggerConfig);
+        $config = new LoggerConfig();
+        $this->configurator->update($config, $instrumentationScope);
+
+        $this->loggerState->logger?->debug('Creating logger', ['scope' => $instrumentationScope, 'config' => $config]);
+
+        return $this->loggers[$instrumentationScope] = new Logger(
+            $this->loggerState,
+            $instrumentationScope,
+            $config->disabled,
+            $config->minimumSeverity,
+            $config->traceBased,
+        );
     }
 
     public function shutdown(?Cancellation $cancellation = null): bool {

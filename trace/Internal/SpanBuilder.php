@@ -2,15 +2,11 @@
 namespace Nevay\OTelSDK\Trace\Internal;
 
 use Nevay\OTelSDK\Common\AttributesBuilder;
-use Nevay\OTelSDK\Common\ClockAware;
 use Nevay\OTelSDK\Common\ContextResolver;
-use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\MonotonicClock;
 use Nevay\OTelSDK\Trace\SamplingParams;
 use Nevay\OTelSDK\Trace\Span\Kind;
 use Nevay\OTelSDK\Trace\Span\Link;
-use Nevay\OTelSDK\Trace\SpanSuppressor;
-use Nevay\OTelSDK\Trace\TracerConfig;
 use OpenTelemetry\API\Trace\SpanBuilderInterface;
 use OpenTelemetry\API\Trace\SpanContextInterface;
 use OpenTelemetry\API\Trace\SpanContextValidator;
@@ -24,10 +20,7 @@ use function count;
  */
 final class SpanBuilder implements SpanBuilderInterface {
 
-    private readonly TracerState $tracerState;
-    private readonly InstrumentationScope $instrumentationScope;
-    private readonly TracerConfig $tracerConfig;
-    private readonly SpanSuppressor $spanSuppressor;
+    private readonly Tracer $tracer;
 
     private readonly string $name;
     private ContextInterface|false|null $parent = null;
@@ -39,19 +32,13 @@ final class SpanBuilder implements SpanBuilderInterface {
     private ?int $startTimestamp = null;
 
     public function __construct(
-        TracerState $tracerState,
-        InstrumentationScope $instrumentationScope,
-        TracerConfig $tracerConfig,
-        SpanSuppressor $spanSuppressor,
+        Tracer $tracer,
         string $name,
     ) {
-        $this->tracerState = $tracerState;
-        $this->instrumentationScope = $instrumentationScope;
-        $this->tracerConfig = $tracerConfig;
-        $this->spanSuppressor = $spanSuppressor;
+        $this->tracer = $tracer;
         $this->name = $name;
 
-        $this->attributesBuilder = $tracerState->spanAttributesFactory->builder();
+        $this->attributesBuilder = $tracer->tracerState->spanAttributesFactory->builder();
     }
 
     public function __clone() {
@@ -65,12 +52,12 @@ final class SpanBuilder implements SpanBuilderInterface {
     }
 
     public function addLink(SpanContextInterface $context, iterable $attributes = []): SpanBuilderInterface {
-        if ($this->tracerState->linkCountLimit === count($this->links)) {
+        if ($this->tracer->tracerState->linkCountLimit >= count($this->links)) {
             $this->droppedLinksCount++;
             return $this;
         }
 
-        $linkAttributes = $this->tracerState->linkAttributesFactory
+        $linkAttributes = $this->tracer->tracerState->linkAttributesFactory
             ->builder()
             ->addAll($attributes)
             ->build();
@@ -105,10 +92,11 @@ final class SpanBuilder implements SpanBuilderInterface {
     }
 
     public function startSpan(): SpanInterface {
-        $parent = ContextResolver::resolve($this->parent, $this->tracerState->contextStorage);
+        $tracerState = $this->tracer->tracerState;
+        $parent = ContextResolver::resolve($this->parent, $tracerState->contextStorage);
         $parentSpan = Span::fromContext($parent);
 
-        if ($this->tracerConfig->disabled) {
+        if ($this->tracer->disabled) {
             return $parentSpan->isRecording()
                 ? Span::wrap($parentSpan->getContext())
                 : $parentSpan;
@@ -126,9 +114,9 @@ final class SpanBuilder implements SpanBuilderInterface {
             : null;
 
         $traceId = $parentSpanContext?->getTraceIdBinary()
-            ?? $this->tracerState->idGenerator->generateTraceIdBinary();
+            ?? $tracerState->idGenerator->generateTraceIdBinary();
         $flags = $parentSpanContext?->getTraceFlags()
-            ?? $this->tracerState->idGenerator->traceFlags();
+            ?? $tracerState->idGenerator->traceFlags();
         $flags &= 0x2;
 
         $samplingParams = new SamplingParams(
@@ -142,44 +130,44 @@ final class SpanBuilder implements SpanBuilderInterface {
             $links,
         );
 
-        $spanSuppression = $this->spanSuppressor->resolveSuppression($samplingParams);
+        $spanSuppression = $this->tracer->spanSuppressor->resolveSuppression($samplingParams);
         if ($spanSuppression->isSuppressed($parent)) {
             return $parentSpan->isRecording()
                 ? Span::wrap($parentSpan->getContext())
                 : $parentSpan;
         }
 
-        $samplingResult = $this->tracerState->sampler->shouldSample($samplingParams);
+        $samplingResult = $tracerState->sampler->shouldSample($samplingParams);
         $traceState = $samplingResult->traceState()
             ?? $parentSpanContext?->getTraceState();
 
-        $spanId = $this->tracerState->idGenerator->generateSpanIdBinary();
+        $spanId = $tracerState->idGenerator->generateSpanIdBinary();
         $flags |= $samplingResult->traceFlags();
         $spanContext = new SpanContext($traceId, $spanId, $flags, $traceState);
         assert(SpanContextValidator::isValidTraceId($spanContext->getTraceId()));
         assert(SpanContextValidator::isValidSpanId($spanContext->getSpanId()));
 
         if (!$samplingResult->shouldRecord() && assert(!$spanContext->isSampled())) {
-            $this->tracerState->spanListener->onStartNonRecording($parentSpanContext);
+            $tracerState->spanListener->onStartNonRecording($parentSpanContext);
 
             return new NonRecordingSpan($spanContext, $spanSuppression);
         }
 
         // Use monotonic clock within recorded traces
-        $clock = $parentSpan instanceof ClockAware
-            ? $parentSpan->getClock()
-            : $this->tracerState->clock;
-        $clock = MonotonicClock::anchor($clock, $this->tracerState->highResolutionTime);
+        $clock = $parentSpan instanceof Span
+            ? $parentSpan->clock
+            : $tracerState->clock;
+        $clock = MonotonicClock::anchor($clock, $tracerState->highResolutionTime);
         $startTimestamp ??= $clock->now();
 
         $attributesBuilder->addAll($samplingResult->additionalAttributes());
 
         $span = new Span(
-            $this->tracerState,
+            $tracerState,
             $clock,
             new SpanData(
-                $this->tracerState->resource,
-                $this->instrumentationScope,
+                $tracerState->resource,
+                $this->tracer->instrumentationScope,
                 $name,
                 $spanContext,
                 $spanKind,
@@ -192,7 +180,7 @@ final class SpanBuilder implements SpanBuilderInterface {
             $spanSuppression,
         );
 
-        $this->tracerState->spanProcessor->onStart($span, $parent);
+        $tracerState->spanProcessor->onStart($span, $parent);
 
         return $span;
     }

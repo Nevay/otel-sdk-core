@@ -2,17 +2,14 @@
 namespace Nevay\OTelSDK\Trace\Internal;
 
 use Amp\Cancellation;
-use Closure;
 use Nevay\OTelSDK\Common\AttributesFactory;
 use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\HighResolutionTime;
 use Nevay\OTelSDK\Common\InstrumentationScope;
-use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Internal\InstrumentationScopeCache;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Trace\IdGenerator;
-use Nevay\OTelSDK\Trace\Internal\SpanSuppression\SpanSuppressorProxy;
 use Nevay\OTelSDK\Trace\Sampler;
 use Nevay\OTelSDK\Trace\SpanProcessor;
 use Nevay\OTelSDK\Trace\SpanSuppressionStrategy;
@@ -21,6 +18,7 @@ use Nevay\OTelSDK\Trace\TracerProviderInterface;
 use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface;
+use WeakMap;
 
 /**
  * @internal
@@ -30,17 +28,21 @@ final class TracerProvider implements TracerProviderInterface {
     public readonly TracerState $tracerState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
     private readonly InstrumentationScopeCache $instrumentationScopeCache;
-    public readonly ConfiguratorStack $tracerConfigurator;
+    /** @var Configurator<TracerConfig> */
+    public Configurator $configurator;
     public SpanSuppressionStrategy $spanSuppressionStrategy;
 
+    /** @var WeakMap<InstrumentationScope, Tracer> */
+    private WeakMap $tracers;
+
     /**
-     * @param ConfiguratorStack<TracerConfig> $tracerConfigurator
+     * @param Configurator<TracerConfig> $configurator
      */
     public function __construct(
         ?ContextStorageInterface $contextStorage,
         Resource $resource,
         AttributesFactory $instrumentationScopeAttributesFactory,
-        ConfiguratorStack $tracerConfigurator,
+        Configurator $configurator,
         SpanSuppressionStrategy $spanSuppressionStrategy,
         Clock $clock,
         HighResolutionTime $highResolutionTime,
@@ -73,14 +75,27 @@ final class TracerProvider implements TracerProviderInterface {
         );
         $this->instrumentationScopeAttributesFactory = $instrumentationScopeAttributesFactory;
         $this->instrumentationScopeCache = new InstrumentationScopeCache();
-        $this->tracerConfigurator = $tracerConfigurator;
-        $this->tracerConfigurator->onChange(static fn(TracerConfig $tracerConfig, InstrumentationScope $instrumentationScope)
-            => $logger?->debug('Updating tracer configuration', ['scope' => $instrumentationScope, 'config' => $tracerConfig]));
+        $this->configurator = $configurator;
         $this->spanSuppressionStrategy = $spanSuppressionStrategy;
+        $this->tracers = new WeakMap();
     }
 
-    public function updateConfigurator(Configurator|Closure $configurator): void {
-        $this->tracerConfigurator->updateConfigurator($configurator);
+    public function reload(): void {
+        foreach ($this->tracers as $tracer) {
+            $config = new TracerConfig();
+            $this->configurator->update($config, $tracer->instrumentationScope);
+
+            if ($tracer->disabled === $config->disabled) {
+                continue;
+            }
+
+            $this->tracerState->logger?->debug('Updating tracer configuration', ['scope' => $tracer->instrumentationScope, 'config' => $config]);
+
+            $tracer->disabled = $config->disabled;
+        }
+        foreach ($this->tracers as $tracer) {
+            $tracer->spanSuppressor = $this->spanSuppressionStrategy->getSuppressor($tracer->instrumentationScope);
+        }
     }
 
     public function getTracer(
@@ -97,10 +112,21 @@ final class TracerProvider implements TracerProviderInterface {
             $this->instrumentationScopeAttributesFactory->builder()->addAll($attributes)->build());
         $instrumentationScope = $this->instrumentationScopeCache->intern($instrumentationScope);
 
-        $tracerConfig = $this->tracerConfigurator->resolveConfig($instrumentationScope);
-        $this->tracerState->logger?->debug('Creating tracer', ['scope' => $instrumentationScope, 'config' => $tracerConfig]);
+        if ($tracer = $this->tracers[$instrumentationScope] ?? null) {
+            return $tracer;
+        }
 
-        return new Tracer($this->tracerState, $instrumentationScope, $tracerConfig, new SpanSuppressorProxy($this->spanSuppressionStrategy, $instrumentationScope));
+        $config = new TracerConfig();
+        $this->configurator->update($config, $instrumentationScope);
+
+        $this->tracerState->logger?->debug('Creating tracer', ['scope' => $instrumentationScope, 'config' => $config]);
+
+        return $this->tracers[$instrumentationScope] = new Tracer(
+            $this->tracerState,
+            $instrumentationScope,
+            $config->disabled,
+            $this->spanSuppressionStrategy->getSuppressor($instrumentationScope),
+        );
     }
 
     public function shutdown(?Cancellation $cancellation = null): bool {

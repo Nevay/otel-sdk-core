@@ -8,7 +8,6 @@ use Nevay\OTelSDK\Common\AttributesFactory;
 use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\InstrumentationScope;
-use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Internal\InstrumentationScopeCache;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Metrics\Aggregator;
@@ -34,17 +33,21 @@ final class MeterProvider implements MeterProviderInterface {
     public readonly MeterState $meterState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
     private readonly InstrumentationScopeCache $instrumentationScopeCache;
-    public readonly ConfiguratorStack $meterConfigurator;
+    /** @var Configurator<MeterConfig> */
+    public Configurator $configurator;
+
+    /** @var WeakMap<InstrumentationScope, Meter> */
+    private WeakMap $meters;
 
     /**
-     * @param ConfiguratorStack<MeterConfig> $meterConfigurator
+     * @param Configurator<MeterConfig> $configurator
      * @param Closure(Aggregator): ExemplarReservoir $exemplarReservoir
      */
     public function __construct(
         ?ContextStorageInterface $contextStorage,
         Resource $resource,
         AttributesFactory $instrumentationScopeAttributesFactory,
-        ConfiguratorStack $meterConfigurator,
+        Configurator $configurator,
         Clock $clock,
         AttributesFactory $metricAttributesFactory,
         ExemplarFilter $exemplarFilter,
@@ -71,14 +74,26 @@ final class MeterProvider implements MeterProviderInterface {
         );
         $this->instrumentationScopeAttributesFactory = $instrumentationScopeAttributesFactory;
         $this->instrumentationScopeCache = new InstrumentationScopeCache();
-        $this->meterConfigurator = $meterConfigurator;
-        $this->meterConfigurator->onChange(static fn(MeterConfig $meterConfig, InstrumentationScope $instrumentationScope)
-            => $logger?->debug('Updating meter configuration', ['scope' => $instrumentationScope, 'config' => $meterConfig]));
-        $this->meterConfigurator->onChange($this->meterState->updateConfig(...));
+        $this->configurator = $configurator;
+        $this->meters = new WeakMap();
     }
 
-    public function updateConfigurator(Configurator|Closure $configurator): void {
-        $this->meterConfigurator->updateConfigurator($configurator);
+    public function reload(): void {
+        foreach ($this->meters as $meter) {
+            $config = new MeterConfig();
+            $this->configurator->update($config, $meter->instrumentationScope);
+
+            if ($meter->disabled === $config->disabled) {
+                continue;
+            }
+
+            $this->meterState->logger?->debug('Updating meter configuration', ['scope' => $meter->instrumentationScope, 'config' => $config]);
+
+            $meter->disabled = $config->disabled;
+            $this->meterState->updateConfig($config, $meter->instrumentationScope);
+        }
+
+        $this->meterState->reload();
     }
 
     public function getMeter(
@@ -95,10 +110,20 @@ final class MeterProvider implements MeterProviderInterface {
             $this->instrumentationScopeAttributesFactory->builder()->addAll($attributes)->build());
         $instrumentationScope = $this->instrumentationScopeCache->intern($instrumentationScope);
 
-        $meterConfig = $this->meterConfigurator->resolveConfig($instrumentationScope);
-        $this->meterState->logger?->debug('Creating meter', ['scope' => $instrumentationScope, 'config' => $meterConfig]);
+        if ($meter = $this->meters[$instrumentationScope] ?? null) {
+            return $meter;
+        }
 
-        return new Meter($this->meterState, $instrumentationScope, $meterConfig);
+        $config = new MeterConfig();
+        $this->configurator->update($config, $instrumentationScope);
+
+        $this->meterState->logger?->debug('Creating meter', ['scope' => $instrumentationScope, 'config' => $config]);
+
+        return $this->meters[$instrumentationScope] = new Meter(
+            $this->meterState,
+            $instrumentationScope,
+            $config->disabled,
+        );
     }
 
     public function shutdown(?Cancellation $cancellation = null): bool {

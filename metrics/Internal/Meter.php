@@ -14,7 +14,6 @@ use Nevay\OTelSDK\Metrics\Internal\Instrument\ObservableGauge;
 use Nevay\OTelSDK\Metrics\Internal\Instrument\ObservableUpDownCounter;
 use Nevay\OTelSDK\Metrics\Internal\Instrument\UpDownCounter;
 use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\MultiReferenceCounter;
-use Nevay\OTelSDK\Metrics\MeterConfig;
 use OpenTelemetry\API\Metrics\AsynchronousInstrument;
 use OpenTelemetry\API\Metrics\CounterInterface;
 use OpenTelemetry\API\Metrics\GaugeInterface;
@@ -36,9 +35,9 @@ use const E_USER_DEPRECATED;
 final class Meter implements MeterInterface {
 
     public function __construct(
-        private readonly MeterState $meterState,
-        private readonly InstrumentationScope $instrumentationScope,
-        private readonly MeterConfig $meterConfig,
+        public readonly MeterState $meterState,
+        public readonly InstrumentationScope $instrumentationScope,
+        public bool $disabled,
     ) {}
 
     private static function dummyInstrument(): Instrument {
@@ -110,7 +109,7 @@ final class Meter implements MeterInterface {
     }
 
     private function createInstrument(InstrumentType $type, string $name, ?string $unit, ?string $description, array $advisory, array $callbacks = []): RegisteredInstrument {
-        $r = $this->meterState->createInstrument(new Instrument($type, $name, $unit, $description, $advisory), $this->instrumentationScope, $this->meterConfig);
+        $r = $this->meterState->createInstrument(new Instrument($type, $name, $unit, $description, $advisory), $this->instrumentationScope, $this->disabled);
 
         foreach ($callbacks as $callback) {
             $this->meterState->registry->registerCallback(AsynchronousInstruments::closure($callback), $r->instrument);

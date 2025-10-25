@@ -7,7 +7,6 @@ use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\HighResolutionTime;
 use Nevay\OTelSDK\Common\InstrumentationScope;
-use Nevay\OTelSDK\Common\Internal\ConfiguratorStack;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Common\SystemClock;
 use Nevay\OTelSDK\Common\SystemHighResolutionTime;
@@ -137,10 +136,11 @@ final class TracerProviderBuilder {
      * @internal
      */
     public function copyStateInto(TracerProvider $tracerProvider, Context $selfDiagnostics): void {
+        $builder = new Configurator\RuleConfiguratorBuilder();
         foreach ($this->configurators as $configurator) {
-            $tracerProvider->tracerConfigurator->push($configurator);
+            $builder->withRule($configurator->update(...));
         }
-        $tracerProvider->tracerConfigurator->push(new Configurator\NoopConfigurator());
+        $tracerProvider->configurator = $builder->toConfigurator();
 
         $idGenerator = $this->idGenerator ?? new RandomIdGenerator();
         $sampler = $this->sampler ?? new ParentBasedSampler(new AlwaysOnSampler());
@@ -171,6 +171,8 @@ final class TracerProviderBuilder {
         $tracerProvider->tracerState->linkCountLimit = $this->linkCountLimit ?? 128;
 
         $tracerProvider->spanSuppressionStrategy = $this->spanSuppressionStrategy ?? new NoopSuppressionStrategy();
+
+        $tracerProvider->reload();
     }
 
     /**
@@ -181,10 +183,7 @@ final class TracerProviderBuilder {
             null,
             Resource::default(),
             UnlimitedAttributesFactory::create(),
-            new ConfiguratorStack(
-                static fn() => new TracerConfig(),
-                static fn(TracerConfig $tracerConfig) => $tracerConfig->__construct(),
-            ),
+            new Configurator\NoopConfigurator(),
             new NoopSuppressionStrategy(),
             $clock ?? SystemClock::create(),
             $clock ?? SystemHighResolutionTime::create(),
