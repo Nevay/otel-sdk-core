@@ -100,15 +100,6 @@ final class MeterState {
         $this->metricProducers[] = $metricProducer = new MeterMetricProducer($this->registry);
         $metricReader->updateResource($this->resource);
         $metricReader->registerProducer($metricProducer);
-
-        $startTimestamp = $this->clock->now();
-        foreach ($this->instruments as $instruments) {
-            foreach ($instruments as $r) {
-                if (!$r->dormant) {
-                    $this->createStreams($r->instrument, $r->instrumentationScope, $startTimestamp);
-                }
-            }
-        }
     }
 
     public function unregister(MetricReader $metricReader): void {
