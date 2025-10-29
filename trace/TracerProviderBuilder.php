@@ -1,12 +1,10 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Trace;
 
-use Closure;
 use Nevay\OTelSDK\Common\AttributesLimitingFactory;
 use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\HighResolutionTime;
-use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Common\SystemClock;
 use Nevay\OTelSDK\Common\SystemHighResolutionTime;
@@ -26,15 +24,14 @@ use Psr\Log\LoggerInterface;
 
 final class TracerProviderBuilder {
 
-    /** @var list<Resource> */
-    private array $resources = [];
+    private ?Resource $resource = null;
     /** @var list<SpanProcessor> */
     private array $spanProcessors = [];
 
     private ?IdGenerator $idGenerator = null;
     private ?Sampler $sampler = null;
-    /** @var list<Configurator<TracerConfig>|Closure(TracerConfig, InstrumentationScope): void> */
-    private array $configurators = [];
+    /** @var Configurator<TracerConfig>|null */
+    private ?Configurator $configurator = null;
     private ?SpanSuppressionStrategy $spanSuppressionStrategy = null;
 
     private ?int $attributeCountLimit = null;
@@ -48,8 +45,8 @@ final class TracerProviderBuilder {
     private ?int $eventCountLimit = null;
     private ?int $linkCountLimit = null;
 
-    public function addResource(Resource $resource): self {
-        $this->resources[] = $resource;
+    public function setResource(Resource $resource): self {
+        $this->resource = $resource;
 
         return $this;
     }
@@ -73,12 +70,12 @@ final class TracerProviderBuilder {
     }
 
     /**
-     * @param Configurator<TracerConfig>|Closure(TracerConfig, InstrumentationScope): void $configurator
+     * @param Configurator<TracerConfig> $configurator
      *
      * @experimental
      */
-    public function addTracerConfigurator(Configurator|Closure $configurator): self {
-        $this->configurators[] = $configurator;
+    public function setTracerConfigurator(Configurator $configurator): self {
+        $this->configurator = $configurator;
 
         return $this;
     }
@@ -136,11 +133,7 @@ final class TracerProviderBuilder {
      * @internal
      */
     public function copyStateInto(TracerProvider $tracerProvider, Context $selfDiagnostics): void {
-        $builder = new Configurator\RuleConfiguratorBuilder();
-        foreach ($this->configurators as $configurator) {
-            $builder->withRule($configurator->update(...));
-        }
-        $tracerProvider->configurator = $builder->toConfigurator();
+        $tracerProvider->configurator = $this->configurator ?? new Configurator\NoopConfigurator();
 
         $idGenerator = $this->idGenerator ?? new RandomIdGenerator();
         $sampler = $this->sampler ?? new ParentBasedSampler(new AlwaysOnSampler());
@@ -150,7 +143,7 @@ final class TracerProviderBuilder {
         }
 
         $tracerProvider->tracerState->spanListener = $spanProcessors[] = new SelfDiagnosticsSpanProcessor($selfDiagnostics->meterProvider);
-        $tracerProvider->tracerState->resource = Resource::mergeAll(...$this->resources);
+        $tracerProvider->tracerState->resource = $this->resource ?? Resource::default();
         $tracerProvider->tracerState->idGenerator = $idGenerator;
         $tracerProvider->tracerState->sampler = $sampler;
         $tracerProvider->tracerState->spanProcessor = MultiSpanProcessor::composite(...$spanProcessors);

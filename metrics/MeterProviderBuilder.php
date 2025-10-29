@@ -5,7 +5,6 @@ use Closure;
 use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\HighResolutionTime;
-use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Common\SystemClock;
 use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
@@ -27,15 +26,14 @@ use Random\Randomizer;
 
 final class MeterProviderBuilder {
 
-    /** @var list<Resource> */
-    private array $resources = [];
+    private ?Resource $resource = null;
     /** @var list<MetricReader> */
     private array $metricReaders = [];
     private ExemplarFilter $exemplarFilter = ExemplarFilter::TraceBased;
     private Closure $exemplarReservoir;
     private readonly ViewRegistryBuilder $viewRegistryBuilder;
-    /** @var list<Configurator<MeterConfig>|Closure(MeterConfig, InstrumentationScope): void> */
-    private array $configurators = [];
+    /** @var Configurator<MeterConfig>|null */
+    private ?Configurator $configurator = null;
 
     public function __construct() {
         $randomizer = new Randomizer(new PcgOneseq128XslRr64());
@@ -45,8 +43,8 @@ final class MeterProviderBuilder {
         $this->viewRegistryBuilder = new ViewRegistryBuilder();
     }
 
-    public function addResource(Resource $resource): self {
-        $this->resources[] = $resource;
+    public function setResource(Resource $resource): self {
+        $this->resource = $resource;
 
         return $this;
     }
@@ -103,12 +101,12 @@ final class MeterProviderBuilder {
     }
 
     /**
-     * @param Configurator<MeterConfig>|Closure(MeterConfig, InstrumentationScope): void $configurator
+     * @param Configurator<MeterConfig> $configurator
      *
      * @experimental
      */
-    public function addMeterConfigurator(Configurator|Closure $configurator): self {
-        $this->configurators[] = $configurator;
+    public function setMeterConfigurator(Configurator $configurator): self {
+        $this->configurator = $configurator;
 
         return $this;
     }
@@ -118,13 +116,9 @@ final class MeterProviderBuilder {
      * @noinspection PhpUnusedParameterInspection
      */
     public function copyStateInto(MeterProvider $meterProvider, Context $selfDiagnostics): void {
-        $builder = new Configurator\RuleConfiguratorBuilder();
-        foreach ($this->configurators as $configurator) {
-            $builder->withRule($configurator->update(...));
-        }
-        $meterProvider->configurator = $builder->toConfigurator();
+        $meterProvider->configurator = $this->configurator ?? new Configurator\NoopConfigurator();
 
-        $meterProvider->meterState->updateResource(Resource::mergeAll(...$this->resources));
+        $meterProvider->meterState->updateResource($this->resource ?? Resource::default());
         $meterProvider->meterState->exemplarFilter = match ($this->exemplarFilter) {
             ExemplarFilter::AlwaysOn => new AlwaysOnFilter(),
             ExemplarFilter::AlwaysOff => new AlwaysOffFilter(),

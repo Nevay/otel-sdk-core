@@ -1,12 +1,10 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Logs;
 
-use Closure;
 use Nevay\OTelSDK\Common\AttributesLimitingFactory;
 use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\HighResolutionTime;
-use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Common\SystemClock;
 use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
@@ -20,20 +18,19 @@ use Psr\Log\LoggerInterface;
 
 final class LoggerProviderBuilder {
 
-    /** @var list<Resource> */
-    private array $resources = [];
+    private ?Resource $resource = null;
     /** @var list<LogRecordProcessor> */
     private array $logRecordProcessors = [];
-    /** @var list<Configurator<LoggerConfig>|Closure(LoggerConfig, InstrumentationScope): void> */
-    private array $configurators = [];
+    /** @var Configurator<LoggerConfig>|null */
+    private ?Configurator $configurator = null;
 
     private ?int $attributeCountLimit = null;
     private ?int $attributeValueLengthLimit = null;
     private ?int $logRecordAttributeCountLimit = null;
     private ?int $logRecordAttributeValueLengthLimit = null;
 
-    public function addResource(Resource $resource): self {
-        $this->resources[] = $resource;
+    public function setResource(Resource $resource): self {
+        $this->resource = $resource;
 
         return $this;
     }
@@ -45,12 +42,12 @@ final class LoggerProviderBuilder {
     }
 
     /**
-     * @param Configurator<LoggerConfig>|Closure(LoggerConfig, InstrumentationScope): void $configurator
+     * @param Configurator<LoggerConfig> $configurator
      *
      * @experimental
      */
-    public function addLoggerConfigurator(Configurator|Closure $configurator): self {
-        $this->configurators[] = $configurator;
+    public function setLoggerConfigurator(Configurator $configurator): self {
+        $this->configurator = $configurator;
 
         return $this;
     }
@@ -73,11 +70,7 @@ final class LoggerProviderBuilder {
      * @internal
      */
     public function copyStateInto(LoggerProvider $loggerProvider, Context $selfDiagnostics): void {
-        $builder = new Configurator\RuleConfiguratorBuilder();
-        foreach ($this->configurators as $configurator) {
-            $builder->withRule($configurator->update(...));
-        }
-        $loggerProvider->configurator = $builder->toConfigurator();
+        $loggerProvider->configurator = $this->configurator ?? new Configurator\NoopConfigurator();
 
         $loggerProvider->loggerState->logRecordAttributesFactory = AttributesLimitingFactory::create(
             $this->logRecordAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
@@ -90,7 +83,7 @@ final class LoggerProviderBuilder {
         }
         $logRecordProcessors[] = new SelfDiagnosticsLogRecordProcessor($selfDiagnostics->meterProvider);
 
-        $loggerProvider->loggerState->resource = Resource::mergeAll(...$this->resources);
+        $loggerProvider->loggerState->resource = $this->resource ?? Resource::default();
         $loggerProvider->loggerState->logRecordProcessor = MultiLogRecordProcessor::composite(...$logRecordProcessors);
 
         $loggerProvider->reload();
