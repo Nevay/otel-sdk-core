@@ -17,6 +17,11 @@ interface MetricReader extends TemporalityResolver, AggregationResolver, Cardina
     public function registerProducer(MetricProducer $metricProducer): void;
 
     /**
+     * @see https://opentelemetry.io/docs/specs/otel/metrics/sdk/#metricproducer
+     */
+    public function unregisterProducer(MetricProducer $metricProducer): void;
+
+    /**
      * @see https://opentelemetry.io/docs/specs/otel/metrics/sdk/#collect
      */
     public function collect(?Cancellation $cancellation = null): bool;

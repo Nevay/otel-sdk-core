@@ -25,6 +25,8 @@ use OpenTelemetry\API\Trace\TracerProviderInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Revolt\EventLoop;
+use function array_search;
+use function spl_object_id;
 use function sprintf;
 
 /**
@@ -137,7 +139,11 @@ final class PeriodicExportingMetricReader implements MetricReader {
     }
 
     public function registerProducer(MetricProducer $metricProducer): void {
-        $this->metricProducer->metricProducers[] = $metricProducer;
+        $this->metricProducer->metricProducers[spl_object_id($metricProducer)] = $metricProducer;
+    }
+
+    public function unregisterProducer(MetricProducer $metricProducer): void {
+        unset($this->metricProducer->metricProducers[spl_object_id($metricProducer)]);
     }
 
     public function collect(?Cancellation $cancellation = null): bool {

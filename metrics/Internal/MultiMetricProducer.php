@@ -21,7 +21,7 @@ final class MultiMetricProducer implements MetricProducer {
     private readonly HistogramInterface $duration;
     private readonly array $attributes;
 
-    /** @var list<MetricProducer> */
+    /** @var array<MetricProducer> */
     public array $metricProducers = [];
 
     /**

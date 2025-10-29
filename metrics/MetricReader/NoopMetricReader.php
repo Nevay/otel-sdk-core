@@ -20,6 +20,10 @@ final class NoopMetricReader implements MetricReader {
         // no-op
     }
 
+    public function unregisterProducer(MetricProducer $metricProducer): void {
+        // no-op
+    }
+
     public function collect(?Cancellation $cancellation = null): bool {
         return true;
     }

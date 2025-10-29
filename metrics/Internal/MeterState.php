@@ -28,7 +28,6 @@ use Nevay\OTelSDK\Metrics\MeterConfig;
 use Nevay\OTelSDK\Metrics\MetricReader;
 use Psr\Log\LoggerInterface;
 use WeakMap;
-use function array_search;
 use function bin2hex;
 use function hash;
 use function preg_match;
@@ -96,19 +95,25 @@ final class MeterState {
     }
 
     public function register(MetricReader $metricReader): void {
-        $this->metricReaders[] = $metricReader;
-        $this->metricProducers[] = $metricProducer = new MeterMetricProducer($this->registry);
+        $index = spl_object_id($metricReader);
+        if (isset($this->metricReaders[$index])) {
+            return;
+        }
+
+        $this->metricReaders[$index] = $metricReader;
+        $this->metricProducers[$index] = $metricProducer = new MeterMetricProducer($this->registry);
         $metricReader->updateResource($this->resource);
         $metricReader->registerProducer($metricProducer);
     }
 
     public function unregister(MetricReader $metricReader): void {
-        $index = array_search($metricReader, $this->metricReaders, true);
-        if ($index === false) {
+        $index = spl_object_id($metricReader);
+        if (!isset($this->metricReaders[$index])) {
             return;
         }
 
         $metricProducer = $this->metricProducers[$index];
+        $metricReader->unregisterProducer($metricProducer);
 
         unset(
             $this->metricReaders[$index],
