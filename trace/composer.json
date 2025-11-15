@@ -7,7 +7,7 @@
         "php-64bit": "^8.2",
         "composer-runtime-api": "^2.0",
         "amphp/amp": "^3.0",
-        "open-telemetry/api": "^1.1 <1.8",
+        "open-telemetry/api": "^1.1 <1.9",
         "open-telemetry/context": "^1.0",
         "revolt/event-loop": "^1.0",
         "tbachert/otel-sdk-common": "^0.1"
