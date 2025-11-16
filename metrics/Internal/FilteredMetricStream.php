@@ -42,6 +42,10 @@ final class FilteredMetricStream implements MetricStream {
         $this->stream->unregister($reader);
     }
 
+    public function temporality(int $reader): Temporality {
+        return $this->stream->temporality($reader);
+    }
+
     public function hasReaders(): bool {
         return $this->stream->hasReaders();
     }

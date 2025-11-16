@@ -70,6 +70,14 @@ final class AsynchronousMetricStream implements MetricStream {
         $this->lastReads[$reader] = null;
     }
 
+    public function temporality(int $reader): Temporality {
+        $cumulative = !isset($this->lastReads[$reader]);
+
+        return $cumulative
+            ? Temporality::Cumulative
+            : Temporality::Delta;
+    }
+
     public function hasReaders(): bool {
         if ($this->cumulativeReaders) {
             return true;

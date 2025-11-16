@@ -42,6 +42,14 @@ interface MetricStream {
     public function unregister(int $reader): void;
 
     /**
+     * Returns the temporality of the given reader.
+     *
+     * @param int $reader reader id
+     * @return Temporality reader temporality
+     */
+    public function temporality(int $reader): Temporality;
+
+    /**
      * Returns whether this stream has registered readers.
      *
      * @return bool whether this stream has registered readers

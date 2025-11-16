@@ -89,6 +89,14 @@ final class SynchronousMetricStream implements MetricStream {
         }
     }
 
+    public function temporality(int $reader): Temporality {
+        $cumulative = ($this->cumulative >> $reader & 1) != 0;
+
+        return $cumulative
+            ? Temporality::Cumulative
+            : Temporality::Delta;
+    }
+
     public function hasReaders(): bool {
         return $this->readers != 0;
     }
