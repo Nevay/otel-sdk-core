@@ -3,7 +3,6 @@ namespace Nevay\OTelSDK\Common;
 
 use Composer\InstalledVersions;
 use InvalidArgumentException;
-use Nevay\SPI\ServiceLoader;
 use function array_key_first;
 use function assert;
 use function bin2hex;
@@ -42,34 +41,6 @@ final class Resource {
             'service.name' => 'unknown_service:php',
             'service.instance.id' => self::uuid4(),
         ]));
-    }
-
-    /**
-     * Detects resource information using all registered resource detectors.
-     *
-     * @param list<string>|string $include list of attribute key patterns to include
-     * @param list<string>|string $exclude list of attribute key patterns to exclude
-     * @return Resource detected resource
-     *
-     * @see ResourceDetector
-     * @see ServiceLoader::register()
-     */
-    public static function detect(array|string $include = '*', array|string $exclude = []): Resource {
-        $attributesFactory = AttributesLimitingFactory::create(
-            attributeKeyFilter: Attributes::filterKeys($include, $exclude),
-        );
-
-        $resources = [];
-        foreach (ServiceLoader::load(ResourceDetector::class) as $detector) {
-            $resource = $detector->getResource();
-            $resources[] = new Resource(
-                $attributesFactory->build($resource->attributes),
-                $resource->schemaUrl,
-            );
-        }
-        $resources[] = Resource::default();
-
-        return Resource::mergeAll(...$resources);
     }
 
     /**
