@@ -35,7 +35,7 @@ final class StaticResourceTransformer implements ResourceTransformer {
      * @see https://opentelemetry.io/docs/specs/semconv/resource/
      */
     public static function opentelemetrySchema(): ResourceTransformer {
-        return self::https_opentelemetry_io_schemas_1_38_0();
+        return self::https_opentelemetry_io_schemas_1_39_0();
     }
 
     /**
@@ -180,9 +180,9 @@ final class StaticResourceTransformer implements ResourceTransformer {
         return substr($schemaUrl, $separator + 1);
     }
 
-    private static function https_opentelemetry_io_schemas_1_38_0(): ResourceTransformer {
+    private static function https_opentelemetry_io_schemas_1_39_0(): ResourceTransformer {
         return new StaticResourceTransformer(
-            schemaUrl: 'https://opentelemetry.io/schemas/1.38.0',
+            schemaUrl: 'https://opentelemetry.io/schemas/1.39.0',
             versions: [
                 '1.4.0' => 0,
                 '1.5.0' => 0,
@@ -220,6 +220,7 @@ final class StaticResourceTransformer implements ResourceTransformer {
                 '1.36.0' => 19,
                 '1.37.0' => 20,
                 '1.38.0' => 21,
+                '1.39.0' => 22,
             ],
             attributeMaps: [
                 [
@@ -328,6 +329,18 @@ final class StaticResourceTransformer implements ResourceTransformer {
                     'system.paging.type' => 'system.paging.fault.type',
                     'system.process.status' => 'process.state',
                     'system.processes.status' => 'process.state',
+                ],
+                [
+                    'linux.memory.slab.state' => 'system.memory.linux.slab.state',
+                    'peer.service' => 'service.peer.name',
+                    'rpc.connect_rpc.error_code' => 'rpc.response.status_code',
+                    'rpc.connect_rpc.request.metadata' => 'rpc.request.metadata',
+                    'rpc.connect_rpc.response.metadata' => 'rpc.response.metadata',
+                    'rpc.grpc.request.metadata' => 'rpc.request.metadata',
+                    'rpc.grpc.response.metadata' => 'rpc.response.metadata',
+                    'rpc.jsonrpc.request_id' => 'jsonrpc.request.id',
+                    'rpc.jsonrpc.version' => 'jsonrpc.protocol.version',
+                    'rpc.system' => 'rpc.system.name',
                 ],
             ],
         );
