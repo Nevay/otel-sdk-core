@@ -83,13 +83,13 @@ final class MeterProvider implements MeterProviderInterface {
             $config = new MeterConfig();
             $this->configurator->update($config, $meter->instrumentationScope);
 
-            if ($meter->disabled === $config->disabled) {
+            if ($meter->enabled === $config->enabled) {
                 continue;
             }
 
             $this->meterState->logger?->debug('Updating meter configuration', ['scope' => $meter->instrumentationScope, 'config' => $config]);
 
-            $meter->disabled = $config->disabled;
+            $meter->enabled = $config->enabled;
             $this->meterState->updateConfig($config, $meter->instrumentationScope);
         }
 
@@ -122,7 +122,7 @@ final class MeterProvider implements MeterProviderInterface {
         return $this->meters[$instrumentationScope] = new Meter(
             $this->meterState,
             $instrumentationScope,
-            $config->disabled,
+            $config->enabled,
         );
     }
 

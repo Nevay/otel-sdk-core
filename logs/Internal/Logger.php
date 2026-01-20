@@ -16,13 +16,13 @@ final class Logger implements LoggerInterface {
     public function __construct(
         private readonly LoggerState $loggerState,
         public readonly InstrumentationScope $instrumentationScope,
-        public bool $disabled,
+        public bool $enabled,
         public int $minimumSeverity,
         public bool $traceBased,
     ) {}
 
     public function isEnabled(?ContextInterface $context = null, ?int $severityNumber = null, ?string $eventName = null): bool {
-        return !$this->disabled
+        return $this->enabled
             && $this->filterSeverity($severityNumber)
             && $this->filterTraceBased($context = ContextResolver::resolve($context, $this->loggerState->contextStorage))
             && $this->loggerState->logRecordProcessor->enabled(
@@ -34,7 +34,7 @@ final class Logger implements LoggerInterface {
     }
 
     public function emit(LogRecord $logRecord): void {
-        if ($this->disabled) {
+        if (!$this->enabled) {
             return;
         }
         if (!$this->filterSeverity(Accessor::getSeverityNumber($logRecord))) {

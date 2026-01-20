@@ -63,13 +63,13 @@ final class LoggerProvider implements LoggerProviderInterface {
             $config = new LoggerConfig();
             $this->configurator->update($config, $logger->instrumentationScope);
 
-            if ($logger->disabled === $config->disabled && $logger->minimumSeverity === $config->minimumSeverity && $logger->traceBased === $config->traceBased) {
+            if ($logger->enabled === $config->enabled && $logger->minimumSeverity === $config->minimumSeverity && $logger->traceBased === $config->traceBased) {
                 continue;
             }
 
             $this->loggerState->logger?->debug('Updating logger', ['scope' => $logger->instrumentationScope, 'config' => $config]);
 
-            $logger->disabled = $config->disabled;
+            $logger->enabled = $config->enabled;
             $logger->minimumSeverity = $config->minimumSeverity;
             $logger->traceBased = $config->traceBased;
         }
@@ -101,7 +101,7 @@ final class LoggerProvider implements LoggerProviderInterface {
         return $this->loggers[$instrumentationScope] = new Logger(
             $this->loggerState,
             $instrumentationScope,
-            $config->disabled,
+            $config->enabled,
             $config->minimumSeverity,
             $config->traceBased,
         );

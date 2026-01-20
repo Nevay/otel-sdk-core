@@ -96,7 +96,7 @@ final class SpanBuilder implements SpanBuilderInterface {
         $parent = ContextResolver::resolve($this->parent, $tracerState->contextStorage);
         $parentSpan = Span::fromContext($parent);
 
-        if ($this->tracer->disabled) {
+        if (!$this->tracer->enabled) {
             return $parentSpan->isRecording()
                 ? Span::wrap($parentSpan->getContext())
                 : $parentSpan;

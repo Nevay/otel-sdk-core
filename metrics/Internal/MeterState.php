@@ -77,7 +77,7 @@ final class MeterState {
 
     public function updateConfig(MeterConfig $meterConfig, InstrumentationScope $instrumentationScope): void {
         foreach ($this->instruments[spl_object_id($instrumentationScope)] ?? [] as $r) {
-            $r->dormant = $meterConfig->disabled;
+            $r->dormant = !$meterConfig->enabled;
         }
     }
 

@@ -85,13 +85,13 @@ final class TracerProvider implements TracerProviderInterface {
             $config = new TracerConfig();
             $this->configurator->update($config, $tracer->instrumentationScope);
 
-            if ($tracer->disabled === $config->disabled) {
+            if ($tracer->enabled === $config->enabled) {
                 continue;
             }
 
             $this->tracerState->logger?->debug('Updating tracer configuration', ['scope' => $tracer->instrumentationScope, 'config' => $config]);
 
-            $tracer->disabled = $config->disabled;
+            $tracer->enabled = $config->enabled;
         }
         foreach ($this->tracers as $tracer) {
             $tracer->spanSuppressor = $this->spanSuppressionStrategy->getSuppressor($tracer->instrumentationScope);
@@ -124,7 +124,7 @@ final class TracerProvider implements TracerProviderInterface {
         return $this->tracers[$instrumentationScope] = new Tracer(
             $this->tracerState,
             $instrumentationScope,
-            $config->disabled,
+            $config->enabled,
             $this->spanSuppressionStrategy->getSuppressor($instrumentationScope),
         );
     }

@@ -37,7 +37,7 @@ final class Meter implements MeterInterface {
     public function __construct(
         public readonly MeterState $meterState,
         public readonly InstrumentationScope $instrumentationScope,
-        public bool $disabled,
+        public bool $enabled,
     ) {}
 
     private static function dummyInstrument(): Instrument {
@@ -109,7 +109,7 @@ final class Meter implements MeterInterface {
     }
 
     private function createInstrument(InstrumentType $type, string $name, ?string $unit, ?string $description, array $advisory, array $callbacks = []): RegisteredInstrument {
-        $r = $this->meterState->createInstrument(new Instrument($type, $name, $unit, $description, $advisory), $this->instrumentationScope, $this->disabled);
+        $r = $this->meterState->createInstrument(new Instrument($type, $name, $unit, $description, $advisory), $this->instrumentationScope, !$this->enabled);
 
         foreach ($callbacks as $callback) {
             $this->meterState->registry->registerCallback(AsynchronousInstruments::closure($callback), $r->instrument);

@@ -7,7 +7,7 @@ namespace Nevay\OTelSDK\Logs;
 final class LoggerConfig {
 
     public function __construct(
-        public bool $disabled = false,
+        public bool $enabled = true,
         public int $minimumSeverity = 0,
         public bool $traceBased = false,
     ) {}
