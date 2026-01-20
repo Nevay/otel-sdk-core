@@ -84,7 +84,7 @@ final class CompositeSampler implements Sampler {
             : $traceState->without('ot');
 
         return new Internal\SamplingResult(
-            decision: $intent->threshold <= $randomness
+            decision: $intent->threshold !== null && $intent->threshold <= $randomness
                 ? SamplingDecision::RecordAndSample
                 : SamplingDecision::Drop,
             traceState: $traceState,
