@@ -5,6 +5,7 @@ use Nevay\OTelSDK\Common\ContextResolver;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use OpenTelemetry\API\Logs\LoggerInterface;
 use OpenTelemetry\API\Logs\LogRecord;
+use OpenTelemetry\API\Logs\LogRecordBuilderInterface;
 use OpenTelemetry\API\Trace\Span;
 use OpenTelemetry\Context\ContextInterface;
 
@@ -14,7 +15,7 @@ use OpenTelemetry\Context\ContextInterface;
 final class Logger implements LoggerInterface {
 
     public function __construct(
-        private readonly LoggerState $loggerState,
+        public readonly LoggerState $loggerState,
         public readonly InstrumentationScope $instrumentationScope,
         public bool $enabled,
         public int $minimumSeverity,
@@ -31,6 +32,10 @@ final class Logger implements LoggerInterface {
                 $severityNumber,
                 $eventName,
             );
+    }
+
+    public function logRecordBuilder(): LogRecordBuilderInterface {
+        return new LogRecordBuilder($this);
     }
 
     public function emit(LogRecord $logRecord): void {
@@ -71,11 +76,11 @@ final class Logger implements LoggerInterface {
         $this->loggerState->logRecordProcessor->onEmit($record, $context);
     }
 
-    private function filterSeverity(?int $severityNumber): bool {
+    public function filterSeverity(?int $severityNumber): bool {
         return !$severityNumber || $severityNumber >= $this->minimumSeverity;
     }
 
-    private function filterTraceBased(ContextInterface $context): bool {
+    public function filterTraceBased(ContextInterface $context): bool {
         if (!$this->traceBased) {
             return true;
         }
