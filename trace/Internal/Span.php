@@ -128,7 +128,7 @@ final class Span implements ReadWriteSpan {
         if (!$this->recording) {
             return $this;
         }
-        if ($this->tracerState->linkCountLimit >= count($this->spanData->links)) {
+        if ($this->tracerState->linkCountLimit <= count($this->spanData->links)) {
             $this->spanData->droppedLinksCount++;
             return $this;
         }
@@ -147,7 +147,7 @@ final class Span implements ReadWriteSpan {
         if (!$this->recording) {
             return $this;
         }
-        if ($this->tracerState->eventCountLimit >= count($this->spanData->events)) {
+        if ($this->tracerState->eventCountLimit <= count($this->spanData->events)) {
             $this->spanData->droppedEventsCount++;
             return $this;
         }
@@ -167,7 +167,7 @@ final class Span implements ReadWriteSpan {
         if (!$this->recording) {
             return $this;
         }
-        if ($this->tracerState->eventCountLimit >= count($this->spanData->events)) {
+        if ($this->tracerState->eventCountLimit <= count($this->spanData->events)) {
             $this->spanData->droppedEventsCount++;
             return $this;
         }

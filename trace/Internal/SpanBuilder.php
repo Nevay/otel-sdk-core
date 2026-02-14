@@ -52,7 +52,7 @@ final class SpanBuilder implements SpanBuilderInterface {
     }
 
     public function addLink(SpanContextInterface $context, iterable $attributes = []): SpanBuilderInterface {
-        if ($this->tracer->tracerState->linkCountLimit >= count($this->links)) {
+        if ($this->tracer->tracerState->linkCountLimit <= count($this->links)) {
             $this->droppedLinksCount++;
             return $this;
         }
