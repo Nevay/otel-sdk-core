@@ -19,6 +19,6 @@ final class LoggerState {
         public readonly Clock $clock,
         public LogRecordProcessor $logRecordProcessor,
         public AttributesFactory $logRecordAttributesFactory,
-        public readonly ?LoggerInterface $logger,
+        public ?LoggerInterface $logger,
     ) {}
 }

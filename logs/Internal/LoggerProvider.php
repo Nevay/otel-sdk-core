@@ -2,7 +2,6 @@
 namespace Nevay\OTelSDK\Logs\Internal;
 
 use Amp\Cancellation;
-use Closure;
 use Nevay\OTelSDK\Common\AttributesFactory;
 use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\Configurator;
@@ -10,7 +9,6 @@ use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\InstrumentationScopeCache;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Logs\LoggerConfig;
-use Nevay\OTelSDK\Logs\LoggerProviderInterface;
 use Nevay\OTelSDK\Logs\LogRecordProcessor;
 use OpenTelemetry\API\Logs\LoggerInterface;
 use OpenTelemetry\Context\ContextStorageInterface;
@@ -20,7 +18,7 @@ use WeakMap;
 /**
  * @internal
  */
-final class LoggerProvider implements LoggerProviderInterface {
+final class LoggerProvider {
 
     public readonly LoggerState $loggerState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;

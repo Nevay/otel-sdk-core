@@ -2,17 +2,8 @@
 namespace Nevay\OTelSDK\Logs;
 
 use Nevay\OTelSDK\Common\AttributesLimitingFactory;
-use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\Configurator;
-use Nevay\OTelSDK\Common\HighResolutionTime;
 use Nevay\OTelSDK\Common\Resource;
-use Nevay\OTelSDK\Common\SystemClock;
-use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
-use Nevay\OTelSDK\Logs\Internal\LogDiscardedLogRecordProcessor;
-use Nevay\OTelSDK\Logs\Internal\LoggerProvider;
-use Nevay\OTelSDK\Logs\Internal\SelfDiagnosticsLogRecordProcessor;
-use Nevay\OTelSDK\Logs\LogRecordProcessor\MultiLogRecordProcessor;
-use Nevay\OTelSDK\Logs\LogRecordProcessor\NoopLogRecordProcessor;
 use OpenTelemetry\API\Configuration\Context;
 use Psr\Log\LoggerInterface;
 
@@ -66,48 +57,23 @@ final class LoggerProviderBuilder {
         return $this;
     }
 
-    /**
-     * @internal
-     */
-    public function copyStateInto(LoggerProvider $loggerProvider, Context $selfDiagnostics): void {
-        $loggerProvider->configurator = $this->configurator ?? new Configurator\NoopConfigurator();
-
-        $loggerProvider->loggerState->logRecordAttributesFactory = AttributesLimitingFactory::create(
-            $this->logRecordAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
-            $this->logRecordAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
-        );
-
-        $logRecordProcessors = $this->logRecordProcessors;
-        if ($loggerProvider->loggerState->logger) {
-            $logRecordProcessors[] = new LogDiscardedLogRecordProcessor($loggerProvider->loggerState->logger);
+    public function build(LoggerInterface|Context|null $selfDiagnostics = null, LoggerProvider $loggerProvider = new LoggerProvider()): LoggerProviderInterface {
+        if ($selfDiagnostics instanceof LoggerInterface) {
+            $selfDiagnostics = new Context(logger: $selfDiagnostics);
         }
-        $logRecordProcessors[] = new SelfDiagnosticsLogRecordProcessor($selfDiagnostics->meterProvider);
+        if ($selfDiagnostics) {
+            $loggerProvider->initSelfDiagnostics($selfDiagnostics);
+        }
 
-        $loggerProvider->loggerState->resource = $this->resource ?? Resource::default();
-        $loggerProvider->loggerState->logRecordProcessor = MultiLogRecordProcessor::composite(...$logRecordProcessors);
-
-        $loggerProvider->reload();
-    }
-
-    /**
-     * @internal
-     */
-    public static function buildBase(?LoggerInterface $logger = null, (Clock&HighResolutionTime)|null $clock = null): LoggerProvider {
-        return new LoggerProvider(
-            null,
-            Resource::default(),
-            UnlimitedAttributesFactory::create(),
-            new Configurator\NoopConfigurator(),
-            $clock ?? SystemClock::create(),
-            new NoopLogRecordProcessor(),
-            AttributesLimitingFactory::create(),
-            $logger,
-        );
-    }
-
-    public function build(?LoggerInterface $logger = null): LoggerProviderInterface {
-        $loggerProvider = self::buildBase($logger);
-        $this->copyStateInto($loggerProvider, new Context());
+        $loggerProvider->update(function(LoggerState $state): void {
+            $state->configurator = $this->configurator ?? new Configurator\NoopConfigurator();
+            $state->logRecordProcessors = $this->logRecordProcessors;
+            $state->resource = $this->resource ?? Resource::default();
+            $state->logRecordAttributesFactory = AttributesLimitingFactory::create(
+                $this->logRecordAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
+                $this->logRecordAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
+            );
+        });
 
         return $loggerProvider;
     }
