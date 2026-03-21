@@ -65,6 +65,7 @@ final class BatchingMetricExportDriver implements ExportingProcessorDriver {
                     );
                     $carry->data->dataPoints = array_splice($metric->data->dataPoints, $remaining);
                 }
+                unset($metric);
                 if ($remaining <= 0) {
                     $remaining += $this->batchSize;
                     try {
