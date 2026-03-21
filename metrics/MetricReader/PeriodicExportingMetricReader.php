@@ -11,6 +11,7 @@ use Nevay\OTelSDK\Metrics\Aggregation;
 use Nevay\OTelSDK\Metrics\CardinalityLimitResolver;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use Nevay\OTelSDK\Metrics\InstrumentType;
+use Nevay\OTelSDK\Metrics\Internal\BatchingMetricExportDriver;
 use Nevay\OTelSDK\Metrics\Internal\MetricExportDriver;
 use Nevay\OTelSDK\Metrics\Internal\MultiMetricProducer;
 use Nevay\OTelSDK\Metrics\MetricExporter;
@@ -25,7 +26,6 @@ use OpenTelemetry\API\Trace\TracerProviderInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Revolt\EventLoop;
-use function array_search;
 use function spl_object_id;
 use function sprintf;
 
@@ -37,7 +37,7 @@ final class PeriodicExportingMetricReader implements MetricReader {
     private readonly MetricExporter $metricExporter;
     private readonly ?CardinalityLimitResolver $cardinalityLimits;
     private readonly ExportingProcessor $processor;
-    private readonly MetricExportDriver $driver;
+    private readonly MetricExportDriver|BatchingMetricExportDriver $driver;
     private readonly MultiMetricProducer $metricProducer;
     private readonly string $exportIntervalCallbackId;
 
@@ -50,6 +50,8 @@ final class PeriodicExportingMetricReader implements MetricReader {
      * @param int<0, max> $exportIntervalMillis interval in milliseconds between
      *        consecutive exports
      * @param int<0, max> $exportTimeoutMillis export timeout in milliseconds
+     * @param int<1, max>|null $maxExportBatchSize maximum batch size of every
+     *        export (in data points)
      * @param int<0, max> $collectTimeoutMillis collect timeout in milliseconds
      * @param MetricFilter|null $metricFilter metric filter to apply to metrics
      *        and attributes during collect
@@ -69,6 +71,7 @@ final class PeriodicExportingMetricReader implements MetricReader {
         MetricExporter $metricExporter,
         int $exportIntervalMillis = 60000,
         int $exportTimeoutMillis = 30000,
+        ?int $maxExportBatchSize = null,
         int $collectTimeoutMillis = 30000,
         ?MetricFilter $metricFilter = null,
         ?CardinalityLimitResolver $cardinalityLimits = null,
@@ -83,6 +86,9 @@ final class PeriodicExportingMetricReader implements MetricReader {
         }
         if ($exportTimeoutMillis < 0) {
             throw new InvalidArgumentException(sprintf('Export timeout (%d) must be greater than or equal to zero', $exportTimeoutMillis));
+        }
+        if ($maxExportBatchSize !== null && $maxExportBatchSize <= 0) {
+            throw new InvalidArgumentException(sprintf('Maximum export batch size (%d) must be greater than zero', $maxExportBatchSize));
         }
         if ($collectTimeoutMillis < 0) {
             throw new InvalidArgumentException(sprintf('Collect timeout (%d) must be greater than or equal to zero', $exportTimeoutMillis));
@@ -108,7 +114,9 @@ final class PeriodicExportingMetricReader implements MetricReader {
         $this->metricProducer = new MultiMetricProducer($metricProducers, $duration, $type, $name);
         $this->processor = $processor = new ExportingProcessor(
             $metricExporter,
-            $this->driver = new MetricExportDriver($this->metricProducer, $metricFilter, $collectTimeoutMillis),
+            $this->driver = $maxExportBatchSize
+                ? new BatchingMetricExportDriver($this->metricProducer, $metricFilter, $collectTimeoutMillis, $maxExportBatchSize)
+                : new MetricExportDriver($this->metricProducer, $metricFilter, $collectTimeoutMillis),
             new NoopListener(),
             $exportTimeoutMillis,
             $tracer,
