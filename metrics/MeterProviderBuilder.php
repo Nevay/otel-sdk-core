@@ -2,22 +2,11 @@
 namespace Nevay\OTelSDK\Metrics;
 
 use Closure;
-use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\Configurator;
-use Nevay\OTelSDK\Common\HighResolutionTime;
 use Nevay\OTelSDK\Common\Resource;
-use Nevay\OTelSDK\Common\SystemClock;
-use Nevay\OTelSDK\Common\UnlimitedAttributesFactory;
 use Nevay\OTelSDK\Metrics\Exemplar\AlignedHistogramBucketExemplarReservoir;
 use Nevay\OTelSDK\Metrics\Exemplar\SimpleFixedSizeExemplarReservoir;
 use Nevay\OTelSDK\Metrics\Internal\Aggregation\ExplicitBucketHistogramAggregator;
-use Nevay\OTelSDK\Metrics\Internal\Exemplar\AlwaysOffFilter;
-use Nevay\OTelSDK\Metrics\Internal\Exemplar\AlwaysOnFilter;
-use Nevay\OTelSDK\Metrics\Internal\Exemplar\ExemplarReservoirs;
-use Nevay\OTelSDK\Metrics\Internal\Exemplar\TraceBasedFilter;
-use Nevay\OTelSDK\Metrics\Internal\MeterProvider;
-use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\DelayedStalenessHandlerFactory;
-use Nevay\OTelSDK\Metrics\Internal\View\DefaultViewRegistry;
 use Nevay\OTelSDK\Metrics\Internal\View\ViewRegistryBuilder;
 use OpenTelemetry\API\Configuration\Context;
 use Psr\Log\LoggerInterface;
@@ -111,51 +100,22 @@ final class MeterProviderBuilder {
         return $this;
     }
 
-    /**
-     * @internal
-     * @noinspection PhpUnusedParameterInspection
-     */
-    public function copyStateInto(MeterProvider $meterProvider, Context $selfDiagnostics): void {
-        $meterProvider->configurator = $this->configurator ?? new Configurator\NoopConfigurator();
-
-        $meterProvider->meterState->updateResource($this->resource ?? Resource::default());
-        $meterProvider->meterState->exemplarFilter = match ($this->exemplarFilter) {
-            ExemplarFilter::AlwaysOn => new AlwaysOnFilter(),
-            ExemplarFilter::AlwaysOff => new AlwaysOffFilter(),
-            ExemplarFilter::TraceBased => new TraceBasedFilter(),
-        };
-        $meterProvider->meterState->exemplarReservoir = $this->exemplarReservoir;
-        $meterProvider->meterState->viewRegistry = $this->viewRegistryBuilder->build();
-
-        foreach ($this->metricReaders as $metricReader) {
-            $meterProvider->meterState->register($metricReader);
+    public function build(LoggerInterface|Context|null $selfDiagnostics = null, MeterProvider $meterProvider = new MeterProvider()): MeterProviderInterface {
+        if ($selfDiagnostics instanceof LoggerInterface) {
+            $selfDiagnostics = new Context(logger: $selfDiagnostics);
+        }
+        if ($selfDiagnostics) {
+            $meterProvider->initSelfDiagnostics($selfDiagnostics);
         }
 
-        $meterProvider->reload();
-    }
-
-    /**
-     * @internal
-     */
-    public static function buildBase(?LoggerInterface $logger = null, (Clock&HighResolutionTime)|null $clock = null): MeterProvider {
-        return new MeterProvider(
-            null,
-            Resource::default(),
-            UnlimitedAttributesFactory::create(),
-            new Configurator\NoopConfigurator(),
-            $clock ?? SystemClock::create(),
-            UnlimitedAttributesFactory::create(),
-            new TraceBasedFilter(),
-            ExemplarReservoirs::defaultFactory(),
-            new DefaultViewRegistry(),
-            new DelayedStalenessHandlerFactory(24 * 60 * 60),
-            $logger,
-        );
-    }
-
-    public function build(?LoggerInterface $logger = null): MeterProviderInterface {
-        $meterProvider = self::buildBase($logger);
-        $this->copyStateInto($meterProvider, new Context());
+        $meterProvider->update(function(MeterState $state): void {
+            $state->configurator = $this->configurator ?? new Configurator\NoopConfigurator();
+            $state->metricReaders = $this->metricReaders;
+            $state->viewRegistry = $this->viewRegistryBuilder->build();
+            $state->exemplarReservoir = $this->exemplarReservoir;
+            $state->exemplarFilter = $this->exemplarFilter;
+            $state->resource = $this->resource ?? Resource::default();
+        });
 
         return $meterProvider;
     }

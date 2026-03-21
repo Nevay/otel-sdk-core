@@ -9,7 +9,6 @@ use Nevay\OTelSDK\Common\Clock;
 use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\InstrumentationScopeCache;
-use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Metrics\Aggregator;
 use Nevay\OTelSDK\Metrics\ExemplarReservoir;
 use Nevay\OTelSDK\Metrics\Internal\Exemplar\ExemplarFilter;
@@ -17,7 +16,6 @@ use Nevay\OTelSDK\Metrics\Internal\Registry\MetricRegistry;
 use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\StalenessHandlerFactory;
 use Nevay\OTelSDK\Metrics\Internal\View\ViewRegistry;
 use Nevay\OTelSDK\Metrics\MeterConfig;
-use Nevay\OTelSDK\Metrics\MeterProviderInterface;
 use Nevay\OTelSDK\Metrics\MetricReader;
 use OpenTelemetry\API\Metrics\MeterInterface;
 use OpenTelemetry\Context\ContextStorageInterface;
@@ -28,7 +26,7 @@ use function Amp\async;
 /**
  * @internal
  */
-final class MeterProvider implements MeterProviderInterface {
+final class MeterProvider {
 
     public readonly MeterState $meterState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;
@@ -45,7 +43,6 @@ final class MeterProvider implements MeterProviderInterface {
      */
     public function __construct(
         ?ContextStorageInterface $contextStorage,
-        Resource $resource,
         AttributesFactory $instrumentationScopeAttributesFactory,
         Configurator $configurator,
         Clock $clock,
@@ -63,7 +60,6 @@ final class MeterProvider implements MeterProviderInterface {
                 $clock,
                 $logger,
             ),
-            $resource,
             $clock,
             $exemplarFilter,
             $exemplarReservoir,
