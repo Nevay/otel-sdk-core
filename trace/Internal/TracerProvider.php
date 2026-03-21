@@ -14,7 +14,6 @@ use Nevay\OTelSDK\Trace\Sampler;
 use Nevay\OTelSDK\Trace\SpanProcessor;
 use Nevay\OTelSDK\Trace\SpanSuppressionStrategy;
 use Nevay\OTelSDK\Trace\TracerConfig;
-use Nevay\OTelSDK\Trace\TracerProviderInterface;
 use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface;
@@ -23,7 +22,7 @@ use WeakMap;
 /**
  * @internal
  */
-final class TracerProvider implements TracerProviderInterface {
+final class TracerProvider {
 
     public readonly TracerState $tracerState;
     private readonly AttributesFactory $instrumentationScopeAttributesFactory;

@@ -2,6 +2,7 @@
 namespace Nevay\OTelSDK\Trace;
 
 use Amp\Cancellation;
+use Closure;
 use OpenTelemetry\API\Trace\NoopTracer;
 use OpenTelemetry\API\Trace\TracerInterface;
 
@@ -9,6 +10,10 @@ final class NoopTracerProvider implements TracerProviderInterface {
 
     public function getTracer(string $name, ?string $version = null, ?string $schemaUrl = null, iterable $attributes = []): TracerInterface {
         return new NoopTracer();
+    }
+
+    public function update(Closure $closure): void {
+        // no-op
     }
 
     public function shutdown(?Cancellation $cancellation = null): bool {

@@ -30,6 +30,6 @@ final class TracerState {
         public AttributesFactory $linkAttributesFactory,
         public ?int $eventCountLimit,
         public ?int $linkCountLimit,
-        public readonly ?LoggerInterface $logger,
+        public ?LoggerInterface $logger,
     ) {}
 }
