@@ -1,8 +1,11 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Metrics\Internal;
 
+use Amp\Cancellation;
+use Amp\Future;
 use Amp\TimeoutCancellation;
 use Nevay\OTelSDK\Common\Attributes;
+use Nevay\OTelSDK\Common\Internal\Export\Exporter;
 use Nevay\OTelSDK\Common\Internal\Export\ExportingProcessorDriver;
 use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Metrics\Data\Metric;
@@ -39,7 +42,8 @@ final class MetricExportDriver implements ExportingProcessorDriver {
         return null;
     }
 
-    public function finalize(mixed $data): iterable {
-        return $data;
+    public function export(Exporter $exporter, mixed $data, ?Cancellation $cancellation = null): Future {
+        /** @noinspection PhpMethodParametersCountMismatchInspection,PhpUnusedLocalVariableInspection */
+        return $exporter->export($data, $cancellation, ...($data = []));
     }
 }

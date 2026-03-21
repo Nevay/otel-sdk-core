@@ -192,10 +192,7 @@ final class ExportingProcessor {
         $listener->onExport($count);
 
         try {
-            $future = $p->exporter->export(
-                $p->driver->finalize($p->queue->dequeue()),
-                new TimeoutCancellation($p->exportTimeout),
-            );
+            $future = $p->driver->export($p->exporter, $p->queue->dequeue(), new TimeoutCancellation($p->exportTimeout));
         } catch (Throwable $e) {
             $future = Future::error($e);
         } finally {

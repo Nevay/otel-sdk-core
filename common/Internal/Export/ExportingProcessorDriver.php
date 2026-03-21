@@ -1,6 +1,9 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Common\Internal\Export;
 
+use Amp\Cancellation;
+use Amp\Future;
+
 /**
  * @template TData
  * @template TExport
@@ -25,8 +28,9 @@ interface ExportingProcessorDriver {
     public function count(mixed $data): ?int;
 
     /**
+     * @param Exporter<TExport> $exporter
      * @param TData $data
-     * @return iterable<TExport>
+     * @return Future<bool>
      */
-    public function finalize(mixed $data): iterable;
+    public function export(Exporter $exporter, mixed $data, ?Cancellation $cancellation = null): Future;
 }

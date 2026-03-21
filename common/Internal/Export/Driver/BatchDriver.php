@@ -1,6 +1,9 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Common\Internal\Export\Driver;
 
+use Amp\Cancellation;
+use Amp\Future;
+use Nevay\OTelSDK\Common\Internal\Export\Exporter;
 use Nevay\OTelSDK\Common\Internal\Export\ExportingProcessorDriver;
 use function count;
 
@@ -35,7 +38,8 @@ final class BatchDriver implements ExportingProcessorDriver {
         return count($data);
     }
 
-    public function finalize(mixed $data): iterable {
-        return $data;
+    public function export(Exporter $exporter, mixed $data, ?Cancellation $cancellation = null): Future {
+        /** @noinspection PhpMethodParametersCountMismatchInspection,PhpUnusedLocalVariableInspection */
+        return $exporter->export($data, $cancellation, ...($data = []));
     }
 }

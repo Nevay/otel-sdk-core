@@ -1,7 +1,10 @@
 <?php declare(strict_types=1);
 namespace Nevay\OTelSDK\Common\Internal\Export\Driver;
 
+use Amp\Cancellation;
+use Amp\Future;
 use AssertionError;
+use Nevay\OTelSDK\Common\Internal\Export\Exporter;
 use Nevay\OTelSDK\Common\Internal\Export\ExportingProcessorDriver;
 
 /**
@@ -28,7 +31,8 @@ final class SimpleDriver implements ExportingProcessorDriver {
         return 1;
     }
 
-    public function finalize(mixed $data): iterable {
-        return [$data];
+    public function export(Exporter $exporter, mixed $data, ?Cancellation $cancellation = null): Future {
+        /** @noinspection PhpMethodParametersCountMismatchInspection,PhpUnusedLocalVariableInspection */
+        return $exporter->export([$data], $cancellation, ...($data = []));
     }
 }
