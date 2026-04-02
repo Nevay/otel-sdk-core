@@ -132,7 +132,7 @@ final class PullMetricReader implements MetricReader {
             return false;
         }
 
-        $this->processor->flush()?->await($cancellation);
+        $this->processor->flush(link: true)?->await($cancellation);
 
         return true;
     }

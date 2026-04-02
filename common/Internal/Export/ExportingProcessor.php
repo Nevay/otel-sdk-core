@@ -7,6 +7,8 @@ use Amp\DeferredFuture;
 use Amp\Future;
 use Amp\TimeoutCancellation;
 use OpenTelemetry\API\Metrics\CounterInterface;
+use OpenTelemetry\API\Trace\Span;
+use OpenTelemetry\API\Trace\SpanContextInterface;
 use OpenTelemetry\API\Trace\TracerInterface;
 use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
@@ -35,8 +37,10 @@ final class ExportingProcessor {
 
     /** @var SplQueue<TData> */
     private readonly SplQueue $queue;
-    /** @var array<int, DeferredFuture> */
+    /** @var array<int, DeferredFuture<null>> */
     private array $flush = [];
+    /** @var array<int, list<SpanContextInterface>> */
+    private array $links = [];
     private ?Suspension $worker = null;
 
     private readonly ?CounterInterface $processedItems;
@@ -95,7 +99,7 @@ final class ExportingProcessor {
         $this->closed = true;
 
         try {
-            $this->flush()?->await($cancellation);
+            $this->flush(link: true)?->await($cancellation);
         } catch (CancelledException $e) {
             $this->drop(errorType: 'shutdown', count: $this->drain($e));
 
@@ -113,7 +117,7 @@ final class ExportingProcessor {
         }
 
         try {
-            $this->flush()?->await($cancellation);
+            $this->flush(link: true)?->await($cancellation);
         } finally {
             $success = $this->exporter->forceFlush($cancellation);
         }
@@ -143,6 +147,7 @@ final class ExportingProcessor {
             $flush->error($e);
         }
         $this->flush = [];
+        $this->links = [];
 
         return $count;
     }
@@ -151,15 +156,23 @@ final class ExportingProcessor {
      * Flushes the batch. The returned future will be resolved after the batch
      * was sent to the exporter.
      */
-    public function flush(): ?Future {
+    public function flush(SpanContextInterface|true|null $link = null): ?Future {
         $queued = $this->queue->count() + $this->driver->hasPending();
         if (!$queued) {
             return null;
         }
 
         $this->resumeWorker();
+        $flushId = $this->processedBatchId + $queued;
 
-        return ($this->flush[$this->processedBatchId + $queued] ??= new DeferredFuture())->getFuture()->ignore();
+        if ($link === true) {
+            $link = Span::getCurrent()->getContext();
+        }
+        if ($link?->isValid()) {
+            $this->links[$flushId][] = $link;
+        }
+
+        return ($this->flush[$flushId] ??= new DeferredFuture())->getFuture()->ignore();
     }
 
     private function resumeWorker(): void {
@@ -167,7 +180,10 @@ final class ExportingProcessor {
         $this->worker = null;
     }
 
-    private static function export(self $p, TracerInterface $tracer, LoggerInterface $logger): void {
+    /**
+     * @param list<SpanContextInterface> $links
+     */
+    private static function export(self $p, TracerInterface $tracer, LoggerInterface $logger, array $links): void {
         assert(!$p->queue->isEmpty());
 
         if (($count = $p->driver->count($p->queue->bottom())) === 0) {
@@ -177,14 +193,17 @@ final class ExportingProcessor {
 
         $listener = $p->listener;
 
-        $span = $tracer
+        $spanBuilder = $tracer
             ->spanBuilder($p->type)
             ->setAttribute('otel.component.name', $p->name)
             ->setAttribute('otel.component.type', $p->type)
             ->setAttribute('code.function.name', __METHOD__)
             ->setAttribute('code.file.path', __FILE__)
-            ->setAttribute('code.line.number', __LINE__)
-            ->startSpan();
+            ->setAttribute('code.line.number', __LINE__);
+        foreach ($links as $link) {
+            $spanBuilder->addLink($link);
+        }
+        $span = $spanBuilder->startSpan();
         $scope = $span->activate();
 
         $p->processedItems?->add($count, ['otel.component.name' => $p->name, 'otel.component.type' => $p->type]);
@@ -231,10 +250,10 @@ final class ExportingProcessor {
                     assert($p->driver->hasPending());
                     $p->queue->push($p->driver->getPending());
                 }
-                self::export($p, $tracer, $logger);
                 $id = ++$p->processedBatchId;
+                self::export($p, $tracer, $logger, $p->links[$id] ?? []);
                 ($p->flush[$id] ?? null)?->complete();
-                unset($p->flush[$id]);
+                unset($p->flush[$id], $p->links[$id]);
             }
 
             $p = null;
