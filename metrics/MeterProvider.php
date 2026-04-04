@@ -59,6 +59,7 @@ final class MeterProvider implements MeterProviderInterface {
         $previousMetricReaders = $this->metricReaders;
         $this->metricReaders = $state->metricReaders;
         $this->exemplarFilter = $state->exemplarFilter;
+        $this->resource = $state->resource;
 
         $this->meterProvider->meterState->exemplarFilter = match ($this->exemplarFilter) {
             ExemplarFilter::AlwaysOn => new AlwaysOnFilter(),
