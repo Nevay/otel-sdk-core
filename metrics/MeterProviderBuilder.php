@@ -7,6 +7,7 @@ use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Metrics\Exemplar\AlignedHistogramBucketExemplarReservoir;
 use Nevay\OTelSDK\Metrics\Exemplar\SimpleFixedSizeExemplarReservoir;
 use Nevay\OTelSDK\Metrics\Internal\Aggregation\ExplicitBucketHistogramAggregator;
+use Nevay\OTelSDK\Metrics\Internal\View\ComposableViewRegistry;
 use Nevay\OTelSDK\Metrics\Internal\View\ViewRegistryBuilder;
 use OpenTelemetry\API\Configuration\Context;
 use Psr\Log\LoggerInterface;
@@ -21,6 +22,7 @@ final class MeterProviderBuilder {
     private ExemplarFilter $exemplarFilter = ExemplarFilter::TraceBased;
     private Closure $exemplarReservoir;
     private readonly ViewRegistryBuilder $viewRegistryBuilder;
+    private readonly ViewRegistryBuilder $mergeRegistryBuilder;
     /** @var Configurator<MeterConfig>|null */
     private ?Configurator $configurator = null;
 
@@ -30,6 +32,7 @@ final class MeterProviderBuilder {
             ? new AlignedHistogramBucketExemplarReservoir($aggregator->boundaries, $randomizer)
             : new SimpleFixedSizeExemplarReservoir(1, $randomizer);
         $this->viewRegistryBuilder = new ViewRegistryBuilder();
+        $this->mergeRegistryBuilder = new ViewRegistryBuilder();
     }
 
     public function setResource(Resource $resource): self {
@@ -90,6 +93,38 @@ final class MeterProviderBuilder {
     }
 
     /**
+     * Customizes telemetry pipelines.
+     *
+     * @param View $view parameters defining the telemetry pipeline
+     * @param InstrumentType|null $type type of instruments to match
+     * @param string|null $name name of instruments to match, supports wildcard
+     *        patterns:
+     *        - `?` matches any single character
+     *        - `*` matches any number of any characters including none
+     * @param string|null $unit unit of instruments to match
+     * @param string|null $meterName name of meters to match
+     * @param string|null $meterVersion version of meters to match
+     * @param string|null $meterSchemaUrl schema url of meters to match
+     *
+     * @see https://opentelemetry.io/docs/specs/otel/metrics/sdk/#view
+     *
+     * @experimental
+     */
+    public function addComposableView(
+        View $view,
+        ?InstrumentType $type = null,
+        ?string $name = null,
+        ?string $unit = null,
+        ?string $meterName = null,
+        ?string $meterVersion = null,
+        ?string $meterSchemaUrl = null,
+    ): self {
+        $this->mergeRegistryBuilder->register($view, $type, $name, $unit, $meterName, $meterVersion, $meterSchemaUrl);
+
+        return $this;
+    }
+
+    /**
      * @param Configurator<MeterConfig> $configurator
      *
      * @experimental
@@ -111,7 +146,10 @@ final class MeterProviderBuilder {
         $meterProvider->update(function(MeterState $state): void {
             $state->configurator = $this->configurator ?? new Configurator\NoopConfigurator();
             $state->metricReaders = $this->metricReaders;
-            $state->viewRegistry = $this->viewRegistryBuilder->build();
+            $state->viewRegistry = new ComposableViewRegistry(
+                createViews: $this->viewRegistryBuilder->build(),
+                mergeViews: $this->mergeRegistryBuilder->build(),
+            );
             $state->exemplarReservoir = $this->exemplarReservoir;
             $state->exemplarFilter = $this->exemplarFilter;
             $state->resource = $this->resource ?? Resource::default();
