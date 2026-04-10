@@ -5,6 +5,7 @@ use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\WildcardPatternMatcher;
 use Nevay\OTelSDK\Metrics\Instrument;
 use Nevay\OTelSDK\Metrics\View;
+use function sort;
 
 /**
  * @internal
@@ -19,15 +20,19 @@ final class CompiledViewRegistry implements ViewRegistry {
     ) {}
 
     public function find(Instrument $instrument, InstrumentationScope $instrumentationScope): iterable {
-        $empty = true;
+        $selectors = [];
         foreach ($this->patternMatcher->match($instrument->name) as $selector) {
             if ($selector->accepts($instrument, $instrumentationScope)) {
-                $empty = false;
-                yield $selector->view;
+                $selectors[] = $selector;
             }
         }
 
-        if ($empty) {
+        sort($selectors);
+
+        foreach ($selectors as $selector) {
+            yield $selector->view;
+        }
+        if (!$selectors) {
             yield new View();
         }
     }

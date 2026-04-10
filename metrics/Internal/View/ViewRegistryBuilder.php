@@ -13,6 +13,9 @@ final class ViewRegistryBuilder {
     /** @var WildcardPatternMatcherBuilder<Selector> */
     private readonly WildcardPatternMatcherBuilder $patternMatcherBuilder;
 
+    /** @var int<-1, max> */
+    private int $order = -1;
+
     public function __construct() {
         $this->patternMatcherBuilder = new WildcardPatternMatcherBuilder();
     }
@@ -26,7 +29,7 @@ final class ViewRegistryBuilder {
         ?string $meterVersion = null,
         ?string $meterSchemaUrl = null,
     ): self {
-        $this->patternMatcherBuilder->add($name ?? '*', new Selector($view, $type, null, $unit, $meterName, $meterVersion, $meterSchemaUrl));
+        $this->patternMatcherBuilder->add($name ?? '*', new Selector(++$this->order, $view, $type, $unit, $meterName, $meterVersion, $meterSchemaUrl));
 
         return $this;
     }
