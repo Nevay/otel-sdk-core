@@ -2,6 +2,7 @@
 namespace Nevay\OTelSDK\Trace\Internal;
 
 use Psr\Log\LoggerInterface;
+use function max;
 use function strlen;
 use function strpos;
 use function substr_compare;
@@ -50,7 +51,7 @@ final class TraceStateHandler {
      */
     public static function unset(string $ot, ?array $seek, string $key): string {
         if ([$offset, $length] = $seek) {
-            $ot = substr_replace($ot, '', $offset - strlen($key) - 1, $length + strlen($key) + 1);
+            $ot = substr_replace($ot, '', max($offset - strlen($key) - 2, 0), $length + strlen($key) + 2);
         }
 
         return $ot;
