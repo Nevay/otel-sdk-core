@@ -51,7 +51,7 @@ final class CompositeSampler implements Sampler {
         if ($randomness === null && (~$params->traceFlags & 0x2) && !$parent->isValid()) {
             // generate randomness for root spans and set rv
             $randomness = $this->randomizer->getInt(0, (1 << 56) - 1);
-            $ot = Internal\TraceStateHandler::set($ot, $rvs, 'rv', sprintf('%014x', $randomness));
+            $ot = Internal\TraceStateHandler::set($ot, $rvs, 'rv', sprintf('%014x', $randomness), false, $this->logger);
         }
         if ($randomness === null && (~$params->traceFlags & 0x2)) {
             $this->logger->warning('The sampler is presuming TraceIDs are random and expects the Trace random flag to be set in confirmation. Please upgrade your caller(s) to use W3C Trace Context Level 2.');
