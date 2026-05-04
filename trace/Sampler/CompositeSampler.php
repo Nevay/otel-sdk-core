@@ -41,9 +41,12 @@ final class CompositeSampler implements Sampler {
         $traceState = $parent->getTraceState() ?? $emptyTraceState;
         $ot = $traceState->get('ot') ?? '';
 
-        $randomness = ($rvs = Internal\TraceStateHandler::seek($ot, 'rv')) && $rvs[1] === 14 && strspn($ot, 'ß123456789abcdef', $rvs[0], $rvs[1]) === $rvs[1]
+        $randomness = ($rvs = Internal\TraceStateHandler::seek($ot, 'rv')) && $rvs[1] === 14 && strspn($ot, '0123456789abcdef', $rvs[0], $rvs[1]) === $rvs[1]
             ? hexdec(substr($ot, $rvs[0], $rvs[1]))
             : null;
+        if ($rvs && $randomness === null) {
+            $this->logger->warning('Invalid TraceState.ot rv value. Ignoring randomness value.', ['rv' => substr($ot, $rvs[0], $rvs[1])]);
+        }
 
         if ($randomness === null && (~$params->traceFlags & 0x2) && !$parent->isValid()) {
             // generate randomness for root spans and set rv
@@ -57,9 +60,12 @@ final class CompositeSampler implements Sampler {
         // use implicit randomness from trace id
         $randomness ??= unpack('J', $params->traceId, 8)[1] & (1 << 56) - 1;
 
-        $parentThreshold = ($ths = Internal\TraceStateHandler::seek($ot, 'th')) && $ths[1] >= 1 && $ths[1] <= 14 && strspn($ot, 'ß123456789abcdef', $ths[0], $ths[1]) === $ths[1]
+        $parentThreshold = ($ths = Internal\TraceStateHandler::seek($ot, 'th')) && $ths[1] >= 1 && $ths[1] <= 14 && strspn($ot, '0123456789abcdef', $ths[0], $ths[1]) === $ths[1]
             ? hexdec(substr($ot, $ths[0], $ths[1])) << 56 - $ths[1] * 4
             : null;
+        if ($ths && $parentThreshold === null) {
+            $this->logger->warning('Invalid TraceState.ot th value. Ignoring sampling threshold.', ['th' => substr($ot, $ths[0], $ths[1])]);
+        }
 
         if ($parentThreshold !== null && ($parentThreshold <= $randomness) !== $parent->isSampled()) {
             $this->logger->warning('Mismatch between sampling threshold and sampled flag detected. Ignoring sampling threshold.');
