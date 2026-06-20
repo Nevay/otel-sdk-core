@@ -20,7 +20,7 @@ use function version_compare;
 final class StaticResourceTransformer implements ResourceTransformer {
 
     /**
-     * @param array<string, int> $versions
+     * @param array<string, int<0, max>> $versions
      * @param list<array<string, string>> $attributeMaps
      */
     private function __construct(
@@ -98,7 +98,7 @@ final class StaticResourceTransformer implements ResourceTransformer {
         }
 
         if (!self::schemaFamilyMatches($resource->schemaUrl, $schemaUrl)) {
-            throw new TransformationException(sprintf('Cannot transform to different schema family (%s -> %s)', $schemaUrl, $resource->schemaUrl));
+            throw new TransformationException(sprintf('Cannot transform to different schema family (%s -> %s)', $resource->schemaUrl, $schemaUrl));
         }
         if (!self::schemaFamilyMatches($schemaUrl, $this->schemaUrl)) {
             throw new TransformationException(sprintf('Unsupported schema family (%s), supported: %s', $schemaUrl, $this->schemaUrl));
