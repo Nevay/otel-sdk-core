@@ -303,12 +303,11 @@ final class MeterState {
 
             $viewAggregator = $view->aggregation?->aggregator($instrument->type, $instrument->advisory);
             if (!$viewAggregator && $view->aggregation) {
-                $this->logger?->warning('View aggregation "{aggregation}" incompatible with instrument type "{instrument_type}", dropping view "{view}"', [
+                $this->logger?->warning('View aggregation "{aggregation}" incompatible with instrument type "{instrument_type}", ignoring invalid aggregation configuration for view "{view}"', [
                     'aggregation' => $view->aggregation,
                     'instrument_type' => $instrument->type,
                     'view' => $descriptor->name,
                 ]);
-                continue;
             }
 
             foreach ($this->metricReaders as $i => $metricReader) {
