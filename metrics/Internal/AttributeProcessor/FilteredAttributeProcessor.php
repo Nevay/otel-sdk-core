@@ -17,7 +17,7 @@ final class FilteredAttributeProcessor implements AttributeProcessor {
     public function process(Attributes $attributes, ContextInterface $context): Attributes {
         $raw = $attributes->toArray();
         foreach ($raw as $key => $_) {
-            if (!($this->attributeKeys)($key)) {
+            if (!($this->attributeKeys)((string) $key)) {
                 unset($raw[$key]);
             }
         }
