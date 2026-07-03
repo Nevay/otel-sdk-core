@@ -23,6 +23,10 @@ final class Tracer implements TracerInterface {
     }
 
     public function spanBuilder(string $spanName): SpanBuilderInterface {
+        if (!$this->enabled) {
+            return new NoopSpanBuilder($this->tracerState->contextStorage);
+        }
+
         return new SpanBuilder($this, $spanName);
     }
 }

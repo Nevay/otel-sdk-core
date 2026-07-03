@@ -35,6 +35,10 @@ final class Logger implements LoggerInterface {
     }
 
     public function logRecordBuilder(): LogRecordBuilderInterface {
+        if (!$this->enabled) {
+            return new NoopLogRecordBuilder();
+        }
+
         return new LogRecordBuilder($this);
     }
 
