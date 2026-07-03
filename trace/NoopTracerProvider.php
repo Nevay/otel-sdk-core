@@ -12,7 +12,7 @@ final class NoopTracerProvider implements TracerProviderInterface {
         return new NoopTracer();
     }
 
-    public function update(Closure $closure): void {
+    public function update(Closure $update): void {
         // no-op
     }
 
