@@ -10,7 +10,7 @@ use Nevay\OTelSDK\Metrics\InstrumentType;
 use Nevay\OTelSDK\Metrics\MetricExporter;
 
 /**
- * @implements NoopExporter<Metric>
+ * @extends NoopExporter<Metric>
  */
 final class NoopMetricExporter extends NoopExporter implements MetricExporter {
 

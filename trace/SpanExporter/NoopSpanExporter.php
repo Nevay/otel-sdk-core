@@ -6,7 +6,7 @@ use Nevay\OTelSDK\Trace\ReadableSpan;
 use Nevay\OTelSDK\Trace\SpanExporter;
 
 /**
- * @implements NoopExporter<ReadableSpan>
+ * @extends NoopExporter<ReadableSpan>
  */
 final class NoopSpanExporter extends NoopExporter implements SpanExporter {
 

@@ -6,7 +6,7 @@ use Nevay\OTelSDK\Logs\LogRecordExporter;
 use Nevay\OTelSDK\Logs\ReadableLogRecord;
 
 /**
- * @implements NoopExporter<ReadableLogRecord>
+ * @extends NoopExporter<ReadableLogRecord>
  */
 final class NoopLogRecordExporter extends NoopExporter implements LogRecordExporter {
 
