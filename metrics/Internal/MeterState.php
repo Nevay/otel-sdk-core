@@ -258,6 +258,8 @@ final class MeterState {
                 new DefaultMetricAggregatorFactory(
                     $view->aggregator,
                     $view->attributeProcessor,
+                    $view->exemplarFilter,
+                    $view->exemplarReservoir,
                     $view->cardinalityLimit,
                 ),
             );
