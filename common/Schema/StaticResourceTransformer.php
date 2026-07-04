@@ -35,7 +35,7 @@ final class StaticResourceTransformer implements ResourceTransformer {
      * @see https://opentelemetry.io/docs/specs/semconv/resource/
      */
     public static function opentelemetrySchema(): ResourceTransformer {
-        return self::https_opentelemetry_io_schemas_1_42_0();
+        return self::https_opentelemetry_io_schemas_1_43_0();
     }
 
     /**
@@ -180,9 +180,9 @@ final class StaticResourceTransformer implements ResourceTransformer {
         return substr($schemaUrl, $separator + 1);
     }
 
-    private static function https_opentelemetry_io_schemas_1_42_0(): ResourceTransformer {
+    private static function https_opentelemetry_io_schemas_1_43_0(): ResourceTransformer {
         return new StaticResourceTransformer(
-            schemaUrl: 'https://opentelemetry.io/schemas/1.42.0',
+            schemaUrl: 'https://opentelemetry.io/schemas/1.43.0',
             versions: [
                 '1.4.0' => 0,
                 '1.5.0' => 0,
@@ -225,6 +225,7 @@ final class StaticResourceTransformer implements ResourceTransformer {
                 '1.41.0' => 23,
                 '1.41.1' => 23,
                 '1.42.0' => 23,
+                '1.43.0' => 23,
             ],
             attributeMaps: [
                 [
