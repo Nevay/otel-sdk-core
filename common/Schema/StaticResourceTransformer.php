@@ -3,6 +3,7 @@ namespace Nevay\OTelSDK\Common\Schema;
 
 use InvalidArgumentException;
 use Nevay\OTelSDK\Common\Attributes;
+use Nevay\OTelSDK\Common\EntityRef;
 use Nevay\OTelSDK\Common\Resource;
 use function array_key_exists;
 use function array_reverse;
@@ -115,21 +116,36 @@ final class StaticResourceTransformer implements ResourceTransformer {
         }
 
         $attributes = $resource->attributes->toArray();
+        $entities = $resource->entities;
 
         for ($i = $fromIndex; $i < $toIndex; $i++) {
-            $attributes = self::transformAttributes($attributes, $this->attributeMaps[$i]);
+            $transformations = self::transformations($attributes, $this->attributeMaps[$i]);
+            $attributes = self::transformAttributes($attributes, $transformations);
+            $entities = self::transformEntities($entities, $transformations);
         }
         for ($i = $fromIndex; --$i >= $toIndex;) {
-            $attributes = self::transformAttributes($attributes, $this->attributeMaps[$i], true);
+            $transformations = self::transformations($attributes, $this->attributeMaps[$i], true);
+            $attributes = self::transformAttributes($attributes, $transformations);
+            $entities = self::transformEntities($entities, $transformations);
+        }
+
+        foreach ($entities as $e => $entity) {
+            $entities[$e] = new EntityRef(
+                type: $entity->type,
+                identity: $entity->identity,
+                description: $entity->description,
+                schemaUrl: $schemaUrl,
+            );
         }
 
         return new Resource(
             attributes: new Attributes($attributes, $resource->attributes->getDroppedAttributesCount()),
             schemaUrl: $schemaUrl,
+            entities: $entities,
         );
     }
 
-    private static function transformAttributes(array $attributes, array $attributeMap, bool $reverse = false): array {
+    private static function transformations(array $attributes, array $attributeMap, bool $reverse = false): array {
         $transformations = [];
         foreach ($attributeMap as $from => $to) {
             if ($reverse) {
@@ -149,6 +165,10 @@ final class StaticResourceTransformer implements ResourceTransformer {
             $transformations[$from] = $to;
         }
 
+        return $transformations;
+    }
+
+    private static function transformAttributes(array $attributes, array $transformations): array {
         if (!$transformations) {
             return $attributes;
         }
@@ -159,6 +179,40 @@ final class StaticResourceTransformer implements ResourceTransformer {
         }
 
         return $mappedAttributes;
+    }
+
+    /**
+     * @param list<EntityRef> $entities
+     * @return list<EntityRef>
+     */
+    private static function transformEntities(array $entities, array $transformations): array {
+        if (!$transformations) {
+            return $entities;
+        }
+
+        foreach ($entities as $e => $entity) {
+            $identity = $entity->identity;
+            $description = $entity->description;
+
+            foreach ($identity as $i => $key) {
+                $identity[$i] = $transformations[$key] ?? $key;
+            }
+            foreach ($description as $i => $key) {
+                $description[$i] = $transformations[$key] ?? $key;
+            }
+
+            if ($identity === $entity->identity && $description === $entity->description) {
+                continue;
+            }
+
+            $entities[$e] = new EntityRef(
+                type: $entity->type,
+                identity: $identity,
+                description: $description,
+            );
+        }
+
+        return $entities;
     }
 
     private static function schemaFamilyMatches(string $left, string $right): bool {
