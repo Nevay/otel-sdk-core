@@ -21,10 +21,12 @@ use Nevay\OTelSDK\Metrics\Internal\Stream\AsynchronousMetricStream;
 use Nevay\OTelSDK\Metrics\Internal\Stream\DefaultMetricAggregator;
 use Nevay\OTelSDK\Metrics\Internal\Stream\DefaultMetricAggregatorFactory;
 use Nevay\OTelSDK\Metrics\Internal\Stream\SynchronousMetricStream;
+use Nevay\OTelSDK\Metrics\Internal\View\ComposableViewRegistry;
 use Nevay\OTelSDK\Metrics\Internal\View\ResolvedView;
 use Nevay\OTelSDK\Metrics\Internal\View\ViewRegistry;
 use Nevay\OTelSDK\Metrics\MeterConfig;
 use Nevay\OTelSDK\Metrics\MetricReader;
+use Nevay\OTelSDK\Metrics\ViewMatchingMode;
 use Psr\Log\LoggerInterface;
 use WeakMap;
 use function bin2hex;
@@ -61,6 +63,7 @@ final class MeterState {
         public ExemplarFilter $exemplarFilter,
         public Closure $exemplarReservoir,
         public ViewRegistry $viewRegistry,
+        public ViewMatchingMode $viewMatchingMode,
         private readonly StalenessHandlerFactory $stalenessHandlerFactory,
         public readonly WeakMap $destructors,
         public ?LoggerInterface $logger,
@@ -289,7 +292,12 @@ final class MeterState {
 
         $optIn = $instrument->advisory['OptIn'] ?? false;
 
-        foreach ($this->viewRegistry->find($instrument, $instrumentationScope) as $view) {
+        $viewRegistry = $this->viewRegistry;
+        if ($this->viewMatchingMode === ViewMatchingMode::Composable) {
+            $viewRegistry = new ComposableViewRegistry($viewRegistry);
+        }
+
+        foreach ($viewRegistry->find($instrument, $instrumentationScope) as $view) {
             $enabled = $view->enabled ?? !$optIn;
             if (!$enabled) {
                 continue;

@@ -17,6 +17,7 @@ use Nevay\OTelSDK\Metrics\Internal\StalenessHandler\StalenessHandlerFactory;
 use Nevay\OTelSDK\Metrics\Internal\View\ViewRegistry;
 use Nevay\OTelSDK\Metrics\MeterConfig;
 use Nevay\OTelSDK\Metrics\MetricReader;
+use Nevay\OTelSDK\Metrics\ViewMatchingMode;
 use OpenTelemetry\API\Metrics\MeterInterface;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface;
@@ -50,6 +51,7 @@ final class MeterProvider {
         ExemplarFilter $exemplarFilter,
         Closure $exemplarReservoir,
         ViewRegistry $viewRegistry,
+        ViewMatchingMode $viewMatchingMode,
         StalenessHandlerFactory $stalenessHandlerFactory,
         ?LoggerInterface $logger,
     ) {
@@ -64,6 +66,7 @@ final class MeterProvider {
             $exemplarFilter,
             $exemplarReservoir,
             $viewRegistry,
+            $viewMatchingMode,
             $stalenessHandlerFactory,
             new WeakMap(),
             $logger,

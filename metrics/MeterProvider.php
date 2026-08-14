@@ -38,6 +38,7 @@ final class MeterProvider implements MeterProviderInterface {
             new AlwaysOffFilter(),
             ExemplarReservoirs::defaultFactory(),
             new DefaultViewRegistry(),
+            ViewMatchingMode::Independent,
             new DelayedStalenessHandlerFactory(24 * 60 * 60),
             new NullLogger(),
         );
@@ -49,6 +50,7 @@ final class MeterProvider implements MeterProviderInterface {
             configurator: $this->meterProvider->configurator,
             metricReaders: $this->metricReaders,
             viewRegistry: $this->meterProvider->meterState->viewRegistry,
+            viewMatchingMode: $this->meterProvider->meterState->viewMatchingMode,
             exemplarReservoir: $this->meterProvider->meterState->exemplarReservoir,
             exemplarFilter: $this->exemplarFilter,
             resource: $this->resource,
@@ -68,6 +70,7 @@ final class MeterProvider implements MeterProviderInterface {
         };
         $this->meterProvider->meterState->exemplarReservoir = $state->exemplarReservoir;
         $this->meterProvider->meterState->viewRegistry = $state->viewRegistry;
+        $this->meterProvider->meterState->viewMatchingMode = $state->viewMatchingMode;
 
         $this->meterProvider->configurator = $state->configurator;
 

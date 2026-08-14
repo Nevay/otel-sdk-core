@@ -17,6 +17,7 @@ final class MeterState {
         public Configurator $configurator,
         public array $metricReaders,
         public ViewRegistry $viewRegistry,
+        public ViewMatchingMode $viewMatchingMode,
         public Closure $exemplarReservoir,
         public ExemplarFilter $exemplarFilter,
         public Resource $resource,
