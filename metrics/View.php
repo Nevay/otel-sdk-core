@@ -19,6 +19,8 @@ final class View {
     public readonly ?Closure $exemplarReservoir;
     /** @internal */
     public readonly ?int $cardinalityLimit;
+    /** @internal */
+    public readonly ?bool $enabled;
 
     /**
      * @param string|null $name metric stream name
@@ -29,6 +31,7 @@ final class View {
      *        data
      * @param Closure(Aggregator): ExemplarReservoir|null $exemplarReservoir
      *        factory function for exemplar reservoir
+     * @param bool|null $enabled whether this view is enabled
      * @param int<0, max>|null $cardinalityLimit aggregation cardinality limit
      */
     public function __construct(
@@ -38,17 +41,19 @@ final class View {
         ?Aggregation $aggregation = null,
         ?Closure $exemplarReservoir = null,
         ?int $cardinalityLimit = null,
+        ?bool $enabled = null,
     ) {
         if (is_array($attributeKeys)) {
             $attributeKeys = Attributes::filterKeys(include: $attributeKeys);
         }
 
-        $this->cardinalityLimit = $cardinalityLimit;
-        $this->exemplarReservoir = $exemplarReservoir;
-        $this->aggregation = $aggregation;
-        $this->attributeKeys = $attributeKeys;
-        $this->description = $description;
         $this->name = $name;
+        $this->description = $description;
+        $this->attributeKeys = $attributeKeys;
+        $this->aggregation = $aggregation;
+        $this->exemplarReservoir = $exemplarReservoir;
+        $this->cardinalityLimit = $cardinalityLimit;
+        $this->enabled = $enabled;
     }
 
     public static function drop(): View {

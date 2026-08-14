@@ -287,7 +287,14 @@ final class MeterState {
             $attributeProcessor = new FilteredAttributeProcessor(Attributes::filterKeys(include: $attributeKeys));
         }
 
+        $optIn = $instrument->advisory['OptIn'] ?? false;
+
         foreach ($this->viewRegistry->find($instrument, $instrumentationScope) as $view) {
+            $enabled = $view->enabled ?? !$optIn;
+            if (!$enabled) {
+                continue;
+            }
+
             $name = $view->name ?? $instrument->name;
             $description = $view->description ?? $instrument->description;
             $viewAttributeProcessor = match ($view->attributeKeys) {
