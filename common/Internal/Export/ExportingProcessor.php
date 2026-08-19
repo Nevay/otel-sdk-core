@@ -5,7 +5,6 @@ use Amp\Cancellation;
 use Amp\CancelledException;
 use Amp\DeferredFuture;
 use Amp\Future;
-use Amp\TimeoutCancellation;
 use OpenTelemetry\API\Metrics\CounterInterface;
 use OpenTelemetry\API\Trace\Span;
 use OpenTelemetry\API\Trace\SpanContextInterface;
@@ -211,7 +210,7 @@ final class ExportingProcessor {
         $listener->onExport($count);
 
         try {
-            $future = $p->driver->export($p->exporter, $p->queue->dequeue(), new TimeoutCancellation($p->exportTimeout));
+            $future = $p->driver->export($p->exporter, $p->queue->dequeue(), Cancellations::withTimeout($p->exportTimeout));
         } catch (Throwable $e) {
             $future = Future::error($e);
         } finally {
