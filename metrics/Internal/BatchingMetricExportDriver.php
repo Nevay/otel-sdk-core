@@ -3,8 +3,8 @@ namespace Nevay\OTelSDK\Metrics\Internal;
 
 use Amp\Cancellation;
 use Amp\Future;
-use Amp\TimeoutCancellation;
 use Nevay\OTelSDK\Common\Attributes;
+use Nevay\OTelSDK\Common\Internal\Export\Cancellations;
 use Nevay\OTelSDK\Common\Internal\Export\Exporter;
 use Nevay\OTelSDK\Common\Internal\Export\ExportingProcessorDriver;
 use Nevay\OTelSDK\Common\Resource;
@@ -32,7 +32,7 @@ final class BatchingMetricExportDriver implements ExportingProcessorDriver {
     ) {}
 
     public function getPending(): iterable {
-        return $this->metricProducer->produce($this->resource, $this->metricFilter, new TimeoutCancellation($this->collectTimeoutMillis / 1000));
+        return $this->metricProducer->produce($this->resource, $this->metricFilter, Cancellations::withTimeout($this->collectTimeoutMillis / 1000));
     }
 
     public function hasPending(): bool {
