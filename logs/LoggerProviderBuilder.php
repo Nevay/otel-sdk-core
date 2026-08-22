@@ -17,8 +17,10 @@ final class LoggerProviderBuilder {
 
     private ?int $attributeCountLimit = null;
     private ?int $attributeValueLengthLimit = null;
+    private ?int $attributeValueDepthLimit = null;
     private ?int $logRecordAttributeCountLimit = null;
     private ?int $logRecordAttributeValueLengthLimit = null;
+    private ?int $logRecordAttributeValueDepthLimit = null;
 
     public function setResource(Resource $resource): self {
         $this->resource = $resource;
@@ -43,14 +45,14 @@ final class LoggerProviderBuilder {
         return $this;
     }
 
-    public function setAttributeLimits(?int $attributeCountLimit = null, ?int $attributeValueLengthLimit = null): self {
+    public function setAttributeLimits(?int $attributeCountLimit = null, ?int $attributeValueLengthLimit = null, ?int $attributeValueDepthLimit = null): self {
         $this->attributeCountLimit = $attributeCountLimit;
         $this->attributeValueLengthLimit = $attributeValueLengthLimit;
 
         return $this;
     }
 
-    public function setLogRecordAttributeLimits(?int $attributeCountLimit = null, ?int $attributeValueLengthLimit = null): self {
+    public function setLogRecordAttributeLimits(?int $attributeCountLimit = null, ?int $attributeValueLengthLimit = null, ?int $attributeValueDepthLimit = null): self {
         $this->logRecordAttributeCountLimit = $attributeCountLimit;
         $this->logRecordAttributeValueLengthLimit = $attributeValueLengthLimit;
 
@@ -72,6 +74,7 @@ final class LoggerProviderBuilder {
             $state->logRecordAttributesFactory = AttributesLimitingFactory::create(
                 $this->logRecordAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
                 $this->logRecordAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
+                $this->logRecordAttributeValueDepthLimit ?? $this->attributeValueDepthLimit ?? 64,
             );
         });
 

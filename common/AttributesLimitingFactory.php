@@ -20,6 +20,7 @@ final class AttributesLimitingFactory implements AttributesFactory {
     private function __construct(
         private readonly ?int $attributeCountLimit,
         private readonly ?int $attributeValueLengthLimit,
+        private readonly ?int $attributeValueDepthLimit,
         private readonly ?Closure $attributeKeyFilter,
         private readonly ?Closure $attributeValueFilter,
     ) {}
@@ -31,6 +32,9 @@ final class AttributesLimitingFactory implements AttributesFactory {
      *        attributes exceeding this limit will be dropped
      * @param int|null $attributeValueLengthLimit maximum length of string
      *        valued attributes, values exceeding this limit will be truncated
+     * @param int|null $attributeValueDepthLimit maximum depth of array
+     *        value attributes, values exceeding this depth will be replaced
+     *        with an empty array
      * @param AttributeKeyFilter|null $attributeKeyFilter filter callback,
      *        attribute keys that do not pass this filter will be dropped
      * @param AttributeValueFilter|null $attributeValueFilter filter callback,
@@ -39,10 +43,11 @@ final class AttributesLimitingFactory implements AttributesFactory {
     public static function create(
         ?int $attributeCountLimit = 128,
         ?int $attributeValueLengthLimit = null,
+        ?int $attributeValueDepthLimit = 64,
         ?Closure $attributeKeyFilter = null,
         ?Closure $attributeValueFilter = null,
     ): AttributesFactory {
-        return new self($attributeCountLimit, $attributeValueLengthLimit, $attributeKeyFilter, $attributeValueFilter);
+        return new self($attributeCountLimit, $attributeValueLengthLimit, $attributeValueDepthLimit, $attributeKeyFilter, $attributeValueFilter);
     }
 
     public function build(iterable $attributes): Attributes {
@@ -53,6 +58,7 @@ final class AttributesLimitingFactory implements AttributesFactory {
         return new AttributesLimitingBuilder(
             $this->attributeCountLimit,
             $this->attributeValueLengthLimit,
+            $this->attributeValueDepthLimit,
             $this->attributeKeyFilter,
             $this->attributeValueFilter,
         );

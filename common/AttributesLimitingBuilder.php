@@ -7,6 +7,7 @@ use function count;
 use function is_array;
 use function is_string;
 use function substr;
+use const PHP_INT_MAX;
 
 /**
  * @internal
@@ -26,6 +27,7 @@ final class AttributesLimitingBuilder implements AttributesBuilder {
     public function __construct(
         private readonly ?int $attributeCountLimit = null,
         private readonly ?int $attributeValueLengthLimit = null,
+        private readonly ?int $attributeValueDepthLimit = null,
         private readonly ?Closure $attributeKeyFilter = null,
         private readonly ?Closure $attributeValueFilter = null,
     ) {}
@@ -57,9 +59,14 @@ final class AttributesLimitingBuilder implements AttributesBuilder {
             return $this;
         }
 
-        $this->attributes[$key] = $this->attributeValueLengthLimit !== null
-            ? self::normalize($value, $this->attributeValueLengthLimit)
-            : $value;
+        if ($this->attributeValueLengthLimit !== null || $this->attributeValueDepthLimit !== null) {
+             $value = self::normalize(
+                value: $value,
+                attributeValueLengthLimit: $this->attributeValueLengthLimit ?? PHP_INT_MAX,
+                attributeValueDepthLimit: $this->attributeValueDepthLimit ?? PHP_INT_MAX,
+            );
+        }
+        $this->attributes[$key] = $value;
 
         return $this;
     }
@@ -82,10 +89,13 @@ final class AttributesLimitingBuilder implements AttributesBuilder {
         return $this;
     }
 
-    private static function normalize(mixed $value, int $attributeValueLengthLimit): mixed {
+    private static function normalize(mixed $value, int $attributeValueLengthLimit, int $attributeValueDepthLimit): mixed {
         if (is_array($value)) {
+            if ($attributeValueDepthLimit === 0) {
+                return [];
+            }
             foreach ($value as $k => $v) {
-                $processed = self::normalize($v, $attributeValueLengthLimit);
+                $processed = self::normalize($v, $attributeValueLengthLimit, $attributeValueDepthLimit - 1);
                 if ($processed !== $v) {
                     $value[$k] = $processed;
                 }

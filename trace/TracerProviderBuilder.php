@@ -25,12 +25,16 @@ final class TracerProviderBuilder {
 
     private ?int $attributeCountLimit = null;
     private ?int $attributeValueLengthLimit = null;
+    private ?int $attributeValueDepthLimit = null;
     private ?int $spanAttributeCountLimit = null;
     private ?int $spanAttributeValueLengthLimit = null;
+    private ?int $spanAttributeValueDepthLimit = null;
     private ?int $eventAttributeCountLimit = null;
     private ?int $eventAttributeValueLengthLimit = null;
+    private ?int $eventAttributeValueDepthLimit = null;
     private ?int $linkAttributeCountLimit = null;
     private ?int $linkAttributeValueLengthLimit = null;
+    private ?int $linkAttributeValueDepthLimit = null;
     private ?int $eventCountLimit = null;
     private ?int $linkCountLimit = null;
 
@@ -78,30 +82,34 @@ final class TracerProviderBuilder {
         return $this;
     }
 
-    public function setAttributeLimits(?int $attributeCountLimit = null, ?int $attributeValueLengthLimit = null): self {
+    public function setAttributeLimits(?int $attributeCountLimit = null, ?int $attributeValueLengthLimit = null, ?int $attributeValueDepthLimit = null): self {
         $this->attributeCountLimit = $attributeCountLimit;
         $this->attributeValueLengthLimit = $attributeValueLengthLimit;
+        $this->attributeValueDepthLimit = $attributeValueDepthLimit;
 
         return $this;
     }
 
-    public function setSpanAttributeLimits(?int $attributeCountLimit = null, ?int $attributeValueLengthLimit = null): self {
+    public function setSpanAttributeLimits(?int $attributeCountLimit = null, ?int $attributeValueLengthLimit = null, ?int $attributeValueDepthLimit = null): self {
         $this->spanAttributeCountLimit = $attributeCountLimit;
         $this->spanAttributeValueLengthLimit = $attributeValueLengthLimit;
+        $this->spanAttributeValueDepthLimit = $attributeValueDepthLimit;
 
         return $this;
     }
 
-    public function setEventAttributeLimits(?int $attributeCountLimit = null, ?int $attributeValueLengthLimit = null): self {
+    public function setEventAttributeLimits(?int $attributeCountLimit = null, ?int $attributeValueLengthLimit = null, ?int $attributeValueDepthLimit = null): self {
         $this->eventAttributeCountLimit = $attributeCountLimit;
         $this->eventAttributeValueLengthLimit = $attributeValueLengthLimit;
+        $this->eventAttributeValueDepthLimit = $attributeValueDepthLimit;
 
         return $this;
     }
 
-    public function setLinkAttributeLimits(?int $attributeCountLimit = null, ?int $attributeValueLengthLimit = null): self {
+    public function setLinkAttributeLimits(?int $attributeCountLimit = null, ?int $attributeValueLengthLimit = null, ?int $attributeValueDepthLimit = null): self {
         $this->linkAttributeCountLimit = $attributeCountLimit;
         $this->linkAttributeValueLengthLimit = $attributeValueLengthLimit;
+        $this->linkAttributeValueDepthLimit = $attributeValueDepthLimit;
 
         return $this;
     }
@@ -135,14 +143,17 @@ final class TracerProviderBuilder {
             $state->spanAttributesFactory = AttributesLimitingFactory::create(
                 $this->spanAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
                 $this->spanAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
+                $this->spanAttributeValueDepthLimit ?? $this->attributeValueDepthLimit ?? 64,
             );
             $state->eventAttributesFactory = AttributesLimitingFactory::create(
                 $this->eventAttributeCountLimit ?? $this->spanAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
                 $this->eventAttributeValueLengthLimit ?? $this->spanAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
+                $this->eventAttributeValueDepthLimit ?? $this->spanAttributeValueDepthLimit ?? $this->attributeValueDepthLimit ?? 64,
             );
             $state->linkAttributesFactory = AttributesLimitingFactory::create(
                 $this->linkAttributeCountLimit ?? $this->spanAttributeCountLimit ?? $this->attributeCountLimit ?? 128,
                 $this->linkAttributeValueLengthLimit ?? $this->spanAttributeValueLengthLimit ?? $this->attributeValueLengthLimit,
+                $this->linkAttributeValueDepthLimit ?? $this->spanAttributeValueDepthLimit ?? $this->attributeValueDepthLimit ?? 64,
             );
             $state->eventCountLimit = $this->eventCountLimit ?? 128;
             $state->linkCountLimit = $this->linkCountLimit ?? 128;
