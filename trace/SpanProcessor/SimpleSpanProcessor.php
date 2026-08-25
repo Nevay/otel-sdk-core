@@ -92,11 +92,11 @@ final class SimpleSpanProcessor implements SpanProcessor {
 
         $queueSize->observe(fn(ObserverInterface $observer) => $observer->observe(
             $this->listener->queueSize,
-            ['otel.sdk.component.name' => $name, 'otel.sdk.component.type' => $type],
+            ['otel.component.name' => $name, 'otel.component.type' => $type],
         ));
         $queueCapacity->observe(fn(ObserverInterface $observer) => $observer->observe(
             $this->maxQueueSize,
-            ['otel.sdk.component.name' => $name, 'otel.sdk.component.type' => $type],
+            ['otel.component.name' => $name, 'otel.component.type' => $type],
         ));
 
         $this->processor = new ExportingProcessor(

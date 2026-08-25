@@ -87,7 +87,7 @@ final class ExportingProcessor {
     }
 
     public function drop(string $errorType, int $count = 1): void {
-        $this->processedItems?->add($count, ['error.type' => $errorType, 'otel.sdk.component.name' => $this->name, 'otel.sdk.component.type' => $this->type]);
+        $this->processedItems?->add($count, ['error.type' => $errorType, 'otel.component.name' => $this->name, 'otel.component.type' => $this->type]);
     }
 
     public function shutdown(?Cancellation $cancellation = null): bool {
