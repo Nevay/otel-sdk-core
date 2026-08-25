@@ -103,7 +103,7 @@ final class BatchSpanProcessor implements SpanProcessor {
             '{span}',
             'The number of spans in the queue of a given instance of an SDK span processor',
         );
-        $queueCapacity = $meter->createObservableGauge(
+        $queueCapacity = $meter->createObservableUpDownCounter(
             'otel.sdk.processor.span.queue.capacity',
             '{span}',
             'The maximum number of spans the queue of a given instance of an SDK span processor can hold',

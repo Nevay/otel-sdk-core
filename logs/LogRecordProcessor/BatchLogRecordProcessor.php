@@ -105,7 +105,7 @@ final class BatchLogRecordProcessor implements LogRecordProcessor {
             '{log_record}',
             'The number of log records in the queue of a given instance of an SDK log record processor',
         );
-        $queueCapacity = $meter->createObservableGauge(
+        $queueCapacity = $meter->createObservableUpDownCounter(
             'otel.sdk.processor.log.queue.capacity',
             '{log_record}',
             'The maximum number of log records the queue of a given instance of an SDK log record processor can hold',
