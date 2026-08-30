@@ -4,14 +4,10 @@ namespace Nevay\OTelSDK\Metrics;
 use Closure;
 use Nevay\OTelSDK\Common\Configurator;
 use Nevay\OTelSDK\Common\Resource;
-use Nevay\OTelSDK\Metrics\Exemplar\AlignedHistogramBucketExemplarReservoir;
-use Nevay\OTelSDK\Metrics\Exemplar\SimpleFixedSizeExemplarReservoir;
-use Nevay\OTelSDK\Metrics\Internal\Aggregation\ExplicitBucketHistogramAggregator;
+use Nevay\OTelSDK\Metrics\Internal\Exemplar\ExemplarReservoirs;
 use Nevay\OTelSDK\Metrics\Internal\View\ViewRegistryBuilder;
 use OpenTelemetry\API\Configuration\Context;
 use Psr\Log\LoggerInterface;
-use Random\Engine\PcgOneseq128XslRr64;
-use Random\Randomizer;
 
 final class MeterProviderBuilder {
 
@@ -19,17 +15,13 @@ final class MeterProviderBuilder {
     /** @var list<MetricReader> */
     private array $metricReaders = [];
     private ExemplarFilter $exemplarFilter = ExemplarFilter::TraceBased;
-    private Closure $exemplarReservoir;
+    private ?Closure $exemplarReservoir = null;
     private readonly ViewRegistryBuilder $viewRegistryBuilder;
     private ViewMatchingMode $viewMatchingMode = ViewMatchingMode::Independent;
     /** @var Configurator<MeterConfig>|null */
     private ?Configurator $configurator = null;
 
     public function __construct() {
-        $randomizer = new Randomizer(new PcgOneseq128XslRr64());
-        $this->exemplarReservoir = static fn(Aggregator $aggregator) => $aggregator instanceof ExplicitBucketHistogramAggregator && $aggregator->boundaries
-            ? new AlignedHistogramBucketExemplarReservoir($aggregator->boundaries, $randomizer)
-            : new SimpleFixedSizeExemplarReservoir(1, $randomizer);
         $this->viewRegistryBuilder = new ViewRegistryBuilder();
     }
 
@@ -123,7 +115,7 @@ final class MeterProviderBuilder {
             $state->metricReaders = $this->metricReaders;
             $state->viewRegistry = $this->viewRegistryBuilder->build();
             $state->viewMatchingMode = $this->viewMatchingMode;
-            $state->exemplarReservoir = $this->exemplarReservoir;
+            $state->exemplarReservoir = $this->exemplarReservoir ?? ExemplarReservoirs::defaultFactory();
             $state->exemplarFilter = $this->exemplarFilter;
             $state->resource = $this->resource ?? Resource::default();
         });

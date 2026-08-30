@@ -15,7 +15,7 @@ use Random\Randomizer;
 final class ExemplarReservoirs {
 
     public static function defaultFactory(): Closure {
-        $randomizer = new Randomizer(new PcgOneseq128XslRr64());
+        static $randomizer = new Randomizer(new PcgOneseq128XslRr64());
 
         return static fn(Aggregator $aggregator) => $aggregator instanceof ExplicitBucketHistogramAggregator && $aggregator->boundaries
             ? new AlignedHistogramBucketExemplarReservoir($aggregator->boundaries, $randomizer)

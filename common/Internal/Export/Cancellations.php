@@ -11,7 +11,7 @@ use Amp\TimeoutCancellation;
  */
 final class Cancellations {
 
-    public static function withTimeout(float $timeout, Cancellation $cancellation = new NullCancellation()): Cancellation {
+    public static function withTimeout(?float $timeout, Cancellation $cancellation = new NullCancellation()): Cancellation {
         return $timeout
             ? new CompositeCancellation(new TimeoutCancellation($timeout), $cancellation)
             : $cancellation;
