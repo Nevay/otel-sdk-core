@@ -137,6 +137,8 @@ final class SpanBuilder implements SpanBuilderInterface {
         $samplingParams = new SamplingParams(
             $parent,
             $parentSpan->getContext(),
+            $tracerState->resource,
+            $tracer->instrumentationScope,
             $traceId,
             $flags,
             $name,
