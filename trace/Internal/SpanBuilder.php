@@ -29,6 +29,7 @@ final class SpanBuilder implements SpanBuilderInterface {
     private array $links = [];
     private int $droppedLinksCount = 0;
     private Kind $spanKind = Kind::Internal;
+    private ?string $spanType = null;
     private ?int $startTimestamp = null;
 
     public function __construct(
@@ -85,6 +86,15 @@ final class SpanBuilder implements SpanBuilderInterface {
         return $this;
     }
 
+    /**
+     * @experimental
+     */
+    public function setSpanType(?string $spanType): SpanBuilderInterface {
+        $this->spanType = $spanType;
+
+        return $this;
+    }
+
     public function setStartTimestamp(int $timestampNanos): SpanBuilderInterface {
         $this->startTimestamp = $timestampNanos;
 
@@ -92,11 +102,12 @@ final class SpanBuilder implements SpanBuilderInterface {
     }
 
     public function startSpan(): SpanInterface {
-        $tracerState = $this->tracer->tracerState;
+        $tracer = $this->tracer;
+        $tracerState = $tracer->tracerState;
         $parent = ContextResolver::resolve($this->parent, $tracerState->contextStorage);
         $parentSpan = Span::fromContext($parent);
 
-        if (!$this->tracer->enabled) {
+        if (!$tracer->enabled) {
             return $parentSpan->isRecording()
                 ? Span::wrap($parentSpan->getContext())
                 : $parentSpan;
@@ -104,6 +115,7 @@ final class SpanBuilder implements SpanBuilderInterface {
 
         $name = $this->name;
         $spanKind = $this->spanKind;
+        $spanType = $this->spanType;
         $attributesBuilder = clone $this->attributesBuilder;
         $links = $this->links;
         $droppedLinksCount = $this->droppedLinksCount;
@@ -119,6 +131,9 @@ final class SpanBuilder implements SpanBuilderInterface {
             ?? $tracerState->idGenerator->traceFlags();
         $flags &= 0x2;
 
+        $attributes = $attributesBuilder->build();
+        $spanType ??= $tracer->spanTypeResolver->resolveSpanType($name, $spanKind, $attributes);
+
         $samplingParams = new SamplingParams(
             $parent,
             $parentSpan->getContext(),
@@ -126,11 +141,12 @@ final class SpanBuilder implements SpanBuilderInterface {
             $flags,
             $name,
             $spanKind,
-            $attributesBuilder->build(),
+            $spanType,
+            $attributes,
             $links,
         );
 
-        $spanSuppression = $this->tracer->spanSuppressor->resolveSuppression($samplingParams);
+        $spanSuppression = $tracerState->spanSuppressionStrategy->resolveSuppression($samplingParams);
         if ($spanSuppression->isSuppressed($parent)) {
             return $parentSpan->isRecording()
                 ? Span::wrap($parentSpan->getContext())
@@ -167,9 +183,10 @@ final class SpanBuilder implements SpanBuilderInterface {
             $clock,
             new SpanData(
                 $tracerState->resource,
-                $this->tracer->instrumentationScope,
+                $tracer->instrumentationScope,
                 $name,
                 $spanContext,
+                $spanType,
                 $spanKind,
                 $parentSpanContext,
                 $links,

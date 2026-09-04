@@ -22,6 +22,7 @@ final class TracerState {
         public AttributesFactory $linkAttributesFactory,
         public int $eventCountLimit,
         public int $linkCountLimit,
-        public SpanSuppressionStrategy $spanSuppressionStrategy
+        public SpanSuppressionStrategy $spanSuppressionStrategy,
+        public SpanTypeStrategy $spanTypeStrategy,
     ) {}
 }

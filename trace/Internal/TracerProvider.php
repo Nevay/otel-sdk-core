@@ -13,6 +13,7 @@ use Nevay\OTelSDK\Trace\IdGenerator;
 use Nevay\OTelSDK\Trace\Sampler;
 use Nevay\OTelSDK\Trace\SpanProcessor;
 use Nevay\OTelSDK\Trace\SpanSuppressionStrategy;
+use Nevay\OTelSDK\Trace\SpanTypeStrategy;
 use Nevay\OTelSDK\Trace\TracerConfig;
 use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\Context\ContextStorageInterface;
@@ -29,7 +30,7 @@ final class TracerProvider {
     private readonly InstrumentationScopeCache $instrumentationScopeCache;
     /** @var Configurator<TracerConfig> */
     public Configurator $configurator;
-    public SpanSuppressionStrategy $spanSuppressionStrategy;
+    public SpanTypeStrategy $spanTypeStrategy;
 
     /** @var WeakMap<InstrumentationScope, Tracer> */
     private WeakMap $tracers;
@@ -43,6 +44,7 @@ final class TracerProvider {
         AttributesFactory $instrumentationScopeAttributesFactory,
         Configurator $configurator,
         SpanSuppressionStrategy $spanSuppressionStrategy,
+        SpanTypeStrategy $spanTypeStrategy,
         Clock $clock,
         HighResolutionTime $highResolutionTime,
         IdGenerator $idGenerator,
@@ -59,6 +61,7 @@ final class TracerProvider {
         $this->tracerState = new TracerState(
             $contextStorage,
             $resource,
+            $spanSuppressionStrategy,
             $clock,
             $highResolutionTime,
             $idGenerator,
@@ -75,7 +78,7 @@ final class TracerProvider {
         $this->instrumentationScopeAttributesFactory = $instrumentationScopeAttributesFactory;
         $this->instrumentationScopeCache = new InstrumentationScopeCache();
         $this->configurator = $configurator;
-        $this->spanSuppressionStrategy = $spanSuppressionStrategy;
+        $this->spanTypeStrategy = $spanTypeStrategy;
         $this->tracers = new WeakMap();
     }
 
@@ -93,7 +96,7 @@ final class TracerProvider {
             $tracer->enabled = $config->enabled;
         }
         foreach ($this->tracers as $tracer) {
-            $tracer->spanSuppressor = $this->spanSuppressionStrategy->getSuppressor($tracer->instrumentationScope);
+            $tracer->spanTypeResolver = $this->spanTypeStrategy->getResolver($tracer->instrumentationScope);
         }
     }
 
@@ -124,7 +127,7 @@ final class TracerProvider {
             $this->tracerState,
             $instrumentationScope,
             $config->enabled,
-            $this->spanSuppressionStrategy->getSuppressor($instrumentationScope),
+            $this->spanTypeStrategy->getResolver($instrumentationScope),
         );
     }
 

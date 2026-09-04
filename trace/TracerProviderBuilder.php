@@ -8,6 +8,7 @@ use Nevay\OTelSDK\Trace\IdGenerator\RandomIdGenerator;
 use Nevay\OTelSDK\Trace\Sampler\AlwaysOnSampler;
 use Nevay\OTelSDK\Trace\Sampler\ParentBasedSampler;
 use Nevay\OTelSDK\Trace\SpanSuppression\NoopSuppressionStrategy;
+use Nevay\OTelSDK\Trace\SpanType\NoopSpanTypeStrategy;
 use OpenTelemetry\API\Configuration\Context;
 use Psr\Log\LoggerInterface;
 
@@ -22,6 +23,7 @@ final class TracerProviderBuilder {
     /** @var Configurator<TracerConfig>|null */
     private ?Configurator $configurator = null;
     private ?SpanSuppressionStrategy $spanSuppressionStrategy = null;
+    private ?SpanTypeStrategy $spanTypeStrategy = null;
 
     private ?int $attributeCountLimit = null;
     private ?int $attributeValueLengthLimit = null;
@@ -78,6 +80,15 @@ final class TracerProviderBuilder {
      */
     public function setSuppressionStrategy(SpanSuppressionStrategy $strategy): self {
         $this->spanSuppressionStrategy = $strategy;
+
+        return $this;
+    }
+
+    /**
+     * @experimental
+     */
+    public function setSpanTypeStrategy(SpanTypeStrategy $strategy): self {
+        $this->spanTypeStrategy = $strategy;
 
         return $this;
     }
@@ -158,6 +169,7 @@ final class TracerProviderBuilder {
             $state->eventCountLimit = $this->eventCountLimit ?? 128;
             $state->linkCountLimit = $this->linkCountLimit ?? 128;
             $state->spanSuppressionStrategy = $this->spanSuppressionStrategy ?? new NoopSuppressionStrategy();
+            $state->spanTypeStrategy = $this->spanTypeStrategy ?? new NoopSpanTypeStrategy();
         });
 
         return $tracerProvider;

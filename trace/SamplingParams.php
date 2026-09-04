@@ -16,6 +16,7 @@ final class SamplingParams {
      * @param int $traceFlags trace flags
      * @param string $spanName span name
      * @param Kind $spanKind span kind
+     * @param string|null $spanType span type
      * @param Attributes $attributes span attributes
      * @param list<Link> $links span links
      */
@@ -26,6 +27,7 @@ final class SamplingParams {
         public readonly int $traceFlags,
         public readonly string $spanName,
         public readonly Kind $spanKind,
+        public readonly ?string $spanType,
         public readonly Attributes $attributes,
         public readonly array $links,
     ) {}

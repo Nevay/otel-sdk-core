@@ -21,6 +21,7 @@ use Nevay\OTelSDK\Trace\Sampler\CompositeSampler;
 use Nevay\OTelSDK\Trace\SpanProcessor\MultiSpanProcessor;
 use Nevay\OTelSDK\Trace\SpanProcessor\NoopSpanProcessor;
 use Nevay\OTelSDK\Trace\SpanSuppression\NoopSuppressionStrategy;
+use Nevay\OTelSDK\Trace\SpanType\NoopSpanTypeStrategy;
 use OpenTelemetry\API\Configuration\Context;
 use OpenTelemetry\API\Trace\TracerInterface;
 use Psr\Log\NullLogger;
@@ -42,6 +43,7 @@ final class TracerProvider implements TracerProviderInterface {
             UnlimitedAttributesFactory::create(),
             new Configurator\NoopConfigurator(),
             new NoopSuppressionStrategy(),
+            new NoopSpanTypeStrategy(),
             $clock ?? SystemClock::create(),
             $clock ?? SystemHighResolutionTime::create(),
             new RandomIdGenerator(),
@@ -69,7 +71,8 @@ final class TracerProvider implements TracerProviderInterface {
             linkAttributesFactory: $this->tracerProvider->tracerState->linkAttributesFactory,
             eventCountLimit: $this->tracerProvider->tracerState->eventCountLimit,
             linkCountLimit: $this->tracerProvider->tracerState->linkCountLimit,
-            spanSuppressionStrategy: $this->tracerProvider->spanSuppressionStrategy,
+            spanSuppressionStrategy: $this->tracerProvider->tracerState->spanSuppressionStrategy,
+            spanTypeStrategy: $this->tracerProvider->spanTypeStrategy,
         );
 
         $update($state);
@@ -77,6 +80,7 @@ final class TracerProvider implements TracerProviderInterface {
         $this->spanProcessors = $state->spanProcessors;
 
         $this->tracerProvider->tracerState->resource = $state->resource;
+        $this->tracerProvider->tracerState->spanSuppressionStrategy = $state->spanSuppressionStrategy;
         $this->tracerProvider->tracerState->idGenerator = $state->idGenerator;
         $this->tracerProvider->tracerState->sampler = $state->sampler;
         $this->tracerProvider->tracerState->spanProcessor = MultiSpanProcessor::composite(...array_values($this->spanProcessors), ...$this->diagnosticSpanProcessors);
@@ -87,7 +91,7 @@ final class TracerProvider implements TracerProviderInterface {
         $this->tracerProvider->tracerState->linkCountLimit = $state->linkCountLimit;
 
         $this->tracerProvider->configurator = $state->configurator;
-        $this->tracerProvider->spanSuppressionStrategy = $state->spanSuppressionStrategy;
+        $this->tracerProvider->spanTypeStrategy = $state->spanTypeStrategy;
 
         $this->tracerProvider->reload();
     }

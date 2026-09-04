@@ -2,7 +2,7 @@
 namespace Nevay\OTelSDK\Trace\Internal;
 
 use Nevay\OTelSDK\Common\InstrumentationScope;
-use Nevay\OTelSDK\Trace\SpanSuppressor;
+use Nevay\OTelSDK\Trace\SpanTypeResolver;
 use OpenTelemetry\API\Trace\SpanBuilderInterface;
 use OpenTelemetry\API\Trace\TracerInterface;
 
@@ -15,7 +15,7 @@ final class Tracer implements TracerInterface {
         public readonly TracerState $tracerState,
         public readonly InstrumentationScope $instrumentationScope,
         public bool $enabled,
-        public SpanSuppressor $spanSuppressor,
+        public SpanTypeResolver $spanTypeResolver,
     ) {}
 
     public function isEnabled(): bool {

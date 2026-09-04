@@ -56,6 +56,10 @@ final class Span implements ReadWriteSpan {
         return $this->spanData->spanContext;
     }
 
+    public function getSpanType(): ?string {
+        return $this->spanData->spanType;
+    }
+
     public function getSpanKind(): Kind {
         return $this->spanData->spanKind;
     }

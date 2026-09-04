@@ -23,6 +23,7 @@ final class SpanData implements ReadableSpan {
 
     public string $name;
     public readonly SpanContextInterface $spanContext;
+    public readonly ?string $spanType;
     public readonly Kind $spanKind;
     public readonly ?SpanContextInterface $parentContext;
     public AttributesBuilder $attributesBuilder;
@@ -45,6 +46,7 @@ final class SpanData implements ReadableSpan {
         InstrumentationScope $instrumentationScope,
         string $name,
         SpanContextInterface $spanContext,
+        ?string $spanType,
         Kind $spanKind,
         ?SpanContextInterface $parentContext,
         array $links,
@@ -56,6 +58,7 @@ final class SpanData implements ReadableSpan {
         $this->instrumentationScope = $instrumentationScope;
         $this->name = $name;
         $this->spanContext = $spanContext;
+        $this->spanType = $spanType;
         $this->spanKind = $spanKind;
         $this->parentContext = $parentContext;
         $this->links = $links;
@@ -78,6 +81,10 @@ final class SpanData implements ReadableSpan {
 
     public function getContext(): SpanContextInterface {
         return $this->spanContext;
+    }
+
+    public function getSpanType(): ?string {
+        return $this->spanType;
     }
 
     public function getSpanKind(): Kind {

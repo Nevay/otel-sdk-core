@@ -8,6 +8,7 @@ use Nevay\OTelSDK\Common\Resource;
 use Nevay\OTelSDK\Trace\IdGenerator;
 use Nevay\OTelSDK\Trace\Sampler;
 use Nevay\OTelSDK\Trace\SpanProcessor;
+use Nevay\OTelSDK\Trace\SpanSuppressionStrategy;
 use OpenTelemetry\Context\ContextStorageInterface;
 use Psr\Log\LoggerInterface;
 
@@ -19,6 +20,7 @@ final class TracerState {
     public function __construct(
         public readonly ?ContextStorageInterface $contextStorage,
         public Resource $resource,
+        public SpanSuppressionStrategy $spanSuppressionStrategy,
         public readonly Clock $clock,
         public readonly HighResolutionTime $highResolutionTime,
         public IdGenerator $idGenerator,

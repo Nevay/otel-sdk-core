@@ -46,6 +46,13 @@ interface ReadableSpan {
     public function getContext(): SpanContextInterface;
 
     /**
+     * Returns the span type.
+     *
+     * @return string|null span type
+     */
+    public function getSpanType(): ?string;
+
+    /**
      * Returns the span kind.
      *
      * @return Kind span kind

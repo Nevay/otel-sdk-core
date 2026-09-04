@@ -1,12 +1,12 @@
 <?php declare(strict_types=1);
-namespace Nevay\OTelSDK\Trace\Internal\SpanSuppression;
+namespace Nevay\OTelSDK\Trace\Internal\SpanTypeResolver;
 
 use GMP;
 
 /**
  * @internal
  */
-final class SemanticConventionSuppressionEntry {
+final class SemanticConventionSpanTypeEntry {
 
     /**
      * @param list<string> $semanticConventions
