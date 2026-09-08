@@ -8,6 +8,7 @@ use Amp\Future;
 use OpenTelemetry\API\Metrics\CounterInterface;
 use OpenTelemetry\API\Trace\Span;
 use OpenTelemetry\API\Trace\SpanContextInterface;
+use OpenTelemetry\API\Trace\StatusCode;
 use OpenTelemetry\API\Trace\TracerInterface;
 use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
@@ -217,17 +218,18 @@ final class ExportingProcessor {
             $scope->detach();
         }
 
-        $future
-            ->catch(static fn() => false)
-            ->finally(static fn() => $listener->onFinished($count));
+        $future->finally(static fn() => $listener->onFinished($count))->ignore();
 
         $future
             ->map(static fn(bool $success) => $span
-                ->setAttribute('otel.success', $success)
+                ->setStatus(match ($success) {
+                    true => StatusCode::STATUS_UNSET,
+                    false => StatusCode::STATUS_ERROR,
+                })
             )
             ->catch(static fn(Throwable $e) => $span
                 ->setAttribute('error.type', $e::class)
-                ->setAttribute('otel.success', false)
+                ->setStatus(StatusCode::STATUS_ERROR)
                 ->recordException($e)
             )
             ->finally($span->end(...));
