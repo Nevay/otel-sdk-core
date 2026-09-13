@@ -21,7 +21,7 @@ use Nevay\OTelSDK\Metrics\Internal\Aggregation\ExplicitBucketHistogramAggregator
  */
 final class ExplicitBucketHistogramAggregation implements Aggregation {
 
-    private const DEFAULT_BOUNDARIES = [0, 5, 10, 25, 50, 75, 100, 250, 500, 1000, 2500, 5000, 7500, 10000];
+    private const DEFAULT_BOUNDARIES = [0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000];
 
     /**
      * @param list<float|int>|null $boundaries array of increasing values
