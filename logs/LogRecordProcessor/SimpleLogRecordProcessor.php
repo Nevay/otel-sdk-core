@@ -7,6 +7,7 @@ use InvalidArgumentException;
 use Nevay\OTelSDK\Common\InstrumentationScope;
 use Nevay\OTelSDK\Common\Internal\Export\Driver\SimpleDriver;
 use Nevay\OTelSDK\Common\Internal\Export\ExportingProcessor;
+use Nevay\OTelSDK\Common\Internal\Export\Listener\QueueListener;
 use Nevay\OTelSDK\Common\Internal\Export\Listener\QueueSizeListener;
 use Nevay\OTelSDK\Logs\LogRecordExporter;
 use Nevay\OTelSDK\Logs\LogRecordProcessor;
@@ -19,9 +20,10 @@ use OpenTelemetry\API\Trace\TracerProviderInterface;
 use OpenTelemetry\Context\ContextInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use function sprintf;
 
 /**
- * `LogRecordProcessor` which passes finished spans to the configured
+ * `LogRecordProcessor` which passes finished log records to the configured
  * `LogRecordExporter` as soon as they are finished.
  *
  * @see https://opentelemetry.io/docs/specs/otel/logs/sdk/#simple-processor
@@ -29,8 +31,7 @@ use Psr\Log\NullLogger;
 final class SimpleLogRecordProcessor implements LogRecordProcessor {
 
     private readonly ExportingProcessor $processor;
-    private readonly QueueSizeListener $listener;
-    private readonly int $maxQueueSize;
+    private readonly QueueListener $listener;
 
     private static int $instanceCounter = -1;
 
@@ -39,10 +40,13 @@ final class SimpleLogRecordProcessor implements LogRecordProcessor {
     /**
      * @param LogRecordExporter $logRecordExporter exporter to push log records
      *        to
-     * @param int<0, max> $maxQueueSize maximum number of pending log records
+     * @param int<1, max> $maxQueueSize maximum number of pending log records
      *        (queued and in-flight), log records exceeding this limit will be
      *        dropped
      * @param int<0, max> $exportTimeoutMillis export timeout in milliseconds
+     * @param bool|int<0, max> $blocking whether to block when the queue is
+     *        full, or the maximum time to block in milliseconds before
+     *        dropping the item
      * @param TracerProviderInterface $tracerProvider tracer provider for self
      *        diagnostics
      * @param MeterProviderInterface $meterProvider meter provider for self
@@ -55,19 +59,21 @@ final class SimpleLogRecordProcessor implements LogRecordProcessor {
         LogRecordExporter $logRecordExporter,
         int $maxQueueSize = 2048,
         int $exportTimeoutMillis = 30000,
+        bool|int $blocking = false,
         TracerProviderInterface $tracerProvider = new NoopTracerProvider(),
         MeterProviderInterface $meterProvider = new NoopMeterProvider(),
         LoggerInterface $logger = new NullLogger(),
         ?string $name = null,
     ) {
-        if ($maxQueueSize < 0) {
-            throw new InvalidArgumentException(sprintf('Maximum queue size (%d) must be greater than or equal to zero', $maxQueueSize));
+        if ($maxQueueSize <= 0) {
+            throw new InvalidArgumentException(sprintf('Maximum queue size (%d) must be greater than zero', $maxQueueSize));
         }
         if ($exportTimeoutMillis < 0) {
             throw new InvalidArgumentException(sprintf('Export timeout (%d) must be greater than or equal to zero', $exportTimeoutMillis));
         }
-
-        $this->maxQueueSize = $maxQueueSize;
+        if ($blocking < 0) {
+            throw new InvalidArgumentException(sprintf('Blocking timeout (%d) must be greater than or equal to zero', $blocking));
+        }
 
         $type = 'simple_log_processor';
         $name ??= $type . '/' . ++self::$instanceCounter;
@@ -93,18 +99,18 @@ final class SimpleLogRecordProcessor implements LogRecordProcessor {
         );
 
         $queueSize->observe(fn(ObserverInterface $observer) => $observer->observe(
-            $this->listener->queueSize,
+            $this->listener->queueSize(),
             ['otel.component.name' => $name, 'otel.component.type' => $type],
         ));
         $queueCapacity->observe(fn(ObserverInterface $observer) => $observer->observe(
-            $this->maxQueueSize,
+            $this->listener->maxQueueSize(),
             ['otel.component.name' => $name, 'otel.component.type' => $type],
         ));
 
         $this->processor = new ExportingProcessor(
             $logRecordExporter,
             new SimpleDriver(),
-            $this->listener = new QueueSizeListener(),
+            $this->listener = QueueSizeListener::create($maxQueueSize, $blocking),
             $exportTimeoutMillis,
             $tracer,
             $processed,
@@ -127,12 +133,16 @@ final class SimpleLogRecordProcessor implements LogRecordProcessor {
             return;
         }
 
-        if ($this->listener->queueSize === $this->maxQueueSize) {
+        if (!$this->listener->acquireQueueSlot()) {
             $this->processor->drop('queue_full');
             return;
         }
+        if ($this->processor->closed) {
+            $this->processor->drop('shutdown');
+            $this->listener->onFinished(1);
+            return;
+        }
 
-        $this->listener->queueSize++;
         $this->processor->enqueue($logRecord);
     }
 
@@ -142,6 +152,7 @@ final class SimpleLogRecordProcessor implements LogRecordProcessor {
         }
 
         $this->closed = true;
+        $this->listener->drain($cancellation);
 
         return $this->processor->shutdown($cancellation);
     }
@@ -150,6 +161,8 @@ final class SimpleLogRecordProcessor implements LogRecordProcessor {
         if ($this->closed) {
             return false;
         }
+
+        $this->listener->drain($cancellation);
 
         return $this->processor->forceFlush($cancellation);
     }

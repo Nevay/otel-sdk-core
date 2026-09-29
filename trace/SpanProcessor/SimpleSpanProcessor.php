@@ -6,6 +6,7 @@ use Composer\InstalledVersions;
 use InvalidArgumentException;
 use Nevay\OTelSDK\Common\Internal\Export\Driver\SimpleDriver;
 use Nevay\OTelSDK\Common\Internal\Export\ExportingProcessor;
+use Nevay\OTelSDK\Common\Internal\Export\Listener\QueueListener;
 use Nevay\OTelSDK\Common\Internal\Export\Listener\QueueSizeListener;
 use Nevay\OTelSDK\Trace\ReadableSpan;
 use Nevay\OTelSDK\Trace\ReadWriteSpan;
@@ -19,6 +20,7 @@ use OpenTelemetry\API\Trace\TracerProviderInterface;
 use OpenTelemetry\Context\ContextInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use function sprintf;
 
 /**
  * `SpanProcessor` which passes finished spans to the configured `SpanExporter`
@@ -29,8 +31,7 @@ use Psr\Log\NullLogger;
 final class SimpleSpanProcessor implements SpanProcessor {
 
     private readonly ExportingProcessor $processor;
-    private readonly QueueSizeListener $listener;
-    private readonly int $maxQueueSize;
+    private readonly QueueListener $listener;
 
     private static int $instanceCounter = -1;
 
@@ -38,9 +39,12 @@ final class SimpleSpanProcessor implements SpanProcessor {
 
     /**
      * @param SpanExporter $spanExporter exporter to push spans to
-     * @param int<0, max> $maxQueueSize maximum number of pending spans (queued
+     * @param int<1, max> $maxQueueSize maximum number of pending spans (queued
      *        and in-flight), spans exceeding this limit will be dropped
      * @param int<0, max> $exportTimeoutMillis export timeout in milliseconds
+     * @param bool|int<0, max> $blocking whether to block when the queue is
+     *        full, or the maximum time to block in milliseconds before
+     *        dropping the item
      * @param TracerProviderInterface $tracerProvider tracer provider for self
      *        diagnostics
      * @param MeterProviderInterface $meterProvider meter provider for self
@@ -53,19 +57,21 @@ final class SimpleSpanProcessor implements SpanProcessor {
         SpanExporter $spanExporter,
         int $maxQueueSize = 2048,
         int $exportTimeoutMillis = 30000,
+        bool|int $blocking = false,
         TracerProviderInterface $tracerProvider = new NoopTracerProvider(),
         MeterProviderInterface $meterProvider = new NoopMeterProvider(),
         LoggerInterface $logger = new NullLogger(),
         ?string $name = null,
     ) {
-        if ($maxQueueSize < 0) {
-            throw new InvalidArgumentException(sprintf('Maximum queue size (%d) must be greater than or equal to zero', $maxQueueSize));
+        if ($maxQueueSize <= 0) {
+            throw new InvalidArgumentException(sprintf('Maximum queue size (%d) must be greater than zero', $maxQueueSize));
         }
         if ($exportTimeoutMillis < 0) {
             throw new InvalidArgumentException(sprintf('Export timeout (%d) must be greater than or equal to zero', $exportTimeoutMillis));
         }
-
-        $this->maxQueueSize = $maxQueueSize;
+        if ($blocking < 0) {
+            throw new InvalidArgumentException(sprintf('Blocking timeout (%d) must be greater than or equal to zero', $blocking));
+        }
 
         $type = 'simple_span_processor';
         $name ??= $type . '/' . ++self::$instanceCounter;
@@ -91,18 +97,18 @@ final class SimpleSpanProcessor implements SpanProcessor {
         );
 
         $queueSize->observe(fn(ObserverInterface $observer) => $observer->observe(
-            $this->listener->queueSize,
+            $this->listener->queueSize(),
             ['otel.component.name' => $name, 'otel.component.type' => $type],
         ));
         $queueCapacity->observe(fn(ObserverInterface $observer) => $observer->observe(
-            $this->maxQueueSize,
+            $this->listener->maxQueueSize(),
             ['otel.component.name' => $name, 'otel.component.type' => $type],
         ));
 
         $this->processor = new ExportingProcessor(
             $spanExporter,
             new SimpleDriver(),
-            $this->listener = new QueueSizeListener(),
+            $this->listener = QueueSizeListener::create($maxQueueSize, $blocking),
             $exportTimeoutMillis,
             $tracer,
             $processed,
@@ -132,12 +138,16 @@ final class SimpleSpanProcessor implements SpanProcessor {
             return;
         }
 
-        if ($this->listener->queueSize === $this->maxQueueSize) {
+        if (!$this->listener->acquireQueueSlot()) {
             $this->processor->drop('queue_full');
             return;
         }
+        if ($this->processor->closed) {
+            $this->processor->drop('shutdown');
+            $this->listener->onFinished(1);
+            return;
+        }
 
-        $this->listener->queueSize++;
         $this->processor->enqueue($span);
     }
 
@@ -147,6 +157,7 @@ final class SimpleSpanProcessor implements SpanProcessor {
         }
 
         $this->closed = true;
+        $this->listener->drain($cancellation);
 
         return $this->processor->shutdown($cancellation);
     }
@@ -155,6 +166,8 @@ final class SimpleSpanProcessor implements SpanProcessor {
         if ($this->closed) {
             return false;
         }
+
+        $this->listener->drain($cancellation);
 
         return $this->processor->forceFlush($cancellation);
     }

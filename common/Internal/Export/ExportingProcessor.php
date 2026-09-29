@@ -45,7 +45,7 @@ final class ExportingProcessor {
 
     private readonly ?CounterInterface $processedItems;
 
-    private bool $closed = false;
+    public bool $closed = false;
 
     public function __construct(
         Exporter $exporter,
@@ -142,6 +142,8 @@ final class ExportingProcessor {
         if ($this->driver->isBuffered()) {
             $count += $this->driver->count($this->driver->getPending());
         }
+
+        $this->listener->onFinished($count);
 
         foreach ($this->flush as $flush) {
             $flush->error($e);

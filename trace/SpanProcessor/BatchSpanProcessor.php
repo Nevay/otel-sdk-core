@@ -6,6 +6,7 @@ use Composer\InstalledVersions;
 use InvalidArgumentException;
 use Nevay\OTelSDK\Common\Internal\Export\Driver\BatchDriver;
 use Nevay\OTelSDK\Common\Internal\Export\ExportingProcessor;
+use Nevay\OTelSDK\Common\Internal\Export\Listener\QueueListener;
 use Nevay\OTelSDK\Common\Internal\Export\Listener\QueueSizeListener;
 use Nevay\OTelSDK\Trace\ReadableSpan;
 use Nevay\OTelSDK\Trace\ReadWriteSpan;
@@ -21,6 +22,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Revolt\EventLoop;
 use function count;
+use function sprintf;
 
 /**
  * `SpanProcessor` which creates batches of finished spans and passes them to
@@ -33,8 +35,7 @@ final class BatchSpanProcessor implements SpanProcessor {
 
     private readonly ExportingProcessor $processor;
     private readonly BatchDriver $driver;
-    private readonly QueueSizeListener $listener;
-    private readonly int $maxQueueSize;
+    private readonly QueueListener $listener;
     private readonly int $maxExportBatchSize;
     private readonly string $scheduledDelayCallbackId;
 
@@ -44,15 +45,18 @@ final class BatchSpanProcessor implements SpanProcessor {
 
     /**
      * @param SpanExporter $spanExporter exporter to push spans to
-     * @param int<0, max> $maxQueueSize maximum number of pending spans (queued
+     * @param int<1, max> $maxQueueSize maximum number of pending spans (queued
      *        and in-flight), spans exceeding this limit will be dropped
      * @param int<0, max> $scheduledDelayMillis delay interval in milliseconds
      *        between two consecutive exports if `$maxExportBatchSize` is not
      *        exceeded
      * @param int<0, max> $exportTimeoutMillis export timeout in milliseconds
-     * @param int<0, max> $maxExportBatchSize maximum batch size of every
+     * @param int<1, max> $maxExportBatchSize maximum batch size of every
      *        export, spans will be exported eagerly after reaching this limit;
      *        must be less than or equal to `maxQueueSize`
+     * @param bool|int<0, max> $blocking whether to block when the queue is
+     *        full, or the maximum time to block in milliseconds before
+     *        dropping the item
      * @param TracerProviderInterface $tracerProvider tracer provider for self
      *        diagnostics
      * @param MeterProviderInterface $meterProvider meter provider for self
@@ -67,13 +71,14 @@ final class BatchSpanProcessor implements SpanProcessor {
         int $scheduledDelayMillis = 5000,
         int $exportTimeoutMillis = 30000,
         int $maxExportBatchSize = 512,
+        bool|int $blocking = false,
         TracerProviderInterface $tracerProvider = new NoopTracerProvider(),
         MeterProviderInterface $meterProvider = new NoopMeterProvider(),
         LoggerInterface $logger = new NullLogger(),
         ?string $name = null,
     ) {
-        if ($maxQueueSize < 0) {
-            throw new InvalidArgumentException(sprintf('Maximum queue size (%d) must be greater than or equal to zero', $maxQueueSize));
+        if ($maxQueueSize <= 0) {
+            throw new InvalidArgumentException(sprintf('Maximum queue size (%d) must be greater than zero', $maxQueueSize));
         }
         if ($scheduledDelayMillis < 0) {
             throw new InvalidArgumentException(sprintf('Scheduled delay (%d) must be greater than or equal to zero', $scheduledDelayMillis));
@@ -81,14 +86,16 @@ final class BatchSpanProcessor implements SpanProcessor {
         if ($exportTimeoutMillis < 0) {
             throw new InvalidArgumentException(sprintf('Export timeout (%d) must be greater than or equal to zero', $exportTimeoutMillis));
         }
-        if ($maxExportBatchSize < 0) {
-            throw new InvalidArgumentException(sprintf('Maximum export batch size (%d) must be greater than or equal to zero', $maxExportBatchSize));
+        if ($maxExportBatchSize <= 0) {
+            throw new InvalidArgumentException(sprintf('Maximum export batch size (%d) must be greater than zero', $maxExportBatchSize));
         }
         if ($maxExportBatchSize > $maxQueueSize) {
             throw new InvalidArgumentException(sprintf('Maximum export batch size (%d) must be less than or equal to maximum queue size (%d)', $maxExportBatchSize, $maxQueueSize));
         }
+        if ($blocking < 0) {
+            throw new InvalidArgumentException(sprintf('Blocking timeout (%d) must be greater than or equal to zero', $blocking));
+        }
 
-        $this->maxQueueSize = $maxQueueSize;
         $this->maxExportBatchSize = $maxExportBatchSize;
 
         $type = 'batching_span_processor';
@@ -115,18 +122,18 @@ final class BatchSpanProcessor implements SpanProcessor {
         );
 
         $queueSize->observe(fn(ObserverInterface $observer) => $observer->observe(
-            $this->listener->queueSize,
+            $this->listener->queueSize(),
             ['otel.component.name' => $name, 'otel.component.type' => $type],
         ));
         $queueCapacity->observe(fn(ObserverInterface $observer) => $observer->observe(
-            $this->maxQueueSize,
+            $this->listener->maxQueueSize(),
             ['otel.component.name' => $name, 'otel.component.type' => $type],
         ));
 
         $this->processor = $processor = new ExportingProcessor(
             $spanExporter,
             $this->driver = new BatchDriver(),
-            $this->listener = new QueueSizeListener(),
+            $this->listener = QueueSizeListener::create($maxQueueSize, $blocking),
             $exportTimeoutMillis,
             $tracer,
             $processed,
@@ -163,12 +170,16 @@ final class BatchSpanProcessor implements SpanProcessor {
             return;
         }
 
-        if ($this->listener->queueSize === $this->maxQueueSize) {
+        if (!$this->listener->acquireQueueSlot()) {
             $this->processor->drop('queue_full');
             return;
         }
+        if ($this->processor->closed) {
+            $this->processor->drop('shutdown');
+            $this->listener->onFinished(1);
+            return;
+        }
 
-        $this->listener->queueSize++;
         $this->driver->batch[] = $span;
 
         if (count($this->driver->batch) === 1) {
@@ -186,6 +197,7 @@ final class BatchSpanProcessor implements SpanProcessor {
         }
 
         $this->closed = true;
+        $this->listener->drain($cancellation);
         EventLoop::cancel($this->scheduledDelayCallbackId);
 
         return $this->processor->shutdown($cancellation);
@@ -196,6 +208,7 @@ final class BatchSpanProcessor implements SpanProcessor {
             return false;
         }
 
+        $this->listener->drain($cancellation);
         EventLoop::disable($this->scheduledDelayCallbackId);
 
         return $this->processor->forceFlush($cancellation);
