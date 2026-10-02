@@ -13,8 +13,8 @@ final class ComposableRuleBasedSampler implements ComposableSampler {
     private readonly array $rules;
     private readonly SamplingIntent $fallback;
 
-    public function __construct(SamplingRule $rule, SamplingRule ...$rules) {
-        $this->rules = [$rule, ...$rules];
+    public function __construct(SamplingRule ...$rules) {
+        $this->rules = $rules;
         $this->fallback = new SamplingIntent(null, false);
     }
 
