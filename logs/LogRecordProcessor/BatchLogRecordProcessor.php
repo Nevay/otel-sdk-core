@@ -70,7 +70,7 @@ final class BatchLogRecordProcessor implements LogRecordProcessor {
     public function __construct(
         LogRecordExporter $logRecordExporter,
         int $maxQueueSize = 2048,
-        int $scheduledDelayMillis = 5000,
+        int $scheduledDelayMillis = 1000,
         int $exportTimeoutMillis = 30000,
         int $maxExportBatchSize = 512,
         bool|int $blocking = false,
