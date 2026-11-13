@@ -2,10 +2,13 @@
 namespace Nevay\OTelSDK\Trace\Sampler;
 
 use InvalidArgumentException;
+use Nevay\OTelSDK\Trace\Internal;
 use Nevay\OTelSDK\Trace\Sampler;
 use Nevay\OTelSDK\Trace\SamplingDecision;
 use Nevay\OTelSDK\Trace\SamplingParams;
 use Nevay\OTelSDK\Trace\SamplingResult;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use function assert;
 use function pack;
 use function sprintf;
@@ -17,6 +20,7 @@ final class TraceIdRatioBasedSampler implements Sampler {
 
     private readonly float $ratio;
     private readonly string $threshold;
+    private readonly LoggerInterface $logger;
 
     /**
      * @param float $ratio sample ratio, must be between 0 and 1 (inclusive)
@@ -24,7 +28,7 @@ final class TraceIdRatioBasedSampler implements Sampler {
      *
      * @noinspection PhpConditionAlreadyCheckedInspection
      */
-    public function __construct(float $ratio, int $precision = 4) {
+    public function __construct(float $ratio, int $precision = 4, LoggerInterface $logger = new NullLogger()) {
         if (!($ratio >= 0 && $ratio <= 1)) {
             throw new InvalidArgumentException(sprintf('Ratio (%s) must be be between 0 and 1 (inclusive)', $ratio));
         }
@@ -34,9 +38,18 @@ final class TraceIdRatioBasedSampler implements Sampler {
 
         $this->ratio = $ratio;
         $this->threshold = substr(pack('J', self::computeTValue($ratio, $precision, 4)), 1);
+        $this->logger = $logger;
     }
 
     public function shouldSample(SamplingParams $params): SamplingResult {
+        if ($params->parent->isValid()) {
+            $ot = $params->parent->getTraceState()?->get('ot') ?? '';
+
+            Internal\TraceStateHandler::seek($ot, 'rv') || Internal\TraceStateHandler::seek($ot, 'th')
+                ? $this->logger->warning('The TraceIdRatioBased sampler is operating as a child sampler and a parent is using ProbabilitySampler. Please upgrade this SDK configuration to use ProbabilitySampler.')
+                : $this->logger->warning('The TraceIdRatioBased sampler is operating as a child sampler; the behavior is subject to change. Please upgrade this SDK configuration to use ProbabilitySampler.');
+        }
+
         return $this->ratio >= 2 ** -56 && substr_compare($params->traceId, $this->threshold, 9) >= 0
             ? SamplingDecision::RecordAndSample
             : SamplingDecision::Drop;
