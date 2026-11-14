@@ -24,15 +24,17 @@ final class ComposableProbabilitySampler implements ComposableSampler {
      */
     public function __construct(float $ratio, int $precision = 4) {
         if (!($ratio >= 0 && $ratio <= 1)) {
-            throw new InvalidArgumentException(sprintf('Ratio (%s) must be be between 0 and 1 (inclusive)', $ratio));
+            throw new InvalidArgumentException(sprintf('Ratio (%s) must be between 0 and 1 (inclusive)', $ratio));
         }
         if ($precision < 1 || $precision > 14) {
             throw new InvalidArgumentException(sprintf('Precision (%d) must be between 1 and 14 (inclusive)', $precision));
         }
 
+        $threshold = self::computeTValue($ratio, $precision, 4);
+
         $this->ratio = $ratio;
-        $this->intent = $ratio >= 2 ** -56
-            ? new SamplingIntent(self::computeTValue($ratio, $precision, 4), true)
+        $this->intent = $threshold < 1 << 56
+            ? new SamplingIntent($threshold, true)
             : new SamplingIntent(null, false);
     }
 
@@ -53,8 +55,6 @@ final class ComposableProbabilitySampler implements ComposableSampler {
      * The T-value is computed as `2**56*(1-$probability)` with a precision of
      * `2**-($wordSize*⌈-log2($probability)/$wordSize+$precision-1⌉)`.
      *
-     * Values below `2**-56` will return `0`.
-     *
      * ```
      * 1/3 w/ precision=3, wordSize=4
      * => 1 - 1/3
@@ -72,9 +72,11 @@ final class ComposableProbabilitySampler implements ComposableSampler {
      * @param float $probability sampling probability, must be between 0 and 1
      * @param positive-int $precision precision in words
      * @param positive-int $wordSize word size, must be a power of two
-     * @return int 56bit T-value
+     * @return int 56bit T-value, or `2**56` if out of sampling range
+     *
+     * @internal
      */
-    private static function computeTValue(float $probability, int $precision, int $wordSize = 1): int {
+    public static function computeTValue(float $probability, int $precision, int $wordSize = 1): int {
         assert($probability >= 0 && $probability <= 1);
         assert($precision >= 1);
         assert($wordSize >= 1 && ($wordSize & $wordSize - 1) === 0);
@@ -85,8 +87,8 @@ final class ComposableProbabilitySampler implements ComposableSampler {
 
         // 56+1bit for rounding
         $s = $e - 1023 - 52 + 57;
-        $t = (1 << 57) - ($s < 0 ? $f >> -$s : $f << $s);
         $m = -1 << 56 >> (-($e - 1023 + 1) + $precision * $wordSize & -$wordSize);
+        $t = (1 << 57) - ($s < 0 ? ($f - 1 >> -$s) - $m & $m : $f << $s);
 
         return $t - $m >> 1 & $m;
     }
