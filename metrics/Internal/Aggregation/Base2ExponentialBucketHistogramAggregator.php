@@ -10,7 +10,7 @@ use Nevay\OTelSDK\Metrics\Data\ExponentialHistogramDataPoint;
 use Nevay\OTelSDK\Metrics\Data\Temporality;
 use OpenTelemetry\Context\ContextInterface;
 use function abs;
-use function ceil;
+use function floor;
 use function is_finite;
 use function log;
 use function min;
@@ -149,15 +149,21 @@ final class Base2ExponentialBucketHistogramAggregator implements Aggregator {
         $summary->sum = $t;
     }
 
+    /**
+     * @see https://opentelemetry.io/docs/specs/otel/metrics/data-model/#exponentialhistogram-producer-recommendations
+     */
     private static function mapToIndex(float $value, int $scale): int {
-        if ($scale > 0) {
-            return (int) ceil(log($value) * M_LOG2E * 2 ** $scale) - 1;
-        }
-
         $b = unpack('J', pack('E', $value))[1];
         $e = $b >> 52 & (1 << 11) - 1;
         $f = $b & (1 << 52) - 1;
 
-        return $e - 1023 - !$f >> -$scale;
+        if ($scale <= 0) {
+            return $e - 1023 - !$f >> -$scale;
+        }
+        if ($e && !$f) { // exact for power of twos
+            return ($e - 1023 << $scale) - 1;
+        }
+
+        return (int) floor(log($value) * M_LOG2E * 2 ** $scale);
     }
 }
