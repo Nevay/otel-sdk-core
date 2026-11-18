@@ -10,6 +10,7 @@ use Nevay\OTelSDK\Metrics\Data\Temporality;
 use OpenTelemetry\Context\ContextInterface;
 use function array_fill;
 use function count;
+use function is_finite;
 use const INF;
 use const NAN;
 
@@ -41,6 +42,10 @@ final class ExplicitBucketHistogramAggregator implements Aggregator {
     }
 
     public function record(mixed $summary, float|int $value, Attributes $attributes, ContextInterface $context, int $timestamp): void {
+        if (!is_finite($value)) {
+            return;
+        }
+
         for ($i = 0, $n = count($this->boundaries); $i < $n && $this->boundaries[$i] < $value; $i++) {}
         $summary->count++;
         self::calculateCompensatedSum($summary, $value);
