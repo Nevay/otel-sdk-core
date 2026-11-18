@@ -88,8 +88,8 @@ final class Base2ExponentialBucketHistogramAggregator implements Aggregator {
         $right->count -= $left->count;
         self::calculateCompensatedSum($right, -$left->sum);
         self::calculateCompensatedSum($right, $left->sumCompensation);
-        $right->min = $right->min <= $left->min ? $right->min : NAN;
-        $right->max = $right->max >= $left->max ? $right->max : NAN;
+        $right->min = $right->min < $left->min ? $right->min : NAN;
+        $right->max = $right->max > $left->max ? $right->max : NAN;
         $right->zeroCount -= $left->zeroCount;
         $right->positive = $right->positive->merge($left->positive, $this->maxSize, -1);
         $right->negative = $right->negative->merge($left->negative, $this->maxSize, -1);

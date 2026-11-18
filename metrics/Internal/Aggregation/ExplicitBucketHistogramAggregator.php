@@ -68,8 +68,8 @@ final class ExplicitBucketHistogramAggregator implements Aggregator {
         $right->count -= $left->count;
         self::calculateCompensatedSum($right, -$left->sum);
         self::calculateCompensatedSum($right, $left->sumCompensation);
-        $right->min = $right->min <= $left->min ? $right->min : NAN;
-        $right->max = $right->max >= $left->max ? $right->max : NAN;
+        $right->min = $right->min < $left->min ? $right->min : NAN;
+        $right->max = $right->max > $left->max ? $right->max : NAN;
         foreach ($left->buckets as $i => $bucketCount) {
             $right->buckets[$i] -= $bucketCount;
         }
